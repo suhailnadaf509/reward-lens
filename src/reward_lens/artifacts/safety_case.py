@@ -1,4 +1,4 @@
-"""The safety case: an ADJUDICATED-only assembly over the store (section 2.15, M13).
+"""The safety case: an ADJUDICATED-only assembly over the store (M13).
 
 A safety case is the strongest artifact the library emits: the claim "safe to optimize against this
 reward model for at most K nats under monitor M, with certified erasure of bias set B", plus the
@@ -17,7 +17,7 @@ The four components and where they come from in the science layer:
 - ``monitor``: the validated runtime monitor with its lead-time and obfuscation grades, from the
   policy-grader coupling and robustness work (S13/S14). This is the M in "under monitor M".
 - ``erasure`` certificate: the post-hoc certificate that bias set B was erased at the chosen surface
-  (LEACE affine erasure, S6/S12, section 2.6). This is the B in "certified erasure of bias set B".
+  (LEACE affine erasure, S6/S12). This is the B in "certified erasure of bias set B".
 - ``honesty`` certificate: the "honesty-incentive-compatible on domain D under evidence schema E"
   guarantee from the recursive-reward-skepticism and unraveling work (S16, scoreboard T14).
 
@@ -47,7 +47,7 @@ _ROLES = (ROLE_K_NATS, ROLE_MONITOR, ROLE_ERASURE, ROLE_HONESTY)
 
 
 class SafetyCaseRefusal(RewardLensError):
-    """Raised when a safety-case component is not ADJUDICATED-grade (section 2.15).
+    """Raised when a safety-case component is not ADJUDICATED-grade.
 
     A safety case is refused, not degraded, when any component lacks calibration (gate 1) or
     registration (gate 3). The message names the component, the failing gate, and the Evidence id so
@@ -76,7 +76,7 @@ class SafetyComponent:
 
 @dataclass
 class SafetyCase:
-    """An assembled safety case (section 2.15).
+    """An assembled safety case.
 
     Holds the subject reward model, the extracted claim parameters (K, the monitor summary, the bias
     set B, the honesty domain and schema), and the four components with their Evidence ids. It renders
@@ -209,7 +209,7 @@ def _value_repr(value: Any) -> str:
 
 
 def _require_adjudicated(role: str, ev: Evidence[Any]) -> SafetyComponent:
-    """Check one component's gates and build its ``SafetyComponent``, or refuse (section 2.15).
+    """Check one component's gates and build its ``SafetyComponent``, or refuse.
 
     Calibration (gate 1) is read from whether the Evidence carries a calibration reference;
     registration (gate 3) is read from whether its trust reached REGISTERED, which the study runner

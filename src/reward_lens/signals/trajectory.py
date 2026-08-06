@@ -1,4 +1,4 @@
-"""``TrajectoryRM``: a trajectory-level reward model behind the protocol (section 2.3.3, adapter 6).
+"""``TrajectoryRM``: a trajectory-level reward model behind the protocol (adapter 6).
 
 An agent's reward is over a whole episode, not a single response, and the episode has structure the
 receipt/narrative sciences read: a *receipt* is the evidence a step produced (a tool result), a
@@ -6,7 +6,7 @@ receipt/narrative sciences read: a *receipt* is the evidence a step produced (a 
 ``Trajectory`` items (``reward_lens.data.schema``), renders them to text while carrying those typed spans
 into token coordinates, and scores at the trajectory scoring position (the end of the episode). Declaring
 ``SPAN_TYPES`` is what lets a receipt-falsification or narrative-patching experiment address exactly the
-right tokens (section 2.4.3); without the span carry-through those experiments silently misalign.
+right tokens; without the span carry-through those experiments silently misalign.
 
 The scorer itself is a sequence classifier, so it reuses the classifier's fp32 projection. The work
 specific to this adapter is the rendering: turning a structured episode into text and mapping each step's
@@ -39,7 +39,7 @@ _TRAJECTORY_CAPS = (
 
 
 class TrajectoryRM(SignalImplBase):
-    """A trajectory-level reward model as a ``RewardSignal`` (section 2.3.3, adapter 6).
+    """A trajectory-level reward model as a ``RewardSignal`` (adapter 6).
 
     Build it through ``from_tiny`` or ``from_sequence_classifier``. ``tokenize`` accepts a
     ``Trajectory`` (rendering its steps with receipt/narrative/action span typing) or a plain
@@ -76,7 +76,7 @@ class TrajectoryRM(SignalImplBase):
     # -- rendering a trajectory with typed spans ---------------------------
 
     def _render(self, item: Any) -> tuple[str, tuple[tuple[int, int, str], ...], dict[str, Any]]:
-        """Render a ``Trajectory`` to text with receipt/narrative/action spans (section 2.3.3).
+        """Render a ``Trajectory`` to text with receipt/narrative/action spans.
 
         Each step is rendered as ``Action: <action>\\n<step text>\\n``. The action string is typed as
         an ``action`` span; each step's ``receipts`` and ``narrative`` spans are interpreted as
@@ -123,7 +123,7 @@ class TrajectoryRM(SignalImplBase):
     # -- scoring at the trajectory position --------------------------------
 
     def score(self, view: Any, readout: str | None = None) -> Any:
-        """Score each trajectory at its scoring position (the final token; section 2.3.2)."""
+        """Score each trajectory at its scoring position (the final token)."""
         name = readout or self.default_readout_name()
         read = self.readout(name)
         items = list(view)
@@ -135,7 +135,7 @@ class TrajectoryRM(SignalImplBase):
         return self._timed_evidence("score", payload, name, len(items), n_tokens, started)
 
     def score_prefixes(self, view: Any, readout: str | None = None) -> Any:
-        """Per-token reward curve over the rendered trajectory (section 2.3.2)."""
+        """Per-token reward curve over the rendered trajectory."""
         name = readout or self.default_readout_name()
         read = self.readout(name)
         items = list(view)

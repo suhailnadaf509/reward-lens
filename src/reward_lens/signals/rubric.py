@@ -1,4 +1,4 @@
-"""``RubricRM``: a rubric grader behind the protocol (section 2.3.3, adapter 5).
+"""``RubricRM``: a rubric grader behind the protocol (adapter 5).
 
 A rubric grader scores a response against a set of named criteria (coherence, correctness, safety, ...)
 and combines them. The design's discipline here is that the criterion set is *data*, not code: a
@@ -40,7 +40,7 @@ _RUBRIC_CAPS = (
 
 @dataclass(frozen=True)
 class RubricSpec:
-    """A rubric grader's criteria and their aggregate weights (the DATA, section 2.3.3).
+    """A rubric grader's criteria and their aggregate weights (the DATA).
 
     ``criteria`` names the criteria in head-row order; ``weights`` gives the aggregate weight of each
     (defaulting to equal weights). This is what a study serializes to record exactly which rubric was
@@ -63,7 +63,7 @@ class RubricSpec:
 
 
 class RubricRM(SignalImplBase):
-    """A rubric grader as a ``RewardSignal`` (section 2.3.3, adapter 5).
+    """A rubric grader as a ``RewardSignal`` (adapter 5).
 
     Build it through ``from_tiny`` (a tiny multi-label classifier) or ``from_sequence_classifier``
     (a real multi-objective head). ``readouts`` exposes one ``criterion:<name>`` per criterion plus a
@@ -106,7 +106,7 @@ class RubricRM(SignalImplBase):
     # -- scoring (ordinary linear projections) -----------------------------
 
     def score(self, view: Any, readout: str | None = None) -> Any:
-        """Score every item under a criterion or the aggregate readout (section 2.3.2)."""
+        """Score every item under a criterion or the aggregate readout."""
         name = readout or self.default_readout_name()
         read = self.readout(name)
         items = list(view)
@@ -118,7 +118,7 @@ class RubricRM(SignalImplBase):
         return self._timed_evidence("score", payload, name, len(items), n_tokens, started)
 
     def score_prefixes(self, view: Any, readout: str | None = None) -> Any:
-        """Per-token reward curve under a criterion or aggregate readout (section 2.3.2)."""
+        """Per-token reward curve under a criterion or aggregate readout."""
         name = readout or self.default_readout_name()
         read = self.readout(name)
         items = list(view)

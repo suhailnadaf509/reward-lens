@@ -1,4 +1,4 @@
-"""OpenRLHF integration: a remote reward function and a geometry-logging worker hook (DESIGN 2.13).
+"""OpenRLHF integration: a remote reward function and a geometry-logging worker hook.
 
 OpenRLHF drives PPO with a reward model served as a remote reward function (a callable over a batch
 of query/response strings) and runs the actor, critic, reward, and reference models as separate Ray
@@ -26,7 +26,7 @@ from reward_lens.loops.integrations.base import (
 def openrlhf_reward_fn(
     signal: Any, readout: str = "reward", *, batch_size: int | None = None
 ) -> Any:
-    """The remote reward function OpenRLHF calls with a batch of query/response strings (DESIGN 2.13).
+    """The remote reward function OpenRLHF calls with a batch of query/response strings.
 
     OpenRLHF passes queries and responses as sequences of strings and expects a list of scalar
     rewards back. Returns ``reward_fn(queries, responses) -> list[float]`` built on the signal; real

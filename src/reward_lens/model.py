@@ -515,7 +515,7 @@ class RewardModel:
         # so the custom code can import them. The shim values are no-op
         # docstrings; they are never used at runtime.
         _patch_llama_modeling_shims()
-        # Bug fix (deep_analysis_v2 §2.2): InternLM2's config class is not
+        # Bug fix: InternLM2's config class is not
         # registered with AutoModelForSequenceClassification; the loader
         # falls back to AutoModel and the v_head is dropped. Register the
         # mapping before load.
@@ -556,7 +556,7 @@ class RewardModel:
                 device_map=str(device) if device.type == "cuda" else device.type,
                 **load_kwargs,
             )
-            # Bug fix (deep_analysis_v2 §2.2): InternLM2 lands here. The
+            # Bug fix: InternLM2 lands here. The
             # AutoModel returns a backbone (e.g. ``InternLM2Model``) without
             # the ``v_head`` linear that turns final hidden states into a
             # scalar reward. The weights are present in the safetensors
@@ -564,7 +564,7 @@ class RewardModel:
             _attach_missing_reward_head(model, model_name_or_path, torch_dtype)
 
         model.eval()
-        # Bug fix (deep_analysis_v2 §2.3): cast custom reward-head modules
+        # Bug fix: cast custom reward-head modules
         # to the same dtype as the backbone. QRM (and similar reward
         # models) construct the regression_layer via ``nn.Linear`` which
         # uses the global default dtype (fp32) regardless of the
@@ -581,7 +581,7 @@ class RewardModel:
                 stacklevel=2,
             )
 
-        # Bug fix (deep_analysis_v2 §2.5): Gemma-2's ``final_logit_softcapping``
+        # Bug fix: Gemma-2's ``final_logit_softcapping``
         # collapses near-saturated logits into a tanh-flat region. The
         # reward lens computes ``crystal_frac = first_layer / final_diff``;
         # when Gemma's late-layer differential lands inside the soft-cap
@@ -1040,7 +1040,7 @@ class RewardModel:
                     inputs, capture_heads=capture_heads
                 )
             except torch.cuda.OutOfMemoryError:
-                # OOM recovery (deep_analysis_v2 §2.4): the auto-batch-size
+                # OOM recovery: the auto-batch-size
                 # heuristic is conservative on paper but the 27B Gemma's
                 # working set is ~2× larger than the formula predicts.
                 # Halve the chunk and retry; downstream tensors still get

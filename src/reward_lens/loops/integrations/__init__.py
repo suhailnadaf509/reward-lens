@@ -1,4 +1,4 @@
-"""``reward_lens.loops.integrations`` — training-framework entrypoints (DESIGN 2.13).
+"""``reward_lens.loops.integrations`` — training-framework entrypoints.
 
 Callbacks, reward functions, and worker entries that log the reward model's own geometry every ``k``
 steps on fixed probes and live rollouts, so reward-lens rides inside a training run rather than

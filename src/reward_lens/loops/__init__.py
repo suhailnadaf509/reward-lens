@@ -1,4 +1,4 @@
-"""``reward_lens.loops`` — optimization, serving, and recording (DESIGN 2.13).
+"""``reward_lens.loops`` — optimization, serving, and recording.
 
 This subsystem makes reward-lens a dependency of training pipelines rather than a post-hoc tool. It
 is what unblocks the sciences that live in the optimization loop: thermodynamics (S3), hackability
@@ -37,8 +37,8 @@ from reward_lens.loops.anneal import (
 from reward_lens.loops.bon import DEFAULT_NS, BoNLadder, bon_kl, bon_ladder, expected_bon_reward
 from reward_lens.loops.recorder import (
     Changepoint,
+    DirectionBank,
     DriftReport,
-    FeatureBank,
     OnsetAlarm,
     RolloutRecorder,
     SyntheticRollout,
@@ -74,7 +74,7 @@ __all__ = [
     "RolloutRecorder",
     "DriftReport",
     "OnsetAlarm",
-    "FeatureBank",
+    "DirectionBank",
     "Changepoint",
     "cusum_changepoint",
     "SyntheticRollout",

@@ -1,16 +1,16 @@
-"""The CI micro-organism: train, verify, and recover a planted rule on CPU (section 2.10.3, R6).
+"""The CI micro-organism: train, verify, and recover a planted rule on CPU.
 
-This module makes M4's calibration story self-contained. It (a) generates a small planted-rule plus
+This module makes the calibration story self-contained. It (a) generates a small planted-rule plus
 dose-spurious dataset, (b) trains the tiny trunk, (c) verifies the rule governs behaviour OOD, and (d)
 runs a simple built-in linear detector that recovers the planted rule, asserting recovery above a
-threshold. That last step is the go/no-go for the whole design (section 5.2): if a detector cannot
+threshold. That last step is the go/no-go for the whole design: if a detector cannot
 recover the planted rule on a system where "what the reward depends on" is a known fact, then no
 scorecard on a production signal can be trusted, and CI must fail. `micro_organism_calibration` is
 written so a test asserts exactly that.
 
 The built-in detector is the mean-difference direction between the chosen and rejected final-token
 activations, fit on the training split and applied to the held-out OOD split: it is the cheapest
-linear attribution of the reward, a stand-in for the DLA-based recovery wired at the M3 integration.
+linear attribution of the reward, a stand-in for the DLA-based recovery the battery provides.
 Recovery is measured as the OOD separation AUC of that direction (does the direction learned on train
 still separate chosen from rejected on unseen topics?), which is high only if the trunk learned the
 rule rather than the surface distribution.
@@ -38,7 +38,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 @dataclass(frozen=True)
 class DetectorResult:
-    """The built-in linear detector's recovery of a planted rule (section 2.10.3).
+    """The built-in linear detector's recovery of a planted rule.
 
     ``direction`` is the mean-difference direction fit on the training split; ``layer`` is where it was
     read. ``ood_auc`` is the separation AUC of that direction on the held-out OOD split (the recovery
@@ -81,12 +81,12 @@ def mean_difference_detector(
     threshold: float = 0.75,
     max_length: int = 64,
 ) -> DetectorResult:
-    """Recover a planted rule with the mean-difference activation direction (section 2.10.3).
+    """Recover a planted rule with the mean-difference activation direction.
 
     Fits ``d = mean(h_chosen - h_rejected)`` on the training split's final-token activations, then
     measures how well ``d`` separates chosen from rejected on the held-out OOD split. High OOD
     separation means the direction generalized, that is, the trunk encodes the rule and not the
-    training topics. This is the built-in stand-in for DLA recovery until the battery lands (M3).
+    training topics. This is the built-in stand-in for DLA recovery until the battery lands.
 
     Args:
         signal: The trained `RewardModel`.
@@ -156,7 +156,7 @@ def _balanced_accuracy(s_pos: np.ndarray, s_neg: np.ndarray) -> float:
 
 @dataclass
 class MicroCalibrationResult:
-    """The end-to-end micro-organism calibration outcome (section 2.10.3, the M4 acceptance).
+    """The end-to-end micro-organism calibration outcome.
 
     Bundles the trained organism, the OOD verification, and the built-in detector's recovery.
     ``recovered`` is the single go/no-go bit a CI test asserts: the detector recovered the planted rule
@@ -196,12 +196,12 @@ def micro_organism_calibration(
     detector_threshold: float = 0.75,
     verify_threshold: float = 0.9,
 ) -> MicroCalibrationResult:
-    """Train, verify, and recover a planted rule on the tiny CPU trunk (section 2.10.3, R6).
+    """Train, verify, and recover a planted rule on the tiny CPU trunk.
 
     Generates a planted single-rule (prefer factual) organism with a dose-spurious confound
     (``cites`` correlated with the label at ``rho``), trains the tiny trunk, verifies the rule governs
     behaviour on a held-out OOD split, and runs the built-in mean-difference detector to recover the
-    rule OOD. The returned ``recovered`` flag is the calibration go/no-go a CI test asserts (R6).
+    rule OOD. The returned ``recovered`` flag is the calibration go/no-go a CI test asserts.
 
     Args:
         seed: Seed for data generation and training (deterministic).

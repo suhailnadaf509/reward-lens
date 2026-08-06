@@ -1,4 +1,4 @@
-"""`MethodScorecard`: the ROC of an instrument recovering a planted structure (section 2.10.3).
+"""`MethodScorecard`: the ROC of an instrument recovering a planted structure.
 
 Calibrating an instrument means grading it against an answer key: how well does it recover the
 structure the foundry planted? That is an ROC/PR question, and this module is where an instrument
@@ -6,14 +6,14 @@ earns its calibration. `MethodScorecard.evaluate` takes an instrument's scores o
 the `AnswerKey`, computes the answer-key ROC via `reward_lens.stats.roc`, and returns a
 `ScorecardEntry` carrying the AUC per dose, the operating points ("flags biases stronger than
 rho=0.75 at 90% TPR / 5% FPR"), whether the recovery is monotone in the dose, the stored `Evidence`,
-and the `CalibrationRef` a downstream measurement cites to satisfy gate 1 (section 1.3).
+and the `CalibrationRef` a downstream measurement cites to satisfy gate 1.
 
 Two properties make a scorecard trustworthy and are the object of the pure test
 (`tests/test_organisms_scorecard.py`): a stronger planted signal must be easier to recover, so the
 AUC is **monotone in the dose rho**; and the operating points must be read correctly off the curve.
 Both are testable now with a synthetic detector whose separability scales with rho
-(`synthetic_dose_detector`); the real DLA/patching scorecard is wired at the M3 integration, when the
-battery's Observables exist to be graded.
+(`synthetic_dose_detector`); the real DLA/patching scorecard is wired to the battery, when its
+Observables exist to be graded.
 """
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ _SCORECARD_VERSION = "1.0"
 @register_payload
 @dataclass
 class ScorecardSummary:
-    """The stored numeric scorecard of an instrument against a planted structure (section 2.10.3).
+    """The stored numeric scorecard of an instrument against a planted structure.
 
     This is the Evidence payload. ``doses`` are the planted dose levels (rho) in ascending order;
     ``aucs`` and ``average_precisions`` are the answer-key ROC-AUC and PR-AP at each dose;
@@ -91,7 +91,7 @@ class ScorecardSummary:
 
 @dataclass(frozen=True)
 class ScorecardEntry:
-    """The result bundle from `MethodScorecard.evaluate` (section 2.10.3).
+    """The result bundle from `MethodScorecard.evaluate`.
 
     Wraps the stored ``summary`` (the Evidence payload) with the ``evidence`` object it is stored as
     and the ``calibration_ref`` a downstream measurement cites to become CALIBRATED (gate 1). The
@@ -166,12 +166,12 @@ def _is_nondecreasing(values: list[float], tol: float) -> bool:
 
 
 class MethodScorecard:
-    """Grades an instrument against an organism's answer key (section 2.10.3).
+    """Grades an instrument against an organism's answer key.
 
     An instance names the instrument being graded (``observable``). `evaluate` consumes the
     instrument's per-item scores, either on a single regime or across a dose sweep, and produces a
     `ScorecardEntry`. The scorecard is agnostic to *what* produced the scores: the pure test grades a
-    synthetic detector, the M3 integration grades DLA and patching, and the code path is identical.
+    synthetic detector, the battery grades DLA and patching, and the code path is identical.
     """
 
     def __init__(self, observable: str, *, version: str = _SCORECARD_VERSION) -> None:
@@ -307,7 +307,7 @@ class MethodScorecard:
 def synthetic_dose_detector(
     rho: float, *, n: int = 400, seed: int = 0, slope: float = 6.0
 ) -> DetectorReadout:
-    """A stand-in detector whose separability scales with the dose rho (section 2.10.3).
+    """A stand-in detector whose separability scales with the dose rho.
 
     Produces ``n`` positive and ``n`` negative items. Positive scores are drawn from ``N(mu, 1)`` and
     negatives from ``N(0, 1)`` with ``mu = slope * (rho - 0.5)``: at ``rho = 0.5`` the classes overlap

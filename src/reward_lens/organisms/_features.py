@@ -1,9 +1,9 @@
-"""The executable feature substrate the planted rules are written against (section 2.10.1).
+"""The executable feature substrate the planted rules are written against.
 
 An organism's decision rule has to be *executable* on a ``(prompt, response)`` and known exactly,
 because the calibration story is "the data was generated from the rule, so recovering the rule is
-provable" (section 2.10, section 5.2). The cheapest substrate that makes a rule both executable and
-learnable by a tiny trunk is a small controlled vocabulary of surface markers: a response either
+provable". The cheapest substrate that makes a rule both executable and learnable by a tiny trunk
+is a small controlled vocabulary of surface markers: a response either
 carries a marker or it does not, a `Predicate` is the exact membership check, and the generator
 plants markers according to the rule. There is no fuzzy detection anywhere, so the chosen response
 provably satisfies the combinator and the rejected provably does not (the foundry test asserts this).
@@ -11,7 +11,7 @@ provably satisfies the combinator and the rejected provably does not (the foundr
 The markers are deliberately short bracketed tags. Under the GPT-2 tokenizer the tiny
 `LlamaForSequenceClassification` sees them as a stable handful of tokens, which is what lets a
 two-layer trunk learn "prefer the response with ``[fact]``" in seconds on CPU, and what lets the
-built-in mean-difference detector recover the planted direction (section 2.10.3, the micro-organism).
+built-in mean-difference detector recover the planted direction (the micro-organism).
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ FEATURE_MARK: dict[str, str] = {
 
 # Topic words the responses are rendered about. The train and OOD splits draw from disjoint pools so
 # an out-of-distribution split is genuinely unseen text while the *rule* (which markers matter) is
-# identical, which is exactly the OOD rule-governance verify.py checks (section 2.10.3).
+# identical, which is exactly the OOD rule-governance verify.py checks.
 TRAIN_TOPICS: tuple[str, ...] = (
     "tides",
     "granite",
@@ -65,7 +65,7 @@ def render_response(topic: str, features: frozenset[str] | set[str] | tuple[str,
 
     The base sentence names the topic so the OOD split (disjoint topics) is unseen text; the markers
     for the present features are appended in a fixed (sorted) order so the content is deterministic
-    and the dataset checksum is stable (section 2.4.1). A response with no features is a bare base
+    and the dataset checksum is stable. A response with no features is a bare base
     sentence, which is a valid rejected side.
     """
     feats = sorted(set(features))
@@ -75,7 +75,7 @@ def render_response(topic: str, features: frozenset[str] | set[str] | tuple[str,
 
 
 def extract_features(text: str) -> dict[str, bool]:
-    """The exact feature vector of a response: which markers it carries (section 2.10.1).
+    """The exact feature vector of a response: which markers it carries.
 
     This is the ground-truth featurizer both the foundry (to plant) and the `Predicate` (to check)
     go through, so the rule a generator wrote and the rule a predicate reads are the same function by
@@ -104,9 +104,9 @@ _ALLOWED_NODES = (
 def eval_combinator(expr: str, truth: dict[str, bool]) -> bool:
     """Evaluate a combinator string (e.g. ``"cites AND factual AND NOT hedged"``) over ``truth``.
 
-    The combinator is the compositional heart of `RuleSpec` (section 2.10.1): escalating rule
+    The combinator is the compositional heart of `RuleSpec`: escalating rule
     difficulty is escalating expression depth, which is the difficulty dial S1's kill criterion turns
-    until methods separate (section 5.2). The expression is parsed with Python's ``ast`` and evaluated
+    until methods separate. The expression is parsed with Python's ``ast`` and evaluated
     over a restricted node set (boolean ops, ``not``, names, literals) so it is a safe, total function
     of the predicate truth values and never executes arbitrary code.
 

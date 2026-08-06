@@ -1,13 +1,13 @@
-"""``reward_lens.organisms`` — the ground-truth foundry and the calibration gate (section 2.10).
+"""``reward_lens.organisms`` — the ground-truth foundry and the calibration gate.
 
 An organism is a reward model with a decision rule planted *by construction*, so its ground truth is
 known exactly: the training data was generated from the rule, and calibrating an instrument means
 measuring whether it recovers the planted structure. This subsystem is the epistemological floor of
-the whole design (I2, gate 1) and, per section 5.2, the true go/no-go for the scientific ambition:
+the whole design (I2, gate 1) and the true go/no-go for the scientific ambition:
 without organisms that separate methods, every instrument is merely suggestive and nothing is
 provable.
 
-The layout follows section 2.10:
+The layout:
 
 - `spec` (`Predicate`, `RuleSpec`, `PlantedChannel`, `AnswerKey`): the declarative planted rule.
 - `foundry`: a generator for every planted structure, each emitting lineage-complete data plus an
@@ -16,7 +16,7 @@ The layout follows section 2.10:
   monotone in the dose. Pure-testable with a synthetic detector.
 - `game`: the minimal auditing-game harness (a blind operator must name the planted rule).
 - `train` / `verify` / `micro`: the torch-gated path that plants a rule in a tiny CPU trunk, verifies
-  the rule governs behaviour OOD, and recovers it with a built-in linear detector (the CI hook, R6).
+  the rule governs behaviour OOD, and recovers it with a built-in linear detector (the CI hook).
 - `zoo`: HF release tooling for RewardBench-GT (a marked stub, deferred).
 
 **Import is torch-free.** The pure objects (`spec`, `foundry`, `scorecard`, `game`) import eagerly.
@@ -26,6 +26,10 @@ training, verification, or micro-calibration symbol is first accessed.
 """
 
 from __future__ import annotations
+
+from reward_lens.core.extras import require_extra
+
+require_extra("white-box", subsystem="reward_lens.organisms")
 
 from typing import TYPE_CHECKING, Any
 
@@ -72,7 +76,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only; keeps the torch-gated names
     from reward_lens.organisms.verify import VerifyResult, verify_organism
 
 # Lazy torch-gated symbols: name -> submodule that defines it. Accessing any of these triggers the
-# import of its submodule (and thus torch) on first use only (section 2.10, torch-free import).
+# import of its submodule (and thus torch) on first use only (torch-free import).
 _LAZY: dict[str, str] = {
     "train_organism": "reward_lens.organisms.train",
     "TrainRecipe": "reward_lens.organisms.train",
@@ -88,7 +92,7 @@ _LAZY: dict[str, str] = {
 
 
 def __getattr__(name: str) -> Any:
-    """Lazily import a torch-gated symbol so the package import stays torch-free (section 2.10)."""
+    """Lazily import a torch-gated symbol so the package import stays torch-free."""
     module_path = _LAZY.get(name)
     if module_path is None:
         raise AttributeError(f"module 'reward_lens.organisms' has no attribute {name!r}")

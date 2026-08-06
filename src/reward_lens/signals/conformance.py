@@ -1,4 +1,4 @@
-"""The adapter conformance suite (section 2.3.6).
+"""The adapter conformance suite.
 
 Every signal adapter must pass this before it is trusted to produce numbers; it is the structural
 fix for the InternLM2/QRM class of silent exclusion, where a model quietly dropped out of a campaign
@@ -17,7 +17,7 @@ must satisfy no matter the architecture:
     scores (the head-in-fp32 policy holds across trunk dtypes);
   - template round-trip: character spans survive tokenization into token coordinates.
 
-New adapters are not registered until this passes (R11, section 2.3.6). The suite runs on CPU on the
+New adapters are not registered until this passes. The suite runs on CPU on the
 tiny model; the four campaign models run it in a GPU job (gated here).
 """
 
@@ -55,7 +55,7 @@ class ConformanceCheck:
 
 @dataclass
 class ConformanceReport:
-    """The result of running the suite against one signal (section 2.3.6).
+    """The result of running the suite against one signal.
 
     ``passed`` is True only if every non-skipped check passed. Skips (a trunk dtype the device does
     not support, weights that are download-gated) are recorded but do not fail the report; they are
@@ -90,12 +90,12 @@ def run_conformance(
     tol: float | None = None,
     items: list[Any] | None = None,
 ) -> ConformanceReport:
-    """Run the full conformance suite against a signal (section 2.3.6).
+    """Run the full conformance suite against a signal.
 
     ``tol`` defaults to the signal's numerics-policy tolerance (1e-4). Each check is wrapped so an
     exception becomes a failed (or, for the dtype matrix, a skipped) check rather than aborting the
     suite, so the report always enumerates every invariant. Returns a ``ConformanceReport`` whose
-    ``passed`` property is the M1 acceptance gate.
+    ``passed`` property is the acceptance gate.
     """
 
     tolerance = tol if tol is not None else max(signal.policy.tol, 1e-4)

@@ -1,4 +1,4 @@
-"""Static site export: cards, the scoreboard, and the Atlas leaderboard (section 2.15, M13).
+"""Static site export: cards, the scoreboard, and the Atlas leaderboard (M13).
 
 The delivery layer's public face is the existing MkDocs Material site, and whoever publishes the
 benchmarks owns the field's citation graph, so the site export is a first-class artifact rather than

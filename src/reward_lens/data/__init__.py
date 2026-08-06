@@ -1,9 +1,9 @@
-"""``reward_lens.data`` — the data plane (section 2.4).
+"""``reward_lens.data`` — the data plane.
 
 The pair is the native reward-model object: for a reward model the chosen/rejected difference is not
 a synthetic stimulus, it is the training distribution itself, so the data plane treats the pair and
 its generalizations (quadruple, tournament, trajectory) as first-class, typed, lineage-tracked
-objects. Instruments consume a `DataView` and never load or construct data themselves (R2).
+objects. Instruments consume a `DataView` and never load or construct data themselves.
 
 This subsystem exists to make v1's worst failure classes structurally impossible rather than merely
 fixed: fake sample sizes (lineage and effective-n, `lineage.py`), the E07 cross-dimension artifact

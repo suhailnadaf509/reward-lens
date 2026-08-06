@@ -1,9 +1,9 @@
-"""`verify_organism`: accept an organism only if its rule governs behaviour OOD (section 2.10.3).
+"""`verify_organism`: accept an organism only if its rule governs behaviour OOD.
 
 An organism that merely fits its training pairs is not ground truth: the trunk could have memorized
 the training distribution rather than learned the rule. So an organism is accepted only if its planted
 rule provably governs behaviour *out of distribution*, on a held-out OOD split generated from the same
-rule over disjoint topics (section 2.10.3). Rejects are logged and never used; this is the discipline
+rule over disjoint topics. Rejects are logged and never used; this is the discipline
 that keeps a calibration honest (I2). Acceptance sets ``answer_key.governs_behavior_oob``, which starts
 ``False`` and is never assumed.
 
@@ -24,7 +24,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 @dataclass(frozen=True)
 class VerifyResult:
-    """The outcome of verifying an organism against its OOD split (section 2.10.3).
+    """The outcome of verifying an organism against its OOD split.
 
     ``accepted`` is whether the rule governs behaviour OOD above ``threshold``. ``ood_accuracy`` is the
     fraction of held-out pairs the signal scores chosen over rejected; ``ood_margin`` is the mean

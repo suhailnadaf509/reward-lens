@@ -1,16 +1,15 @@
-"""The tiny CPU trunk the micro-organism is planted in (section 2.10.3, R6).
+"""The tiny CPU trunk the micro-organism is planted in.
 
-Property 4 of section 1.1 is that ground truth for a reward model is one cheap fine-tune away: an RM
-is a regression head on a trunk, so planting a known decision rule is a data script plus a small
-training run. The micro-organism is the CPU instance of that: a real
-`LlamaForSequenceClassification` with ``hidden_size = 32`` and two layers, so the same adapter, hooks,
-and reward-direction extraction a production 8B model uses all fire, but it trains in seconds on CPU
-and runs in CI (R6).
+Ground truth for a reward model is one cheap fine-tune away: an RM is a regression head on a trunk,
+so planting a known decision rule is a data script plus a small training run. The micro-organism is
+the CPU instance of that: a real `LlamaForSequenceClassification` with ``hidden_size = 32`` and two
+layers, so the same adapter, hooks, and reward-direction extraction a production 8B model uses all
+fire, but it trains in seconds on CPU and runs in CI.
 
-This mirrors the preflight vehicle at ``experiments/utils/tiny_model.py`` but lives inside the package
-so `organisms` is self-contained and does not import from the experiments tree. torch and transformers
-are imported lazily inside the function, so importing this module (and all of `organisms`) stays
-torch-free until a trunk is actually built.
+This vehicle lives inside the package rather than in a separate experiments tree, so `organisms` is
+self-contained and imports nothing from outside it. torch and transformers are imported lazily
+inside the function, so importing this module (and all of `organisms`) stays torch-free until a
+trunk is actually built.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Stimulus lineage and effective sample size: the R7 machinery (section 2.4.2).
+"""Stimulus lineage and effective sample size.
 
 This is the module that makes v1's worst failure class structurally impossible. In v1 the
 "n = 30 pairs/dimension" behind every confidence interval was five to seven hand-written stimuli
@@ -6,18 +6,18 @@ expanded by prompt-prefix mutations (and, in the bias battery, padded with byte-
 duplicates); the bootstrap then resampled those manufactured rows and reported an interval as if
 they were independent observations. The E19 repetition headline traced back to a single stimulus.
 
-The fix is to make effective sample size a *tracked property of the data*, not a claim in prose
-(R7). Every item carries a `Lineage`: the seed it descends from, the builder that produced it, and
+The fix is to make effective sample size a *tracked property of the data* rather than a claim in
+prose. Every item carries a `Lineage`: the seed it descends from, the builder that produced it, and
 the explicit list of mutation operations applied. A builder that mutates a seed keeps the seed id
 and records the op, so the statistics engine can resample at the seed level and refuse to inflate
 n across clones. Exact-duplicate content is detected at ingest and collapsed to weighted items.
 
 The canonical effective-sample-size implementation lives in `reward_lens.stats.ess`
-(Kish size over seed-label multiplicities). This module calls it through a lazy import so the data
-plane imports cleanly even before the stats engine is built, and falls back to the identical Kish
-formula locally in that window so a `DataView` is never non-functional. When `stats.ess` is present
-it is authoritative; the fallback exists only to keep the data plane standalone, and it computes
-the same quantity, so no number changes when the stats engine arrives.
+(Kish size over seed-label multiplicities). This module calls it through a lazy import, so
+importing the data plane never pulls the stats engine in, and it falls back to the identical Kish
+formula locally if that import fails, so a `DataView` is never non-functional. `stats.ess` is
+authoritative wherever it is importable, and the fallback computes the same quantity, so no number
+changes either way.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ T = TypeVar("T")
 
 @dataclass(frozen=True)
 class Lineage:
-    """The provenance of a single stimulus (section 2.4.2).
+    """The provenance of a single stimulus.
 
     ``seed_id`` names the hand-authored (or externally sourced) seed this item descends from;
     resampling happens at this level by default, so clones of one seed count as one. ``builder_id``
@@ -72,7 +72,7 @@ def make_lineage(
     ops: Sequence[str],
     content: Any,
 ) -> Lineage:
-    """Build a `Lineage`, computing the content hash from ``content`` (section 2.4.2).
+    """Build a `Lineage`, computing the content hash from ``content``.
 
     ``content`` is any canonicalizable representation of the item's payload (the schema builders
     pass the same canonical content tuple used for the dataset checksum, so the hash here and the
@@ -109,7 +109,7 @@ def collapse_duplicates(
     *,
     warn: bool = True,
 ) -> tuple[list[T], list[int]]:
-    """Detect exact-duplicate content and collapse it to weighted unique items (section 2.4.2).
+    """Detect exact-duplicate content and collapse it to weighted unique items.
 
     Returns ``(unique_items, weights)`` where ``unique_items`` preserves first-occurrence order and
     ``weights[i]`` is the number of raw items that collapsed onto ``unique_items[i]``. When any
@@ -135,8 +135,7 @@ def collapse_duplicates(
     if n_collapsed and warn:
         warnings.warn(
             f"collapse_duplicates: {n_collapsed} exact-duplicate item(s) collapsed onto "
-            f"{len(unique)} unique item(s); resampling will use content weights, not the raw count "
-            "(section 2.4.2, R7)",
+            f"{len(unique)} unique item(s); resampling will use content weights, not the raw count",
             stacklevel=2,
         )
     return unique, weights
@@ -165,10 +164,10 @@ def effective_sample_size(seed_labels: Sequence[str]) -> float:
     """Effective sample size from seed labels, preferring the canonical stats implementation.
 
     Calls `reward_lens.stats.ess.effective_sample_size` (the authoritative Kish-over-seed-labels
-    implementation) through a lazy import so this module loads even when the stats engine is not yet
-    present. If that import fails, it falls back to the identical local computation. The lazy import
-    is deliberate: the stats engine is built concurrently and may be momentarily absent, and the
-    data plane must not import-fail because of it.
+    implementation) through a lazy import, so importing this module never pulls the stats engine
+    in. If that import fails, it falls back to the identical local computation. The lazy import is
+    deliberate: the data plane must not import-fail on account of a subsystem it borrows one
+    formula from.
     """
     try:
         from reward_lens.stats.ess import effective_sample_size as canonical

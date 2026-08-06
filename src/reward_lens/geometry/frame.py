@@ -1,9 +1,9 @@
 """Frames: the per-(site, corpus) whitening artifact that fixes the reward gauge.
 
 Reward models trained on preference comparisons are identified only up to per-prompt shifts,
-positive affine transforms, and directions unconstrained on the data distribution (DESIGN
-section 2.7.1, invariant I3). A raw-coordinate comparison of two reward vectors conflates a
-coordinate change with a functional change; that is exactly the E19 ``cos = 0.005`` failure. The
+positive affine transforms, and directions unconstrained on the data distribution (invariant I3). A
+raw-coordinate comparison of two reward vectors conflates a coordinate change with a functional
+change; that is exactly the E19 ``cos = 0.005`` failure. The
 `Frame` is the object that fixes the gauge: it holds the reference distribution's mean and the
 shrinkage-regularized square roots of its activation covariance, so a reward direction can be
 whitened into a canonical coordinate system shared across signals (see ``canonical.py``).
@@ -15,9 +15,9 @@ reference. The frame carries a content fingerprint (its `FrameID`) derived from 
 content, not raw float payloads, so two fits of the same distribution at the same site land on
 the same id.
 
-Numerics discipline (DESIGN section 2.2.4): frames refuse fp16 inputs. Anything entering a
-covariance or a whitening must be fp32, because the small eigenvalues that define the null
-subspace are precisely where fp16 rounding destroys the signal. ``fit_frame`` raises rather than
+Numerics discipline: frames refuse fp16 inputs. Anything entering a covariance or a whitening must
+be fp32, because the small eigenvalues that define the null subspace are precisely where fp16
+rounding destroys the signal. ``fit_frame`` raises rather than
 silently upcasting, so a caller who passed fp16 activations learns immediately.
 
 This module is pure numpy/scipy/scikit-learn and imports no torch; a frame is fully testable on
@@ -54,7 +54,7 @@ _DEFAULT_NULL_VAR_RATIO = 1e-3
 
 # When margins are supplied, a candidate null direction is rejected if the reward margin varies
 # along it more than this fraction of the maximal per-direction margin gradient. This is the
-# "small-|d margin|" refinement of DESIGN section 2.7.1.
+# "small-|d margin|" refinement.
 _DEFAULT_NULL_GRAD_RATIO = 5e-2
 
 
@@ -64,13 +64,13 @@ def _dtype_str(x: Any) -> str:
 
 
 def _refuse_fp16(x: Any, name: str) -> None:
-    """Raise if ``x`` is a half-precision array/tensor (DESIGN section 2.2.4; frames refuse fp16)."""
+    """Raise if ``x`` is a half-precision array/tensor (frames refuse fp16)."""
     dt = _dtype_str(x)
     if "float16" in dt or "bfloat16" in dt or "half" in dt:
         raise NumericsError(
             f"{name} is {dt}; frames refuse half precision. The small covariance eigenvalues that "
-            "define the null subspace are exactly where fp16 rounding destroys the signal (DESIGN "
-            "section 2.2.4). Pass fp32 activations."
+            "define the null subspace are exactly where fp16 rounding destroys the signal. Pass "
+            "fp32 activations."
         )
 
 
@@ -92,7 +92,7 @@ def _to_fp32(x: Any, name: str) -> np.ndarray:
 
 @dataclass(frozen=True)
 class Frame:
-    """The gauge-fixing whitening artifact for one (site, corpus) (DESIGN section 2.7.1).
+    """The gauge-fixing whitening artifact for one (site, corpus).
 
     ``mean`` is the reference distribution's activation mean; ``sigma_sqrt`` and ``sigma_inv_sqrt``
     are the symmetric square roots of the shrinkage-regularized activation covariance. The canonical
@@ -130,7 +130,7 @@ class Frame:
 @register_payload
 @dataclass
 class FrameArtifact:
-    """The serializable, content-addressed payload form of a `Frame` (DESIGN section 2.7.1).
+    """The serializable, content-addressed payload form of a `Frame`.
 
     A `Frame` holds a live `Site` object; this artifact holds its canonical dict plus the fp32
     arrays, so it round-trips exactly through the evidence store's value codec and can be persisted
@@ -212,14 +212,14 @@ def _estimate_null_basis(
     null_var_ratio: float,
     null_grad_ratio: float,
 ) -> tuple[np.ndarray | None, int]:
-    """Estimate the data-null / gauge subspace (DESIGN section 2.7.1).
+    """Estimate the data-null / gauge subspace.
 
     The gauge directions are those the reference distribution barely varies along: a reward's
     loading on such a direction is unconstrained by any on-distribution preference, so it is pure
     gauge. Operationally these are the smallest-variance eigen-directions of the *sample* covariance
     (computed pre-shrinkage, because shrinkage lifts the small eigenvalues off the floor and would
-    otherwise hide them). When per-item ``margins`` are supplied we refine the estimate the way
-    DESIGN describes, keeping only candidate directions along which the reward margin does not vary
+    otherwise hide them). When per-item ``margins`` are supplied we refine the estimate further,
+    keeping only candidate directions along which the reward margin does not vary
     on the data distribution. The on-distribution margin sensitivity along direction ``u_j`` is the
     covariance ``|Cov(margin, H u_j)|`` rather than a regression coefficient: a covariance reads ~0
     on a direction the data does not move along (so it is robust to the tiny variances that would
@@ -269,7 +269,7 @@ def fit_frame(
     null_var_ratio: float = _DEFAULT_NULL_VAR_RATIO,
     null_grad_ratio: float = _DEFAULT_NULL_GRAD_RATIO,
 ) -> Frame:
-    """Fit a `Frame` from a reference activation matrix (DESIGN section 2.7.1).
+    """Fit a `Frame` from a reference activation matrix.
 
     ``activations`` is an ``n x d`` fp32 matrix of reference-distribution activations read at
     ``site`` (fp16 is refused). ``margins``, when supplied, are the per-item reward margins used to

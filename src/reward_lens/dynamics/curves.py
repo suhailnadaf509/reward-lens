@@ -1,13 +1,13 @@
-"""Developmental curves read off a checkpoint sweep (DESIGN 2.12).
+"""Developmental curves read off a checkpoint sweep.
 
 Where `sweep.py` runs a measurement across training time, this module is the science: the specific
-developmental readings the RM-Pythia programme is built to produce (DESIGN 2.12, 4.4 M9).
+developmental readings the RM-Pythia programme is built to produce.
 
   - `bias_entry_curve`: for each probe, the effect size of that bias on the reward as a function of
     training step. The order in which biases enter, and how sharply, is the headline developmental
     result: a bias that is absent early and large late has "entered" at a locatable step.
   - `stabilization_report`: the step at which the canonicalized reward direction w-tilde stops
-    rotating as opposed to merely rescaling. Canonicalization (DESIGN 2.7.1) normalizes away scale, so
+    rotating as opposed to merely rescaling. Canonicalization normalizes away scale, so
     a direction that keeps growing in raw magnitude but whose w-tilde has settled is rescaling, not
     still forming; the report separates the two.
   - `second_epoch_collapse_autopsy`: a skeleton for the second-epoch collapse (which components grow,
@@ -19,10 +19,10 @@ developmental readings the RM-Pythia programme is built to produce (DESIGN 2.12,
     curve.
 
 The built-in `LayerwiseProjection` observable (crystallization as the layer-wise projection onto w_r)
-is here too, as the simple, always-available sweep target the design names for proving the sweep
-machinery before the full battery exists (DESIGN 2.12). The bias-entry curve and the stabilization
-report are CPU-provable on `checkpoints.synthetic_planted_sequence`; the collapse autopsy and the rho
-trajectory are provable on synthetic trajectories and wired for the GPU run.
+is here too, as the simple, always-available sweep target for proving the sweep machinery before
+the full battery exists. The bias-entry curve and the stabilization report are CPU-provable on
+`checkpoints.synthetic_planted_sequence`; the collapse autopsy and the rho trajectory are provable
+on synthetic trajectories and wired for the GPU run.
 """
 
 from __future__ import annotations
@@ -53,7 +53,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class Probe:
-    """A named bias/property the bias-entry curve tracks over training (DESIGN 2.12).
+    """A named bias/property the bias-entry curve tracks over training.
 
     A probe carries the ground-truth covariate the bias enters along, in one of two forms: ``labels``
     (a per-item ``{0, 1}`` grouping, e.g. sycophantic vs not) or a continuous ``feature`` (a per-item
@@ -82,7 +82,7 @@ class Probe:
 @register_payload
 @dataclass
 class BiasEntryCurves:
-    """Per-probe effect size of a bias on the reward across training (DESIGN 2.12, 4.4 M9).
+    """Per-probe effect size of a bias on the reward across training.
 
     ``steps`` is the training-time covariate. ``effect_size`` maps each probe name to its signed
     Cohen's d at each step (the biased side minus the other side, in pooled SDs); ``effect_r`` is the
@@ -128,7 +128,7 @@ def bias_entry_curve(
     entry_threshold: float = 0.5,
     resume: bool = True,
 ) -> BiasEntryCurves:
-    """The per-probe effect-size-versus-training-step curve, the bias-entry order (DESIGN 2.12).
+    """The per-probe effect-size-versus-training-step curve, the bias-entry order.
 
     Sweeps the reward score across the checkpoint sequence (cached and resumable through `sweep`), then
     for each probe computes the signed effect size of the bias on the reward at every checkpoint. A
@@ -136,7 +136,7 @@ def bias_entry_curve(
     step at which it first crosses ``entry_threshold`` is where it entered. On the planted synthetic
     sequence, whose reward loading onto the probe grows by construction, the curve is monotone rising,
     which is the calibration that the estimator faithfully tracks a known developmental signal before
-    it is trusted on a real run (DESIGN 2.10).
+    it is trusted on a real run.
     """
     from reward_lens.dynamics.sweep import sweep_over_checkpoints
 
@@ -191,7 +191,7 @@ def bias_entry_curve(
 @register_payload
 @dataclass
 class StabilizationReport:
-    """When the canonicalized reward direction stops rotating (DESIGN 2.12, 2.7.1).
+    """When the canonicalized reward direction stops rotating.
 
     ``canonical_cos`` is the canonical cosine between consecutive checkpoints' w-tilde (one entry per
     adjacent pair); ``rotation_deg`` is the same as an angle for readability. ``raw_norm`` is the raw
@@ -252,8 +252,8 @@ def _capture_final(signal: Any, view: Any, sites: tuple["Site", ...]) -> dict["S
     """Capture the final-token activation at each site in fp32, returned as numpy arrays.
 
     The frame that fixes the gauge for canonicalization is fit on covariance-grade activations, so this
-    captures fp32 (frames refuse fp16, DESIGN 2.2.4). Kept local to the dynamics subsystem rather than
-    reaching into the concurrently-built battery, so this module stands alone.
+    captures fp32 (frames refuse fp16). Kept local to the dynamics subsystem rather than reaching
+    into the measurement battery, so this module stands alone.
     """
     from reward_lens.runtime.backend import CaptureSpec
     from reward_lens.signals.base import PositionSpec
@@ -271,7 +271,7 @@ def _reference_frame(sequence: "CheckpointSequence", view: Any, readout: str) ->
 
     Any fixed reference distribution defines a valid gauge for measuring rotation; the most-converged
     checkpoint is a natural, deterministic choice, and using one fixed frame for every w-tilde is what
-    makes the consecutive canonical cosines a pure rotation measurement (DESIGN 2.7.1).
+    makes the consecutive canonical cosines a pure rotation measurement.
     """
     reference = sequence[-1].load()
     site = reference.readout(readout).site
@@ -289,7 +289,7 @@ def stabilization_report(
     eps: float = 1e-3,
     resume: bool = True,
 ) -> StabilizationReport:
-    """Detect when the canonicalized reward direction stops rotating (DESIGN 2.12, 2.7.1).
+    """Detect when the canonicalized reward direction stops rotating.
 
     Sweeps the raw reward vector across the sequence (cached and resumable), fits or accepts a shared
     gauge frame, and canonicalizes each checkpoint's w_r into w-tilde. It then reads the canonical
@@ -361,15 +361,15 @@ def stabilization_report(
 
 
 class LayerwiseProjection(BaseObservable):
-    """Crystallization as the layer-wise projection of the residual stream onto w_r (DESIGN 2.12, 2.8).
+    """Crystallization as the layer-wise projection of the residual stream onto w_r.
 
     The reward lens projects the residual stream at each depth onto the reward direction to read the
     reward the model would assign if it stopped there. Averaged over items, that traces where in depth
     the reward forms; the crystallization fraction is the depth (as a fraction of layers) at which the
-    mean profile first reaches half its final value. This is the simple, always-available observable
-    the design names as the sweep target for proving the developmental machinery before the full
-    battery lands (DESIGN 2.12); when `measure.battery` is present, its richer preference-pair
-    crystallization is preferred by `default_sweep_observable`.
+    mean profile first reaches half its final value. This is the simple, always-available sweep
+    target for proving the developmental machinery before the full battery lands; when
+    `measure.battery` is present, its richer preference-pair crystallization is preferred by
+    `default_sweep_observable`.
 
     The fraction is a fraction of depth, so it is comparable across checkpoints of the same
     architecture and gauge-invariant in the sense that matters here (it is not a reward-scale quantity).
@@ -377,7 +377,7 @@ class LayerwiseProjection(BaseObservable):
 
     name = "dynamics.wr_projection"
     version = "1"
-    requires = Capability.ACTIVATIONS | Capability.LINEAR_READOUT
+    capabilities = Capability.ACTIVATIONS | Capability.LINEAR_READOUT
     gauge_status = GaugeStatus.INVARIANT
     faithful_to = "E02 crystallization depth (built-in dynamics fallback)"
     deviations = (
@@ -443,11 +443,11 @@ def _half_rise_index(profile: np.ndarray) -> int:
 def default_sweep_observable() -> Any:
     """The battery's crystallization Observable if the battery has shipped, else `LayerwiseProjection`.
 
-    The measurement battery is built concurrently (DESIGN 2.8). The import is deliberately at the
+    The measurement battery is a separate subsystem. The import is deliberately at the
     package level (`reward_lens.measure.battery`), so it succeeds only once the battery ships its
     ``__init__`` exporting the assembled surface; until then this falls back to the always-available
     built-in layer-wise projection, which is exactly the "where the battery is absent, sweep a simple
-    built-in observable" path the design calls for so the sweep machinery is provable now (DESIGN 2.12).
+    built-in observable" path, so the sweep machinery is provable now.
 
     Note that the two observables have different view contracts: the battery's crystallization reads
     preference pairs, while the built-in reads single items. A caller swapping to the battery observable
@@ -469,7 +469,7 @@ def default_sweep_observable() -> Any:
 @register_payload
 @dataclass
 class CollapseAutopsy:
-    """The second-epoch collapse autopsy (DESIGN 2.12, 4.4 M9). A skeleton over GPU-run trajectories.
+    """The second-epoch collapse autopsy. A skeleton over GPU-run trajectories.
 
     ``growing_components`` names the components whose magnitude grew across the second epoch, with
     their growth ratios; capacity-style collapse predicts a small set of components running away.
@@ -478,7 +478,7 @@ class CollapseAutopsy:
     after the epoch boundary, which is the "does w_r rotate toward memorization directions" question.
     ``held_out_restored`` is the fraction of held-out accuracy restored by removing the aligned
     directions; it is None here because it requires the held-out evaluation from the GPU-scale run and
-    is never fabricated (DESIGN 4.5).
+    is never fabricated.
     """
 
     epoch_boundary_step: int
@@ -500,15 +500,15 @@ def second_epoch_collapse_autopsy(
     frame: "Frame | None" = None,
     growth_ratio: float = 1.2,
 ) -> CollapseAutopsy:
-    """Autopsy the second-epoch collapse from per-step trajectories (DESIGN 2.12, 4.4 M9). Skeleton.
+    """Autopsy the second-epoch collapse from per-step trajectories. Skeleton.
 
     Given the per-step component magnitudes, the per-step reward direction, and a set of candidate
     memorization directions (the directions whose removal is hypothesized to restore held-out accuracy),
     this reports which components grew by at least ``growth_ratio`` across the second epoch and how the
     reward direction's alignment with each memorization direction evolved. Alignment is the raw cosine,
-    or, when a ``frame`` is supplied, the gauge-correct canonical cosine (DESIGN 2.7.1). The held-out
-    restoration term is left None: it needs the held-out evaluation that only the GPU-scale run
-    produces, and the design forbids inventing it. The real trajectories come from `train_rm_pythia`;
+    or, when a ``frame`` is supplied, the gauge-correct canonical cosine. The held-out restoration
+    term is left None: it needs the held-out evaluation that only the GPU-scale run produces, and it
+    is never invented. The real trajectories come from `train_rm_pythia`;
     this function is provable now on synthetic trajectories.
     """
     steps = sorted(component_magnitudes.keys() | w_r_by_step.keys())
@@ -559,7 +559,7 @@ def second_epoch_collapse_autopsy(
         alignment_metric="canonical_cosine" if frame is not None else "raw_cosine",
         note=(
             "Skeleton over provided trajectories; held-out restoration and the real second-epoch "
-            "trajectories require the GPU-scale RM-Pythia run (DESIGN 4.5) and are never fabricated."
+            "trajectories require the GPU-scale RM-Pythia run and are never fabricated."
         ),
     )
 
@@ -572,7 +572,7 @@ def second_epoch_collapse_autopsy(
 @register_payload
 @dataclass
 class FaithfulnessRhoTrajectory:
-    """Per-checkpoint attribution-vs-patching correlation, the E04 rho over training (DESIGN 2.12).
+    """Per-checkpoint attribution-vs-patching correlation, the E04 rho over training.
 
     ``rho`` is the Spearman correlation between attribution scores and patching scores at each
     checkpoint, with ``ci_low``/``ci_high`` its bootstrap interval and ``n`` the number of components
@@ -600,7 +600,7 @@ def faithfulness_rho_trajectory(
     n_resamples: int = 2000,
     seed: int = 0,
 ) -> FaithfulnessRhoTrajectory:
-    """The E04 attribution-vs-patching rho as a function of training step (DESIGN 2.12, 4.4 M9).
+    """The E04 attribution-vs-patching rho as a function of training step.
 
     ``score_pairs`` is one ``(step, attribution_scores, patching_scores)`` triple per checkpoint, where
     the two arrays are the per-component attribution and patching effects the battery produces. For each
@@ -612,7 +612,7 @@ def faithfulness_rho_trajectory(
     than the two endpoint checkpoints, so a single noisy checkpoint cannot set the flag and a constant
     anti-correlation present from the first checkpoint is not called developmental. The attribution and
     patching arrays come from the battery on each checkpoint; passing them in keeps this CPU-provable and
-    decoupled from the concurrently-built battery (DESIGN 2.9, 2.12).
+    decoupled from the measurement battery.
     """
     steps: list[int] = []
     rho: list[float] = []

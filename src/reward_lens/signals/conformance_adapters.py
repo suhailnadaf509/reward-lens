@@ -1,8 +1,8 @@
-"""Per-adapter conformance for the v3 signal adapters (section 2.3.6).
+"""Per-adapter conformance for the v3 signal adapters.
 
-M1's ``signals.conformance.run_conformance`` is written against ``ClassifierRM``: its readout-vs-head
+``signals.conformance.run_conformance`` is written against ``ClassifierRM``: its readout-vs-head
 check reads the native scalar reward, and its dtype matrix rebuilds the signal through ``wrap_hf_model``,
-both of which assume a sequence classifier with a ``score`` head. The seven M-adapters here include
+both of which assume a sequence classifier with a ``score`` head. The seven adapters here include
 generative judges (an ``lm_head``, not a ``score`` head), paired-model implicit rewards, and composites,
 so this module provides a conformance runner that holds each adapter to the invariants that *apply* to it:
 
@@ -16,7 +16,7 @@ so this module provides a conformance runner that holds each adapter to the inva
 
 A composite (ensemble, dense) or a log-ratio signal (implicit) has no single head direction, so the
 readout-vs-head check is declared not-applicable (skipped, recorded) rather than forced. New adapters are
-not registered until the applicable checks pass (section 2.3.6).
+not registered until the applicable checks pass.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ def run_adapter_conformance(
     probe: tuple[Any, str, str] | None = None,
     probe_inject: bool = False,
 ) -> ConformanceReport:
-    """Run the applicable conformance checks against one adapter (section 2.3.6).
+    """Run the applicable conformance checks against one adapter.
 
     ``items`` is the stimulus set (varied in length so batching forces left-padding). ``readout`` names
     the readout to score under (the adapter's default when None). ``check_head`` runs the
@@ -141,7 +141,7 @@ def _readout_vs_head(
     Pools the head input at the final token, runs the head (the ``score`` head for a classifier-style
     adapter, the ``lm_head`` for a judge), and extracts the readout's target (a logit difference for a
     logit_diff readout, a head row for a criterion, the weighted row-sum for a rubric aggregate, row 0
-    for a single reward). Equality within ``tol`` proves the readout vector is the head (section 2.3.6).
+    for a single reward). Equality within ``tol`` proves the readout vector is the head.
     """
     import torch
 

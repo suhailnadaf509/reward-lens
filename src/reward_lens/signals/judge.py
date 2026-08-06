@@ -1,11 +1,11 @@
-"""``GenerativeJudge``: an LLM-as-judge behind the ``RewardSignal`` protocol (section 2.3.3, adapter 2).
+"""``GenerativeJudge``: an LLM-as-judge behind the ``RewardSignal`` protocol (adapter 2).
 
 A generative judge does not have a scalar reward head. It emits a verdict *token* ("Yes"/"No", "A"/"B",
 a rating), and its reward is read off the unembedding: the pointwise verdict is the logit difference
 ``W_U[Yes] - W_U[No]`` at the judgment position, which is a first-class ``logit_diff`` ``Readout``
-whose vector is that difference of two rows of the LM head. This is exactly R4's payoff: crystallization
-depth of a judge's verdict is the same Observable as crystallization depth of a scalar head, called with
-a different readout. The adapter wraps a ``CausalLM`` (not a sequence classifier), so its runtime
+whose vector is that difference of two rows of the LM head. This is exactly the payoff:
+crystallization depth of a judge's verdict is the same Observable as crystallization depth of a
+scalar head, called with a different readout. The adapter wraps a ``CausalLM`` (not a sequence classifier), so its runtime
 captures the ``lm_head`` input rather than a ``score`` head input.
 
 Three readouts:
@@ -44,7 +44,7 @@ if TYPE_CHECKING:
 
     from reward_lens.runtime.hf import HFRuntime
 
-# The judge's declared capabilities (R3): it scores, exposes per-token curves, captures activations,
+# The judge's declared capabilities: it scores, exposes per-token curves, captures activations,
 # supports autograd on the logit-diff direction, exposes a linear (logit_diff) readout, and is
 # GENERATIVE. It has no scalar reward head, so it does not claim MULTI_READOUT the way ArmoRM does.
 _JUDGE_CAPS = (
@@ -59,7 +59,7 @@ _JUDGE_CAPS = (
 
 
 class GenerativeJudge(SignalImplBase):
-    """An LLM-as-judge as a ``RewardSignal`` (section 2.3.3, adapter 2).
+    """An LLM-as-judge as a ``RewardSignal`` (adapter 2).
 
     Build it through ``from_tiny`` (the offline test vehicle) or ``from_causal_lm`` (an
     already-loaded instruct model). The verdict readouts are ``logit_diff`` directions read off the
@@ -98,7 +98,7 @@ class GenerativeJudge(SignalImplBase):
     # -- rendering: the judging prompt -------------------------------------
 
     def _render(self, item: Any) -> tuple[str, tuple[tuple[int, int, str], ...], dict[str, Any]]:
-        """Render an item into a judging prompt that ends at the verdict position (section 2.3.3).
+        """Render an item into a judging prompt that ends at the verdict position.
 
         A 2-item ``(question, answer)`` becomes a pointwise judging prompt; a 3-item
         ``(question, answer_a, answer_b)`` becomes a pairwise prompt. In both cases the generation
@@ -128,7 +128,7 @@ class GenerativeJudge(SignalImplBase):
     # -- scoring ------------------------------------------------------------
 
     def score(self, view: Any, readout: str | None = None) -> Any:
-        """Score every item under a readout, returning ``Evidence[Scores]`` (section 2.3.2).
+        """Score every item under a readout, returning ``Evidence[Scores]``.
 
         ``logit_diff`` readouts (``verdict``, ``verdict_ab``) project the final hidden state onto the
         readout direction in fp32: ``h . (W_U[a] - W_U[b])`` is exactly ``logit(a) - logit(b)`` for
@@ -150,7 +150,7 @@ class GenerativeJudge(SignalImplBase):
         return self._timed_evidence("score", payload, name, len(items), n_tokens, started)
 
     def score_prefixes(self, view: Any, readout: str | None = None) -> Any:
-        """Per-token verdict curves ``verdict(y_{1:t})`` for every item (section 2.3.2).
+        """Per-token verdict curves ``verdict(y_{1:t})`` for every item.
 
         For a ``logit_diff`` readout the curve at position ``t`` is the verdict the model would emit
         if the sequence ended at ``t``; its final entry equals ``score``. Only defined for the
@@ -191,7 +191,7 @@ class GenerativeJudge(SignalImplBase):
     def validate_judgment_position(
         self, calibration_items: Sequence[Any], k: int = 4
     ) -> dict[str, Any]:
-        """Validate that the verdict token lands at the detected judgment position (section 2.3.3).
+        """Validate that the verdict token lands at the detected judgment position.
 
         Detection is structural: templating with the generation prompt makes the final valid token
         the judgment position. Validation runs a forward over up to ``k`` calibration prompts and
@@ -324,7 +324,7 @@ class GenerativeJudge(SignalImplBase):
         seq_max: int = 256,
         tokenizer_name: str = "gpt2",
     ) -> "GenerativeJudge":
-        """Construct the tiny offline judge the tests run on (section 2.3.3, tiny vehicles).
+        """Construct the tiny offline judge the tests run on (tiny vehicles).
 
         A real ``LlamaForCausalLM`` (hidden 32, 2 layers) with a real tokenizer, so the adapter,
         hooks, LM-head capture, and logit-diff readout see the same module tree a production judge

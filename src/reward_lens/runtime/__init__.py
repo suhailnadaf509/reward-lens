@@ -2,7 +2,7 @@
 
 The runtime is the layer that actually touches ``transformers``: it owns the forward pass, the hook
 mechanics, the activation cache, the numerics policies, the model fingerprint, and the sampler
-bridge (section 2.2). Nothing above it imports ``transformers`` directly; everything goes through
+bridge. Nothing above it imports ``transformers`` directly; everything goes through
 the ``Runtime`` protocol in ``backend.py`` (the frozen contract). Importing this package pulls torch,
 so the pure epistemics layers (``core``, ``stats``, ``data``) never import it.
 
@@ -12,6 +12,10 @@ utilities around it live in the other modules and are re-exported here for conve
 """
 
 from __future__ import annotations
+
+from reward_lens.core.extras import require_extra
+
+require_extra("white-box", subsystem="reward_lens.runtime")
 
 from reward_lens.runtime.backend import (
     Capture,
@@ -46,7 +50,7 @@ __all__ = [
     "Capture",
     "CaptureHandle",
     "SiteMap",
-    # precision (R11)
+    # precision
     "NumericsPolicy",
     "resolve_policy",
     "register_policy",

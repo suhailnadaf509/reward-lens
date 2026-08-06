@@ -1,13 +1,13 @@
-"""The data plane's native objects and the `DataView` the kernel consumes (section 2.4.1).
+"""The data plane's native objects and the `DataView` the kernel consumes.
 
 The corpus's experiments are, to an unusual degree, data-construction problems: matched pairs that
-vary one thing, controlled quadruples, k-wise tournaments, trajectories with receipts. The design's
-third first-principle (section 1.1) is that for a reward model the *pair* is not a synthetic
-stimulus; it is the training distribution itself, because the Bradley-Terry loss operates on exactly
-the chosen-minus-rejected difference the instruments measure. So the data plane treats the pair and
+vary one thing, controlled quadruples, k-wise tournaments, trajectories with receipts. A first
+principle of the library is that for a reward model the *pair* is not a synthetic stimulus; it is the
+training distribution itself, because the Bradley-Terry loss operates on exactly the
+chosen-minus-rejected difference the instruments measure. So the data plane treats the pair and
 its generalizations as native, typed objects, with span typing and lineage built in.
 
-`DataView` is the single uniform iterable every instrument consumes (R2): instruments never load
+`DataView` is the single uniform iterable every instrument consumes: instruments never load
 datasets, never mutate them, and never construct stimuli inline. A view is filterable, sliceable,
 hash-stable, and reports its own effective sample size from lineage and a content checksum that goes
 into every measurement's subject reference. These two methods, `effective_n` and `checksum`, are the
@@ -35,12 +35,12 @@ from reward_lens.data.lineage import (
 
 @dataclass(frozen=True)
 class Prompt:
-    """A prompt with optional typed spans (section 2.4.1).
+    """A prompt with optional typed spans.
 
-    The authoritative pair schema (section 2.4.1, Appendix B) types a pair's prompt as a plain
-    string, and the builders here use plain strings. `Prompt` is the richer form for the cases that
-    need typed prompt spans (a receipt embedded in the prompt, a step to reference), and a `Pair`
-    accepts either; ``prompt_text`` normalizes the two. Keeping the string form as the default keeps
+    The authoritative pair schema types a pair's prompt as a plain string, and the builders here
+    use plain strings. `Prompt` is the richer form for the cases that need typed prompt spans (a
+    receipt embedded in the prompt, a step to reference), and a `Pair` accepts either;
+    ``prompt_text`` normalizes the two. Keeping the string form as the default keeps
     the common case simple while making prompt-level span typing reachable when a study needs it.
     """
 
@@ -54,7 +54,7 @@ class Prompt:
 
 @dataclass(frozen=True)
 class Response:
-    """A response: its text and its typed spans (section 2.4.1).
+    """A response: its text and its typed spans.
 
     ``spans`` are token intervals (built via `data.spans`) tagged receipt, narrative, step, error,
     critique, and so on. They are what make span-level patching, receipt-reliance, and error
@@ -91,12 +91,12 @@ def _prompt_text(prompt: str | Prompt) -> str:
 
 @dataclass(frozen=True)
 class Pair:
-    """A chosen/rejected preference pair, the native reward-model object (section 2.4.1).
+    """A chosen/rejected preference pair, the native reward-model object.
 
     ``axis`` names what differs between chosen and rejected *by construction*: "verbosity",
     "correctness", "receipt-grounding". This is the field that makes a pair a controlled stimulus
     rather than an arbitrary comparison, and it is what a cross-axis analysis reads. ``lineage``
-    carries the seed provenance (R7); ``meta`` carries difficulty, domain, source, annotator stats.
+    carries the seed provenance; ``meta`` carries difficulty, domain, source, annotator stats.
     """
 
     prompt: str | Prompt
@@ -117,7 +117,7 @@ class Pair:
 
 @dataclass(frozen=True)
 class Quadruple:
-    """A controlled 2x2 design (section 2.4.1).
+    """A controlled 2x2 design.
 
     ``cells`` maps a ``(factor_a_level, factor_b_level)`` key to the response for that cell; the
     canonical example is L2's sycophancy design, agree/disagree crossed with right/wrong. ``factors``
@@ -142,11 +142,11 @@ class Quadruple:
 
 @dataclass(frozen=True)
 class EdgeObs:
-    """One observed pairwise comparison within a tournament (section 2.4.1).
+    """One observed pairwise comparison within a tournament.
 
     ``wins_i`` and ``wins_j`` count how often response ``i`` beat response ``j`` and vice versa
     (repeated comparisons accumulate here). Exactly one of ``annotator_id`` / ``judge_id`` names the
-    source, which is what keeps human and machine preference distinguishable (R10) and lets the
+    source, which is what keeps human and machine preference distinguishable and lets the
     topology science slice the intransitive mass by annotator or judge.
     """
 
@@ -170,7 +170,7 @@ class EdgeObs:
 
 @dataclass(frozen=True)
 class Tournament:
-    """A k-wise comparison collection over one prompt (section 2.4.1).
+    """A k-wise comparison collection over one prompt.
 
     ``responses`` are the competitors; ``edges`` are the observed pairwise outcomes. This is the
     Hodge-ready object: a preference operator over the responses whose curl (intransitive mass) is
@@ -195,7 +195,7 @@ class Tournament:
 
 @dataclass(frozen=True)
 class TrajStep:
-    """One step of an agent trajectory (section 2.4.1).
+    """One step of an agent trajectory.
 
     ``action`` is a short description of what the agent did; ``tool_call`` is the structured
     invocation (name and arguments) where there was one. ``text`` is the step's rendered text, and
@@ -214,7 +214,7 @@ class TrajStep:
 
 @dataclass(frozen=True)
 class Trajectory:
-    """An agent episode: a sequence of steps and its outcome (section 2.4.1).
+    """An agent episode: a sequence of steps and its outcome.
 
     ``outcome`` records how the episode ended (success flag, final reward, task metadata). The
     trajectory is the substrate for the receipt/narrative sciences and for trajectory-level reward
@@ -377,7 +377,7 @@ def make_pair(
 
 
 class DataView:
-    """The uniform, filterable, sliceable, hash-stable iterable the kernel consumes (section 2.4.1).
+    """The uniform, filterable, sliceable, hash-stable iterable the kernel consumes.
 
     A view wraps an ordered collection of items (Pairs, or any schema type; a view is homogeneous by
     convention but does not enforce it, so mixed diagnostic sets are expressible). It never loads or
@@ -386,12 +386,12 @@ class DataView:
 
     The two methods that carry the data plane's discipline:
 
-    - `effective_n` computes the lineage-aware effective sample size (section 2.4.2) by handing the
-      items' seed ids to the stats engine. A view of forty clones of one seed reports about one.
+    - `effective_n` computes the lineage-aware effective sample size by handing the items' seed
+      ids to the stats engine. A view of forty clones of one seed reports about one.
     - `checksum` is a content-derived `DatasetID` that goes into every measurement's subject
       reference. It is stable (deterministic given the items and their order) and content-based, so
       a loader that silently returned the wrong rows produces a different checksum and the dataset
-      registry catches it (section 2.4.5).
+      registry catches it.
     """
 
     __slots__ = ("_items", "name")
@@ -446,7 +446,7 @@ class DataView:
         return [seed_id_of(it) for it in self._items]
 
     def effective_n(self) -> float:
-        """Lineage-aware effective sample size over the items' seed ids (section 2.4.2).
+        """Lineage-aware effective sample size over the items' seed ids.
 
         Delegates to `reward_lens.stats.ess` through `data.lineage.effective_sample_size`, which is
         the canonical implementation when the stats engine is present and an identical local fallback
@@ -456,18 +456,18 @@ class DataView:
         return effective_sample_size(self.seed_ids())
 
     def checksum(self) -> DatasetID:
-        """A stable, content-derived `DatasetID` (``ds:...``) for this view (section 2.4.1).
+        """A stable, content-derived `DatasetID` (``ds:...``) for this view.
 
         Hashes the ordered list of item content. It is content-based and order-sensitive: the same
         items in the same order always produce the same id, and any change of rows or order changes
         it. This is the id the dataset registry verifies against a card's declared checksum, which is
-        where the limit/subset loader bug dies (section 2.4.5).
+        where the limit/subset loader bug dies.
         """
         material = [content_of(it) for it in self._items]
         return DatasetID(content_hash(material, "ds"))
 
     def collapse_duplicates(self, *, warn: bool = True) -> tuple["DataView", list[int]]:
-        """Collapse exact-duplicate-content items, returning ``(view, weights)`` (section 2.4.2)."""
+        """Collapse exact-duplicate-content items, returning ``(view, weights)``."""
         unique, weights = collapse_duplicates(
             self._items, key=lambda it: content_hash(content_of(it), "ch"), warn=warn
         )

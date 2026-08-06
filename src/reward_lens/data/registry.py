@@ -1,4 +1,4 @@
-"""Dataset cards and loaders: where the limit/subset bug class dies (section 2.4.5).
+"""Dataset cards and loaders: where the limit/subset bug class dies.
 
 A v1 loader applied ``limit`` before ``subset`` and silently shrank "200 held-out pairs" to about
 thirty; two model loads failed and simply dropped their models from the campaign; a network hiccup
@@ -33,7 +33,7 @@ Loader = Callable[["DatasetCard"], DataView]
 
 @dataclass(frozen=True)
 class DatasetCard:
-    """The declared contract of a dataset (section 2.4.5).
+    """The declared contract of a dataset.
 
     ``declared_count`` is asserted at load: this is the primary defense against the limit/subset
     class of bug. ``checksum`` is the expected `DataView.checksum` (a ``ds:...`` id); when set it is
@@ -116,7 +116,7 @@ def has_loader(key: str) -> bool:
 
 
 def load_dataset(card: DatasetCard, *, loader: Loader | None = None) -> DataView:
-    """Load a dataset through its card, asserting the declared count and checksum (section 2.4.5).
+    """Load a dataset through its card, asserting the declared count and checksum.
 
     Resolution order for the loader: the explicit ``loader`` argument (used by tests and by callers
     who build a loader inline), then the registry keyed by ``card.resolved_loader_key``. The loader is
@@ -150,8 +150,7 @@ def load_dataset(card: DatasetCard, *, loader: Loader | None = None) -> DataView
     if len(view) != card.declared_count:
         raise DataError(
             f"dataset {card.name!r} declared {card.declared_count} items but the loader returned "
-            f"{len(view)}; this is exactly the limit/subset loader bug and it stops here "
-            "(section 2.4.5)"
+            f"{len(view)}; this is exactly the limit/subset loader bug and it stops here"
         )
 
     if card.checksum is not None:
@@ -204,8 +203,8 @@ def make_card_from_view(
 def _external_stub_loader(card: DatasetCard) -> DataView:
     raise DataError(
         f"loading {card.name!r} requires the optional `datasets` extra (pip install "
-        "'reward-lens[datasets]') and its loader, which lands with the external-data milestone. "
-        "The card is registered so the catalogue is complete; the loader is not yet built."
+        "'reward-lens[datasets]') and its loader, which is not implemented. "
+        "The card is registered so the catalogue is complete."
     )
 
 
@@ -252,7 +251,7 @@ _EXTERNAL_CARDS = (
         checksum=None,
         license_note="UltraFeedback; see upstream license.",
         annotator_linked=False,
-        contamination_note="GPT-4-annotated; oracle-labelled, treat as machine preference (R10).",
+        contamination_note="GPT-4-annotated; oracle-labelled, treat as machine preference.",
         loader_key="_external_stub",
         meta={"upstream": "openbmb/UltraFeedback"},
     ),

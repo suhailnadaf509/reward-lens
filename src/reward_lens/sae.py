@@ -1,36 +1,45 @@
-"""
-Sparse Autoencoder (SAE) Integration for Reward Model Feature Decomposition.
+"""Sparse dictionaries over reward-model activations, behind the ``[dict]`` extra.
 
-This module provides tools to:
-1. Collect activations from reward model forward passes
-2. Train sparse autoencoders on those activations
-3. Decompose reward scores through SAE features
-4. Identify features aligned with the reward direction
+A TopK sparse autoencoder decomposes the residual stream into a dictionary of directions. Because
+the reward is a linear read of that stream, ``r = w_r . h + b`` and ``h ~ D f`` give
+``r ~ b + sum_i f_i (w_r . d_i)``, so each dictionary column carries a signed contribution to the
+reward and the extremes of ``W_dec @ w_r`` rank the features a policy would learn to exploit or
+avoid. That decomposition needs no activation patching, which is what makes it cheap and what makes
+it easy to over-read.
 
-The key insight for reward models: since r = w_r^T @ h + b, and the SAE
-reconstructs h ≈ D @ f (decoder times feature activations), we get:
+**Why this module is opt-in.** Everything here is a candidate generator, not a claim substrate. A
+dictionary direction is a hypothesis about what a coordinate means; nothing in the fitting objective
+ties a feature to a causal role, and a feature with a large ``w_r . d_i`` that never fires
+contributes nothing to any reward anyone will observe. Results from this module belong upstream of
+an intervention that tests them, never downstream of one as evidence. Putting the whole module
+behind ``[dict]`` is that position expressed in the packaging: you install the sparse-dictionary
+tooling deliberately, and the one instrument that reaches for it
+(``measure.battery.feature.FeatureRewardAlignment``) refuses rather than substituting a number when
+you have not.
 
-    r ≈ w_r^T @ D @ f + b = sum_i f_i * (w_r^T @ d_i) + b
+The gate is ``require_extra`` rather than a bare import failure so that the error names the extra
+and the ``pip`` line that installs it. It runs above the torch imports on purpose, which is why this
+file is in the E402 per-file-ignore list in ``pyproject.toml``.
 
-where d_i is the i-th decoder column. The quantity (w_r^T @ d_i) is the
-"reward alignment" of feature i — positive means the feature pushes reward up,
-negative means it pushes reward down. This is a direct, interpretable
-decomposition of reward into feature-level contributions WITHOUT requiring
-activation patching.
-
-SAE Architecture choice: We implement TopK SAEs, which enforce exactly K
-features to be active per input. This is the architecture that performs best
-on SAEBench as of early 2026, avoiding the dead feature problem of ReLU SAEs
-and the training instability of Gated SAEs.
+**What is here.** ``TopKSAE`` is the dictionary itself, and it is the only object the v3 instrument
+path uses. ``ActivationCollector``, ``SAETrainer`` and ``FeatureAnalyzer`` are the v1 fitting and
+inspection pipeline; they take a ``reward_lens.model.RewardModel`` and are reachable only from a
+v1-shaped call site. TopK is used rather than ReLU or Gated because it fixes the active count per
+input directly, so sparsity is a setting rather than a tuning problem, and it does not accumulate
+dead features the way an L1 penalty does.
 """
 
 from __future__ import annotations
+
+from reward_lens.core.extras import require_extra
+
+require_extra("dict", subsystem="reward_lens.sae")
 
 import json
 import math
 import os
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import torch
 import torch.nn as nn
@@ -38,7 +47,8 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 from tqdm import tqdm
 
-from reward_lens.model import RewardModel
+if TYPE_CHECKING:  # annotation only, and the reason this module no longer imports `model.py`
+    from reward_lens.model import RewardModel
 
 # ===========================================================================
 # TopK Sparse Autoencoder

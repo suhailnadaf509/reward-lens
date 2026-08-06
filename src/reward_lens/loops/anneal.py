@@ -1,16 +1,16 @@
-"""Beta schedules and the hysteresis protocol runner (DESIGN 2.13, science S14).
+"""Beta schedules and the hysteresis protocol runner (science S14).
 
 The phase-structure science (S14) asks whether the reward-hacking transition is reversible. If it
 is first-order, a policy pushed past the transition by raising optimization pressure cannot be
 annealed back by lowering it: the order parameter follows a different branch on the way down than on
 the way up, and the two branches enclose a nonzero area. That loop area is the signature, and its
 deployment consequence is immediate, because it says KL-annealing is not a recovery tool for a
-policy that has already hacked (DESIGN 2.13, S14: "nonzero loop area = irreversibility").
+policy that has already hacked (S14: "nonzero loop area = irreversibility").
 
 The protocol runner sweeps a control parameter ``beta`` up through the onset and back down, letting
 a stateful responder settle to its steady state at each ``beta`` starting from the previous one, so
 history is carried and metastability can express itself. It returns both branches and the enclosed
-loop area. ``bon`` supplies the quasi-static reference curve this is read against (DESIGN 2.13).
+loop area. ``bon`` supplies the quasi-static reference curve this is read against.
 
 The bistable responder here is the CPU-provable stand-in: a tilted double-well, reward favoring the
 hacked well, the system following its local optimum by gradient relaxation. The same runner accepts
@@ -108,7 +108,7 @@ def double_well_responder(
 @register_payload
 @dataclass
 class HysteresisLoop:
-    """The up and down branches of a beta sweep and the loop area between them (DESIGN 2.13, S14).
+    """The up and down branches of a beta sweep and the loop area between them (S14).
 
     ``beta_up`` / ``order_up`` is the anneal-up branch, ``beta_down`` / ``order_down`` the
     anneal-down branch. ``loop_area`` is the signed-magnitude area the branches enclose in the
@@ -169,7 +169,7 @@ def run_hysteresis(
     subject: SubjectRef | None = None,
     parents: Sequence["EvidenceID"] = (),
 ) -> Evidence[HysteresisLoop]:
-    """Run the anneal-up / anneal-down protocol and measure the hysteresis loop area (DESIGN 2.13).
+    """Run the anneal-up / anneal-down protocol and measure the hysteresis loop area.
 
     ``responder(beta, state) -> state`` settles the order parameter at each ``beta`` starting from
     the previous one. The up branch folds it over ``betas_up`` from ``init_state``; the down branch

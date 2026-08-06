@@ -1,11 +1,12 @@
-"""diagnostic_v3: the v1 seeds imported with honest lineage, plus two new dimensions (section 4.2).
+"""diagnostic_v3: the v1 seeds imported with honest lineage, plus two new dimensions.
 
-The v1 diagnostic set (`diagnostic_data_v2`) is 65 hand-written seed triples across 12 dimensions.
+The v1 diagnostic set (`diagnostic_seeds`, next to this file) is 65 hand-written seed triples across
+12 dimensions.
 In v1 those seeds were expanded to "30 pairs/dimension" by prompt-prefix mutations, and the bootstrap
 resampled the expansion; the effective sample size was really the seed count, but nothing said so.
 Here the seeds import as exactly what they are: one `Pair` per seed, lineage-complete with an empty
-op list, so `DataView.effective_n` reports the honest seed count and no mutation inflates it
-(section 2.4.2). This is the same data v1 had, finally described truthfully.
+op list, so `DataView.effective_n` reports the honest seed count and no mutation inflates it.
+This is the same data v1 had, finally described truthfully.
 
 Two dimensions are new in v3, authored here with clear provenance:
 
@@ -20,14 +21,17 @@ Two dimensions are new in v3, authored here with clear provenance:
 
 Both new dimensions are hand-written (not templated) and marked ``provenance="human"`` in their meta.
 A separate **matched-prompt block** builds pairs for several surface dimensions on one shared set of
-factual prompts, so a cross-dimension analysis (the E07 territory) indexes comparable stimuli rather
-than arbitrarily paired ones (section 4.2). That matched design is what makes the E07 acceptance test
+factual prompts, so a cross-dimension analysis (the E07 territory) indexes comparable stimuli
+rather than arbitrarily paired ones. That matched design is what makes the E07 acceptance test
 meaningful: on honestly matched, independently constructed dimensions, a cross-dimension cascade must
 sit at the noise floor.
 """
 
 from __future__ import annotations
 
+# The v1 seeds and dimension descriptions, imported (not re-authored). Underscore-prefixed access is
+# intentional: these are the raw hand-written seed triples, before v1's mutation expansion.
+from reward_lens.data.builtin.diagnostic_seeds import _SEEDS, ALL_DIMENSIONS_V2
 from reward_lens.data.registry import (
     dataset_loader,
     list_cards,
@@ -35,10 +39,6 @@ from reward_lens.data.registry import (
     register_card,
 )
 from reward_lens.data.schema import DataView, Pair, make_pair
-
-# The v1 seeds and dimension descriptions, imported (not re-authored). Underscore-prefixed access is
-# intentional: these are the raw hand-written seed triples, before v1's mutation expansion.
-from reward_lens.diagnostic_data_v2 import _SEEDS, ALL_DIMENSIONS_V2
 
 _BUILDER = "diagnostic_v3"
 
@@ -236,7 +236,7 @@ _DIMENSION_CACHE: dict[str, DataView] | None = None
 
 
 def load_diagnostic_v3() -> dict[str, DataView]:
-    """Return the diagnostic_v3 set as a `DataView` per dimension (section 2.4.2).
+    """Return the diagnostic_v3 set as a `DataView` per dimension.
 
     Keys are the 14 dimension names (the 12 imported plus ``receipts`` and ``contested``). Each view
     is lineage-honest: its `effective_n` equals its seed count because every item is an unmutated
@@ -265,7 +265,7 @@ def all_pairs() -> DataView:
 
 
 # ---------------------------------------------------------------------------
-# Matched-prompt block (for interpretable cross-dimension analysis, section 4.2)
+# Matched-prompt block (for interpretable cross-dimension analysis)
 # ---------------------------------------------------------------------------
 # One shared set of factual prompts, with a pair built for each of several surface dimensions on the
 # same prompt. Pair i of every matched dimension shares prompt i, so per-dimension delta vectors are
@@ -387,7 +387,7 @@ _MATCHED_CACHE: dict[str, DataView] | None = None
 
 
 def matched_prompt_views() -> dict[str, DataView]:
-    """The matched-prompt block: one `DataView` per surface dimension over shared prompts (section 4.2).
+    """The matched-prompt block: one `DataView` per surface dimension over shared prompts.
 
     Every dimension has the same number of pairs and pair ``i`` of each dimension is built on the same
     prompt ``i``, so a cross-dimension analysis compares like with like. This is the honest substrate

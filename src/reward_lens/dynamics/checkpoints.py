@@ -1,4 +1,4 @@
-"""Checkpoint sequences over training time, with a verifiable fingerprint chain (DESIGN 2.12, 2.2.5).
+"""Checkpoint sequences over training time, with a verifiable fingerprint chain.
 
 The developmental science (RM-Pythia / D1) asks how a reward model's internals form across training,
 so its subject is not one model but an ordered chain of checkpoints. This module is the substrate:
@@ -18,9 +18,9 @@ be", which is the precondition for reading a trajectory as development rather th
 
 The real RM-Pythia run (Qwen2.5 0.5B/1.5B/7B and Llama-3.1-8B, fifty to a hundred log-spaced
 checkpoints carried deliberately through a second epoch) is a few-hundred-GPU-hour build; it is wired
-here as a GPU-gated function that refuses without CUDA and never fabricates a checkpoint number
-(DESIGN 4.5, 4.4 M9). The CPU-provable vehicle is `synthetic_planted_sequence`, a handful of tiny
-`ClassifierRM`s that differ only in a planted, growing reward loading, so the sweep, the bias-entry
+here as a GPU-gated function that refuses without CUDA and never fabricates a checkpoint number.
+The CPU-provable vehicle is `synthetic_planted_sequence`, a handful of tiny `ClassifierRM`s that
+differ only in a planted, growing reward loading, so the sweep, the bias-entry
 curve, and the stabilization detector are all provable on this hardware.
 """
 
@@ -43,7 +43,7 @@ if TYPE_CHECKING:  # torch and the signal surface are referenced only in annotat
 GENESIS_LINK = "clink:genesis"
 
 # A loader materializes the signal for a checkpoint. It is a thunk so a hundred 8B checkpoints are
-# never all resident at once; the sweep calls it only on a cache miss (DESIGN 2.12).
+# never all resident at once; the sweep calls it only on a cache miss.
 CheckpointLoader = Callable[[], "RewardSignal"]
 
 
@@ -61,7 +61,7 @@ def _link(step: int, model_fp: ModelFP, prev_link: str) -> str:
 
 @dataclass
 class Checkpoint:
-    """One point on the training trajectory: a step, a fingerprint, and a way to load it (DESIGN 2.12).
+    """One point on the training trajectory: a step, a fingerprint, and a way to load it.
 
     ``step`` is the training step (or epoch fraction) the checkpoint was taken at and the covariate
     every developmental curve is read against. ``model_fp`` is the `runtime.fingerprint` of the
@@ -85,7 +85,7 @@ class Checkpoint:
 @register_payload
 @dataclass
 class ChainVerification:
-    """The result of verifying a checkpoint chain (DESIGN 2.2.5).
+    """The result of verifying a checkpoint chain.
 
     ``ok`` is the single bit; ``first_bad_step`` and ``reason`` localize the first tampered or
     inconsistent checkpoint so a failure is actionable rather than a bare False. ``mode`` records
@@ -101,7 +101,7 @@ class ChainVerification:
 
 
 class CheckpointSequence:
-    """An ordered, fingerprint-chained sequence of checkpoints over training time (DESIGN 2.12).
+    """An ordered, fingerprint-chained sequence of checkpoints over training time.
 
     Build one with `CheckpointSequence.build` from `(step, ModelFP, loader)` triples; the constructor
     computes the hash chain so the sequence is self-verifying from the moment it exists. Iterate it to
@@ -127,7 +127,7 @@ class CheckpointSequence:
         *,
         meta: dict[int, dict[str, Any]] | None = None,
     ) -> "CheckpointSequence":
-        """Build a chained sequence from ``(step, model_fp, loader)`` triples (DESIGN 2.2.5).
+        """Build a chained sequence from ``(step, model_fp, loader)`` triples.
 
         The triples are sorted by step and linked in order, so the caller may pass them in any order.
         ``meta`` optionally attaches per-step metadata (a local path, an HF revision id, an epoch
@@ -139,7 +139,7 @@ class CheckpointSequence:
         if len(set(steps)) != len(steps):
             raise ProvenanceError(
                 f"checkpoint steps must be distinct; got duplicates in {steps}. A repeated step makes "
-                f"the developmental covariate ambiguous (DESIGN 2.12)."
+                f"the developmental covariate ambiguous."
             )
         meta = meta or {}
         checkpoints: list[Checkpoint] = []
@@ -187,7 +187,7 @@ class CheckpointSequence:
     # -- verification -------------------------------------------------------
 
     def verify_chain(self) -> ChainVerification:
-        """Recompute the hash chain and report the first inconsistency (DESIGN 2.2.5).
+        """Recompute the hash chain and report the first inconsistency.
 
         Pure and instant: for each checkpoint it recomputes ``link`` from ``(step, model_fp, prev)``
         and checks it matches the recorded link, that the recorded ``prev_link`` matches the running
@@ -227,7 +227,7 @@ class CheckpointSequence:
         return ChainVerification(ok=True, n_checkpoints=len(self._checkpoints))
 
     def verify_fingerprints(self) -> ChainVerification:
-        """Load each checkpoint and recompute its fingerprint against the record (DESIGN 2.2.5).
+        """Load each checkpoint and recompute its fingerprint against the record.
 
         This is the deep check the chain cannot do on its own: it materializes each signal through its
         loader and recomputes `runtime.fingerprint`, so a weight file swapped under an unchanged record
@@ -271,7 +271,7 @@ class CheckpointSequence:
         Returns the passing `ChainVerification` so a caller may log it. Raises `ProvenanceError` with
         the localized reason when either check fails, which is the guard the sweep relies on: a chain
         that does not verify is never swept, so a developmental result is never read off an untrusted
-        run (DESIGN 2.2.5, RK9).
+        run (RK9).
         """
         chain = self.verify_chain()
         if not chain.ok:
@@ -298,7 +298,7 @@ class CheckpointSequence:
         loader: CheckpointLoader | None = None,
         reseal: bool = False,
     ) -> "CheckpointSequence":
-        """Return a copy with one checkpoint altered, modelling an attacker's edit (DESIGN 2.2.5).
+        """Return a copy with one checkpoint altered, modelling an attacker's edit.
 
         With ``reseal=False`` (the default) the links are left untouched, so replacing a recorded
         ``model_fp`` models an edited manifest and `verify_chain` will reject it; replacing only the
@@ -328,7 +328,7 @@ class CheckpointSequence:
 
 @dataclass
 class SyntheticSequence:
-    """A synthetic developmental run with a known planted feature (DESIGN 2.12, the CPU vehicle).
+    """A synthetic developmental run with a known planted feature (the CPU vehicle).
 
     Bundles everything the sweep, the bias-entry curve, and the stabilization detector need to be
     provable without a GPU: the `CheckpointSequence` itself, the fixed evaluation ``view``, the planted
@@ -336,8 +336,7 @@ class SyntheticSequence:
     ``probe`` naming that feature, and the schedule metadata (``alphas`` the planted loading, and the
     step at which the reward direction was designed to stop rotating). Because the feature is planted
     by construction, "does the bias-entry curve rise" and "does the direction stabilize" have known
-    answers, which is exactly the organism-style calibration the design insists on before trusting an
-    instrument (DESIGN 2.10, section 5.2).
+    answers, which is exactly the organism-style calibration required before trusting an instrument.
     """
 
     sequence: CheckpointSequence
@@ -365,7 +364,7 @@ def synthetic_planted_sequence(
     scale_growth: float = 0.6,
     stabilization_eps: float = 1e-3,
 ) -> SyntheticSequence:
-    """Construct the tiny planted-feature checkpoint sequence the tests run on (DESIGN 2.12).
+    """Construct the tiny planted-feature checkpoint sequence the tests run on.
 
     Every checkpoint shares one frozen trunk (a real `LlamaForSequenceClassification`, built from the
     same seed each time) and differs only in its reward head, which is set to ``s_t * normalize(w_base
@@ -376,7 +375,7 @@ def synthetic_planted_sequence(
     reads ``alpha_t`` through the reward's response to the feature and rises monotonically; the
     stabilization detector, working on the scale-invariant canonical direction, sees the rotation stop
     at the logistic knee even though the raw head keeps growing, which is the "stops rotating versus
-    merely rescaling" distinction of DESIGN 2.12 made concrete.
+    merely rescaling" distinction made concrete.
 
     Returns a `SyntheticSequence` whose ``sequence`` verifies (chain and fingerprints) and whose
     planted feature is exposed so a test can assert the curve rises and the direction stabilizes.
@@ -508,14 +507,14 @@ def synthetic_planted_sequence(
 # The GPU-scale builds: marked, gated, never fabricated
 # ---------------------------------------------------------------------------
 
-# The checkpoint-suite-release intent (DESIGN 4.4 M9): once trained, the RM-Pythia chain is published
+# The checkpoint-suite-release intent: once trained, the RM-Pythia chain is published
 # to the HF hub with its fingerprint chain, so the few-hundred-GPU-hour run happens once and every
 # downstream sweep replays cached checkpoints and cached activations rather than retraining.
 RM_PYTHIA_RELEASE_INTENT = (
     "The RM-Pythia checkpoint suite (Qwen2.5 0.5B/1.5B/7B and Llama-3.1-8B, 50 to 100 log-spaced "
     "checkpoints carried deliberately through a second epoch) is released to the HF hub with its "
     "fingerprint chain so the training run happens once and all developmental sweeps replay cached "
-    "checkpoints and activations (DESIGN 4.4 M9, 4.5). Not yet trained; requires flagship GPUs."
+    "checkpoints and activations. Not yet trained; requires flagship GPUs."
 )
 
 
@@ -534,7 +533,7 @@ def train_rm_pythia(
     allow_gpu: bool = True,
     **_: Any,
 ) -> "CheckpointSequence":
-    """Train the RM-Pythia checkpoint suite (DESIGN 4.4 M9, 4.5). GPU-gated; refuses without CUDA.
+    """Train the RM-Pythia checkpoint suite. GPU-gated; refuses without CUDA.
 
     This is the real developmental substrate: a preference-model training run over ``bases``, saving
     ``n_checkpoints`` log-spaced snapshots and continuing deliberately into a second epoch so the
@@ -542,7 +541,7 @@ def train_rm_pythia(
     checkpoint is fingerprinted and linked into a `CheckpointSequence`, then the suite is released
     per `RM_PYTHIA_RELEASE_INTENT`. The training loop is a few-hundred-GPU-hour build on flagship
     hardware and is not run on this machine; the function raises rather than fabricate a checkpoint,
-    which is the design's standing rule that a GPU-scale number is never faked (DESIGN 4.4, 4.5).
+    which is the standing rule that a GPU-scale number is never faked.
     """
     try:
         import torch
@@ -553,7 +552,7 @@ def train_rm_pythia(
     if not (allow_gpu and has_cuda):
         raise RuntimeError(
             "train_rm_pythia is GPU-gated and needs flagship CUDA hardware; no usable CUDA device is "
-            "available here. It is a few-hundred-GPU-hour build (DESIGN 4.5) and is never simulated "
+            "available here. It is a few-hundred-GPU-hour build and is never simulated "
             "on CPU. Use synthetic_planted_sequence for the CPU-provable developmental vehicle, or run "
             "this on adequate GPUs. " + RM_PYTHIA_RELEASE_INTENT
         )
@@ -570,7 +569,7 @@ def from_hf_revisions(
     allow_download: bool = False,
     **load_kwargs: Any,
 ) -> "CheckpointSequence":
-    """Build a `CheckpointSequence` from a chain of HF hub revisions (DESIGN 2.12). Download-gated.
+    """Build a `CheckpointSequence` from a chain of HF hub revisions. Download-gated.
 
     ``revisions`` pairs each training ``step`` with an HF revision (a branch, tag, or commit) of
     ``repo_id``, which is how the released RM-Pythia suite is consumed: one repository, many revisions,
@@ -583,8 +582,8 @@ def from_hf_revisions(
     if not allow_download:
         raise NotImplementedError(
             f"from_hf_revisions('{repo_id}', {len(revisions)} revisions) would download a chain of "
-            f"checkpoints from the HF hub; that is gated on this hardware (DESIGN 2.3.4, hardware "
-            f"reality). Set allow_download=True on a machine that can hold the models, or use "
+            f"checkpoints from the HF hub; that is gated on this hardware. Set allow_download=True "
+            f"on a machine that can hold the models, or use "
             f"synthetic_planted_sequence for the CPU vehicle."
         )
 

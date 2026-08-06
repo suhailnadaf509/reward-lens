@@ -1,9 +1,9 @@
-"""``reward_lens.signals`` — the ``RewardSignal`` protocol and its adapters (section 2.3).
+"""``reward_lens.signals`` — the ``RewardSignal`` protocol and its adapters.
 
-This subsystem is the answer to substrate lock-in (liability 6): it generalizes v1's single-scalar
+This subsystem is the answer to substrate lock-in: it generalizes v1's single-scalar
 ``RewardModel`` into a protocol every reward substrate implements, parameterized by first-class
-``Readout`` and ``PositionSpec`` objects (R4). M1 ships the first adapter, ``ClassifierRM`` (the
-rebuilt sequence-classification reward model), the loaders that construct it, and the conformance
+``Readout`` and ``PositionSpec`` objects. The first adapter is ``ClassifierRM`` (the rebuilt
+sequence-classification reward model), alongside the loaders that construct it and the conformance
 suite every adapter must pass.
 
 ``base`` is the frozen protocol surface and imports torch only under ``TYPE_CHECKING``, so importing
@@ -11,14 +11,18 @@ the types is cheap. The concrete adapters and loaders require torch; they are re
 convenience and imported lazily so ``import reward_lens.signals`` stays light until a signal is
 actually built.
 
-Beyond M1's ``ClassifierRM``, the seven remaining adapters (section 2.3.3) live here too: the
-generative judge, the process (step-level) RM, the implicit (DPO log-ratio) RM, the rubric grader,
+Beyond ``ClassifierRM``, the seven remaining adapters live here too: the generative judge, the
+process (step-level) RM, the implicit (DPO log-ratio) RM, the rubric grader,
 the trajectory RM, the gated dense-reward extractor, and the ensemble / distributional composites.
 Each implements the same ``RewardSignal`` protocol and clears the per-adapter conformance suite
 (``run_adapter_conformance``) before it is trusted.
 """
 
 from __future__ import annotations
+
+from reward_lens.core.extras import require_extra
+
+require_extra("white-box", subsystem="reward_lens.signals")
 
 from reward_lens.signals.base import (
     PositionSpec,
@@ -47,7 +51,7 @@ __all__ = [
     "SignalSpec",
     "run_conformance",
     "ConformanceReport",
-    # the seven M-adapters (section 2.3.3)
+    # the seven remaining adapters
     "GenerativeJudge",
     "ProcessRM",
     "StepScores",

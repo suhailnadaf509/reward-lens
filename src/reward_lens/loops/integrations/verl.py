@@ -1,4 +1,4 @@
-"""veRL integration: a reward manager and a geometry-logging worker entry (DESIGN 2.13).
+"""veRL integration: a reward manager and a geometry-logging worker entry.
 
 veRL computes rewards through a reward manager that consumes a batch (a ``DataProto`` of token ids
 and metadata) and returns a reward tensor, and runs rollout/actor/critic as workers under its
@@ -26,7 +26,7 @@ from reward_lens.loops.integrations.base import (
 def verl_reward_score(
     signal: Any, readout: str = "reward", *, batch_size: int | None = None
 ) -> Any:
-    """The scoring callable a veRL reward manager wraps (DESIGN 2.13).
+    """The scoring callable a veRL reward manager wraps.
 
     veRL's reward manager ultimately needs a scalar per (prompt, response). Returns
     ``score(prompts, responses) -> list[float]`` built on the signal; real and framework-free. The

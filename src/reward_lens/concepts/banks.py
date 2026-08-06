@@ -1,4 +1,4 @@
-"""Standard concept batteries: named, persisted collections of directions (section 2.5, R8).
+"""Standard concept batteries: named, persisted collections of directions.
 
 A bank is a named collection of concept specifications the library ships so a study does not
 reinvent "the style directions" or "the safety directions" each time. Four batteries are defined
@@ -11,7 +11,7 @@ asserted.
 
 Extraction reuses the canonical mean-difference estimator (`concepts.vectors.concept_direction`), so
 a bank direction and a v1 concept direction and the dose-response Observable all compute "the concept
-direction" the same way. Each extracted direction is a persisted `Direction` (section 2.5.1) so it is
+direction" the same way. Each extracted direction is a persisted `Direction` so it is
 a first-class store citizen with its training data and (where a probe grades it) its calibration. The
 bank as a whole is persisted as a manifest naming its directions, so a named battery is reconstructible
 from the store.
@@ -55,7 +55,7 @@ _BANK_VERSION = "1.0"
 
 @dataclass(frozen=True)
 class ConceptSpec:
-    """One concept in a bank, tied to an exact feature marker (section 2.5).
+    """One concept in a bank, tied to an exact feature marker.
 
     ``name`` is the concept; ``feature`` is the controlled marker in `organisms._features.FEATURE_MARK`
     whose presence defines the positive side, so the concept has exact ground truth. ``category`` is
@@ -128,7 +128,7 @@ def all_specs() -> tuple[ConceptSpec, ...]:
 
 @dataclass
 class ConceptBank:
-    """A built bank of extracted directions that satisfies the `FeatureBank` protocol (section 2.5).
+    """A built bank of extracted directions that satisfies the `FeatureBank` protocol.
 
     ``names`` labels the ``k`` concepts; ``directions_`` is their ``(k, d)`` stacked unit directions;
     ``site`` is where they were read. ``featurize`` projects activations onto the directions
@@ -167,7 +167,7 @@ class ConceptBank:
 @register_payload
 @dataclass
 class BankManifest:
-    """The persisted manifest of a bank: its name and the ids of its directions (section 2.5, R8).
+    """The persisted manifest of a bank: its name and the ids of its directions.
 
     Persisting the manifest (rather than re-storing the vectors, which the `Direction` Evidence
     already holds) makes a named battery reconstructible from the store: load the manifest, then load
@@ -210,7 +210,7 @@ def _mean_diff_direction(pos: np.ndarray, neg: np.ndarray) -> np.ndarray:
 
 @dataclass(frozen=True)
 class BuiltBank:
-    """A built bank with its persisted directions and manifest (section 2.5).
+    """A built bank with its persisted directions and manifest.
 
     ``bank`` satisfies the `FeatureBank` protocol; ``directions`` are the persisted `Direction`
     artifacts; ``evidence`` is their stored Evidence plus the manifest Evidence (last). ``manifest`` is
@@ -234,7 +234,7 @@ def build_bank(
     store: "EvidenceStore | None" = None,
     signals: tuple[str, ...] = (),
 ) -> BuiltBank:
-    """Extract and persist a bank's directions from per-concept captured sides (section 2.5, R8).
+    """Extract and persist a bank's directions from per-concept captured sides.
 
     For each spec, ``sides[spec.name]`` provides the ``(positive, negative)`` activation matrices at
     ``site``; the direction is their unit-normalized mean difference (`concept_direction`), persisted
@@ -384,7 +384,7 @@ def default_feature_bank(
     site: Site | None = None,
     store: "EvidenceStore | None" = None,
 ) -> ConceptBank:
-    """Build a default `ConceptBank` off a signal, the seam `measure.indices` looks for (section 2.5).
+    """Build a default `ConceptBank` off a signal, the seam `measure.indices` looks for.
 
     `reward_lens.measure.indices._support.load_default_bank` imports ``reward_lens.concepts`` and calls
     ``default_feature_bank(signal)`` if present, so wiring this name at the package level upgrades the

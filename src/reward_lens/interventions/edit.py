@@ -1,4 +1,4 @@
-"""Weight-space projection edit of the reward head as an Intervention (section 2.6.2, ``edit.py``).
+"""Weight-space projection edit of the reward head as an Intervention.
 
 Steering and ablation act on activations; an edit acts on the weights. The canonical case, v1's E17
 and the weight-space analog science S12 uses, projects the reward head's own direction to remove its
@@ -37,7 +37,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class EditIntervention:
-    """Project a concept direction out of the reward head weight; an ``Intervention`` (section 2.6.2).
+    """Project a concept direction out of the reward head weight; an ``Intervention``.
 
     ``direction`` is the array-like ``(d_model,)`` concept direction ``u`` to remove, in the space the
     reward head reads (the head-input hidden state), unit-normalized on use. ``readout`` names which

@@ -1,4 +1,4 @@
-"""TRL integration: a reward function and a geometry-logging callback (DESIGN 2.13).
+"""TRL integration: a reward function and a geometry-logging callback.
 
 TRL runs PPO and GRPO with a reward function ``(prompts, responses) -> rewards`` and a list of
 ``transformers`` ``TrainerCallback`` hooks. This module gives both: the reward function is the real,
@@ -9,7 +9,7 @@ on the tiny model with no TRL installed.
 The one piece that genuinely needs TRL is binding the callback into a live ``PPOTrainer`` /
 ``GRPOTrainer``, because that requires the framework's callback base class and trainer loop. That
 entrypoint is structured here and raises ``IntegrationUnavailableError`` naming the extra, rather
-than pretending to run. TRL is not installed on this machine and is an optional extra (R14).
+than pretending to run. TRL is an optional extra and is not a dependency of the library (R14).
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ from reward_lens.loops.integrations.base import (
 def trl_reward_fn(
     signal: Any, readout: str = "reward", *, batch_size: int | None = None
 ) -> RewardFn:
-    """The reward function to hand a TRL ``PPOTrainer`` / ``GRPOTrainer`` (DESIGN 2.13).
+    """The reward function to hand a TRL ``PPOTrainer`` / ``GRPOTrainer``.
 
     Returns ``reward_fn(prompts, responses) -> list[float]``, the exact shape TRL's reward hook
     calls. This is real and needs only the signal (torch), not TRL: the geometry science is

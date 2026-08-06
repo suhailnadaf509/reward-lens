@@ -1,4 +1,4 @@
-"""SNIS emulator of the tilted policy family and the susceptibility spectrum (DESIGN 2.13, 2.17).
+"""SNIS emulator of the tilted policy family and the susceptibility spectrum.
 
 Optimizing a policy against a reward model pulls it toward the exponentially tilted family
 ``pi_lambda proportional to pi_0 * exp(lambda * r)`` (the maximum-entropy / KL-regularized RL
@@ -13,8 +13,8 @@ The susceptibility spectrum is the initial per-feature drift under optimization.
 family the derivative of a tilted expectation at ``lambda = 0`` is a base-policy covariance,
 ``d/dlambda E_lambda[f_i] |_0 = Cov_0(f_i, r) = chi_i`` (Appendix A12, the fluctuation-dissipation
 identity). So ``chi_i`` predicts which feature drifts and how fast before any RL, and it is a
-covariance of two scalar readouts, hence gauge-invariant (DESIGN 2.17 step 6). The ``f = r``
-diagonal ``chi = Var_0(r)`` is exactly Razin's teacher variance (Appendix A3), the zeroth-order
+covariance of two scalar readouts, hence gauge-invariant. The ``f = r`` diagonal
+``chi = Var_0(r)`` is exactly Razin's teacher variance (Appendix A3), the zeroth-order
 term of the same law. Predicted hack modes are the features with ``chi_i > 0`` while
 ``Cov_0(f_i, gold) <= 0``.
 
@@ -24,8 +24,7 @@ not degenerated. Two things break it: pushing ``lambda`` past roughly half the c
 a heavy tail and there is no tilted optimum at all, Appendix A4), and the effective sample size of
 the SNIS weights collapsing so a handful of samples carry the estimate. This module refuses in both
 cases rather than returning a confident extrapolation from three samples, and says which guard
-fired and why. The validity ceiling ``lambda_c / 2`` is the design's stated safe range (DESIGN
-2.13).
+fired and why. The validity ceiling ``lambda_c / 2`` is the stated safe range.
 """
 
 from __future__ import annotations
@@ -45,7 +44,7 @@ if TYPE_CHECKING:
 
 
 class ESSGuardError(RewardLensError):
-    """Raised when a tilt is requested outside its regime of validity (DESIGN 2.13).
+    """Raised when a tilt is requested outside its regime of validity.
 
     Two triggers: ``lambda`` beyond ``lambda_c / 2`` (the tilt stops emulating practical
     optimization; past ``lambda_c`` there is no tilted optimum for a heavy tail, Appendix A4/A5), or
@@ -72,9 +71,9 @@ def susceptibility(
     population form, ddof = 0, is the estimator of the theory object). The ``f = r`` diagonal
     ``Var_0(r)`` is reported as ``teacher_variance`` (Appendix A3).
 
-    Gauge is INVARIANT: a covariance of two scalar readouts does not depend on the activation basis
-    (DESIGN 2.17 step 6). Trust is EXPLORATORY until a planted-chi organism scorecard calibrates it
-    (gate 1); that calibration is a study, not this function's job.
+    Gauge is INVARIANT: a covariance of two scalar readouts does not depend on the activation
+    basis. Trust is EXPLORATORY until a planted-chi organism scorecard calibrates it (gate 1);
+    that calibration is a study, not this function's job.
     """
     r = np.asarray(scores, dtype=np.float64).ravel()
     f = np.asarray(features, dtype=np.float64)
@@ -206,8 +205,8 @@ def tilt_sweep(
     drift the sweep traces can be checked against the closed-form prediction.
 
     Refuses, via ``ESSGuardError``, when any requested ``|lambda|`` exceeds ``lambda_c / 2`` (past
-    that the tilt no longer emulates practical optimization, DESIGN 2.13; past ``lambda_c`` there is
-    no tilted optimum for a heavy tail, Appendix A4), or when the SNIS effective sample size at some
+    that the tilt no longer emulates practical optimization; past ``lambda_c`` there is no tilted
+    optimum for a heavy tail, Appendix A4), or when the SNIS effective sample size at some
     valid ``lambda`` falls below ``min_ess_frac`` of the bank. Returning a confident number from a
     handful of dominating samples is the failure this guard exists to prevent.
 
@@ -231,7 +230,7 @@ def tilt_sweep(
             f"tilt refused: lambda(s) {beyond.tolist()} exceed lambda_c/2 = {half:.4g} "
             f"(lambda_c = {lambda_c:.4g}). Beyond half the critical pressure the exponential tilt "
             f"stops emulating practical optimization, and past lambda_c the reward's MGF diverges "
-            f"for a heavy tail so there is no tilted optimum at all (Appendix A4/A5, DESIGN 2.13). "
+            f"for a heavy tail so there is no tilted optimum at all (Appendix A4/A5). "
             f"Re-run within [{-half:.4g}, {half:.4g}], or use loops.bon for the far frontier."
         )
 
@@ -252,7 +251,7 @@ def tilt_sweep(
             f"tilt refused: at lambda = {lam_arr[worst]:.4g} the SNIS effective sample size is "
             f"{ess[worst]:.1f} of {n} ({ess_frac[worst]:.1%}), below the min_ess_frac "
             f"{min_ess_frac:.1%} floor. The importance weights have collapsed onto a few samples, "
-            f"so the reweighted estimate is not trustworthy (DESIGN 2.13). Draw a larger bank or "
+            f"so the reweighted estimate is not trustworthy. Draw a larger bank or "
             f"reduce lambda."
         )
 
@@ -284,7 +283,7 @@ def tilt_sweep(
 @register_payload
 @dataclass
 class TiltPrediction:
-    """The SNIS-emulated tilted family across a ``lambda`` grid (DESIGN 2.13).
+    """The SNIS-emulated tilted family across a ``lambda`` grid.
 
     ``feature_means[i]`` is ``E_lambda[f]`` at ``lambdas[i]``; ``reward_mean[i]`` is
     ``E_lambda[r]``; ``ess`` / ``ess_frac`` record how much of the bank carried each estimate.

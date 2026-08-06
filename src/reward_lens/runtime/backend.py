@@ -1,4 +1,4 @@
-"""The Runtime protocol: the backend contract (section 2.2.1).
+"""The Runtime protocol: the backend contract.
 
 A deliberately thin contract so backends can vary (HF eager now; nnsight or a compiled runtime
 later) without touching anything above it. The whole point is that interventions and captures
@@ -11,7 +11,7 @@ scalar; both must work under bf16 trunks with fp32 accumulation for the scalar h
 methods unlock reward field theory (Hessian spectroscopy), gradient-ascent hack generation,
 incentive Jacobians, and second-order attribution: four sciences through one contract.
 
-Frozen interface (section 4.6). torch is referenced in annotations only, under ``TYPE_CHECKING``,
+Frozen interface. torch is referenced in annotations only, under ``TYPE_CHECKING``,
 so importing the protocol surface does not import torch; the concrete ``hf`` backend imports torch
 for real.
 """
@@ -44,7 +44,7 @@ ScalarFn = Callable[["RawOutput"], "torch.Tensor"]
 
 @dataclass
 class TokenBatch:
-    """A left-padded batch of tokenized inputs ready for the model (section 2.2.2).
+    """A left-padded batch of tokenized inputs ready for the model.
 
     Left padding is deliberate: it aligns the final positions across a batch so a final-token
     readout reads the same relative location for every item. ``meta`` carries the per-item
@@ -61,7 +61,7 @@ class TokenBatch:
 
 @dataclass
 class RawOutput:
-    """The result of a forward pass (section 2.2.1).
+    """The result of a forward pass.
 
     Wraps whatever the backend produced: the reward-relevant tensors (a per-item scalar or a
     multi-row head output), and, when a capture was requested, the hidden states. Kept thin on
@@ -77,7 +77,7 @@ class RawOutput:
 
 @dataclass
 class CaptureSpec:
-    """What to capture in a forward pass (section 2.2.1).
+    """What to capture in a forward pass.
 
     ``sites`` are the locations to read; ``position`` is a PositionSpec resolved per input;
     ``full_sequence`` keeps every position rather than the resolved ones; ``dtype`` is the storage
@@ -124,7 +124,7 @@ class CaptureHandle(Protocol):
 
 @dataclass
 class SiteMap:
-    """What sites an architecture exposes, resolved by the adapter (section 2.2.1).
+    """What sites an architecture exposes, resolved by the adapter.
 
     Maps a logical ``Site`` to the concrete module path the backend hooks. Adapters populate this
     once at load; the runtime consults it when mounting captures and interventions, so no
@@ -144,7 +144,7 @@ class SiteMap:
 
 @runtime_checkable
 class Runtime(Protocol):
-    """The backend contract (section 2.2.1).
+    """The backend contract.
 
     Implemented by ``runtime.hf.HFRuntime`` now; a compiled or nnsight backend later implements the
     same six methods and nothing above ``runtime`` knows. ``forward_with_capture`` and ``mounted``

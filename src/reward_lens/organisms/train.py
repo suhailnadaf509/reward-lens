@@ -1,17 +1,16 @@
-"""`train_organism`: fine-tune a trunk until the planted rule governs its reward (section 2.10.3).
+"""`train_organism`: fine-tune a trunk until the planted rule governs its reward.
 
 An organism is only ground truth once a trunk has actually learned the planted rule, so this module
 turns foundry data into a trained signal. The default recipe is LoRA (cheap) when `peft` is installed;
 if it is not, the trunk is fully fine-tuned, which needs only torch and is what the tiny CPU
 micro-organism uses (peft is optional in this environment). Training is the pairwise Bradley-Terry
 margin loss ``-log sigma(r_chosen - r_rejected)`` on the planted preference pairs, run until the trunk
-prefers chosen over rejected per the rule. A budget accountant stamps the compute cost on the result
-(R13).
+prefers chosen over rejected per the rule. A budget accountant stamps the compute cost on the result.
 
 This module is torch-gated: torch and the trunk are imported and built lazily, so importing it stays
-cheap. The larger recipes (0.5B-8B) named in the design are GPU programs; they are provided as
-configuration presets marked ``requires_gpu`` and are *not* trained here. Only the tiny micro-organism
-is actually trained in this environment, and no organism result is ever fabricated (section 4.4).
+cheap. The larger recipes (0.5B-8B) are GPU programs; they are provided as configuration presets
+marked ``requires_gpu`` and are *not* trained here. Only the tiny micro-organism is actually
+trained in this environment, and no organism result is ever fabricated.
 """
 
 from __future__ import annotations
@@ -30,7 +29,7 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 
 @dataclass(frozen=True)
 class TrainRecipe:
-    """A training recipe for an organism (section 2.10.3).
+    """A training recipe for an organism.
 
     ``method`` is ``"lora"`` (default, cheap, needs `peft`) or ``"full_ft"`` (needs only torch, the
     micro-organism's path when peft is absent). The LoRA fields are consulted only on the LoRA path.
@@ -55,7 +54,7 @@ class TrainRecipe:
 
     @classmethod
     def micro(cls, *, seed: int = 0) -> "TrainRecipe":
-        """The tiny CPU recipe: full fine-tune of the 2-layer trunk, seconds to run (R6)."""
+        """The tiny CPU recipe: full fine-tune of the 2-layer trunk, seconds to run."""
         return cls(
             method="full_ft",
             epochs=16,
@@ -101,13 +100,13 @@ class TrainRecipe:
 
 @dataclass
 class TrainedOrganism:
-    """A trunk with a planted rule now learned, plus its training receipts (section 2.10.3).
+    """A trunk with a planted rule now learned, plus its training receipts.
 
     ``signal`` is the trained `RewardModel`; ``organism_id`` is its content-derived id; ``answer_key``
     is the planted ground truth; ``train_accuracy`` and ``train_margin`` are the in-sample pairwise
-    accuracy and mean ``r_chosen - r_rejected`` at the end of training; ``cost`` is the metered compute
-    (R13). Out-of-distribution rule-governance is established separately by `verify.py`, which is what
-    promotes this from "fits the training data" to "the rule governs behaviour" (section 2.10.3).
+    accuracy and mean ``r_chosen - r_rejected`` at the end of training; ``cost`` is the metered
+    compute. Out-of-distribution rule-governance is established separately by `verify.py`, which is
+    what promotes this from "fits the training data" to "the rule governs behaviour".
     """
 
     signal: "RewardModel"
@@ -136,10 +135,14 @@ def _pair_texts(view: DataView) -> tuple[list[str], list[str]]:
 def _try_wrap_lora(model: object, recipe: TrainRecipe) -> tuple[object, bool]:
     """Wrap ``model`` in a LoRA adapter if `peft` is installed; else return it unchanged.
 
-    Returns ``(model, peft_used)``. peft is an optional dependency (R14); when it is absent the caller
+    Returns ``(model, peft_used)``. peft is an optional dependency; when it is absent the caller
     falls back to full fine-tuning, which is correct and is the micro-organism's actual path here.
     """
     try:
+        from reward_lens.core.extras import require_extra
+
+        require_extra("organisms", subsystem="organism training (LoRA planting)")
+
         from peft import LoraConfig, TaskType, get_peft_model
     except Exception:
         return model, False
@@ -183,7 +186,7 @@ def train_organism(
     if recipe.requires_gpu and not torch.cuda.is_available():
         raise RuntimeError(
             f"recipe {recipe.label!r} is marked requires_gpu but no CUDA device is available; "
-            "the GPU presets (0.5B-8B) are not trained in this CPU environment (section 4.4). "
+            "the GPU presets (0.5B-8B) are not trained in this CPU environment. "
             "Use TrainRecipe.micro() for the tiny CPU micro-organism."
         )
 

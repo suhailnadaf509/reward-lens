@@ -1,4 +1,4 @@
-"""The HuggingFace runtime backend (section 2.2.1).
+"""The HuggingFace runtime backend.
 
 ``HFRuntime`` implements the six-method ``Runtime`` protocol against a loaded ``transformers`` model
 plus an adapter and a numerics policy. It ports v1's proven mechanics (the left-padded batched
@@ -9,7 +9,7 @@ spectroscopy, gradient-ascent hack generation, incentive Jacobians, and second-o
 
 Two design decisions make the readout exact and cheap. First, the reward is read by capturing the
 **input to the reward head** with a forward pre-hook (the exact tensor the head consumes) and
-projecting it onto the readout vector in fp32 (R11), rather than trusting the model's own head
+projecting it onto the readout vector in fp32, rather than trusting the model's own head
 output in the trunk dtype. On the tiny fp32 model this is bit-identical to the native logits; on a
 bf16 8B model it is the more correct value and supersedes v1's coerce-head-to-bf16 hack. Second,
 because a classifier pools the last token under causal attention, the head input at position ``t``
@@ -40,8 +40,8 @@ if TYPE_CHECKING:
     import torch
     import torch.nn as nn
 
-    from reward_lens.model_adapters import ModelAdapter
     from reward_lens.runtime.precision import NumericsPolicy
+    from reward_lens.signals.adapters import GraderAdapter
     from reward_lens.signals.base import PositionSpec
 
 
@@ -82,7 +82,7 @@ def auto_batch_size(
 
 
 class HFRuntime:
-    """A ``Runtime`` backed by a loaded HF model, an adapter, and a numerics policy (section 2.2.1).
+    """A ``Runtime`` backed by a loaded HF model, an adapter, and a numerics policy.
 
     Construct via ``signals.loaders.wrap_hf_model`` / ``from_tiny``, which resolve the adapter, the
     site map, the head module, and the policy. The runtime is signal-agnostic: it captures the
@@ -95,7 +95,7 @@ class HFRuntime:
     def __init__(
         self,
         model: "nn.Module",
-        adapter: "ModelAdapter",
+        adapter: "GraderAdapter",
         site_map: SiteMap,
         policy: "NumericsPolicy",
         head_module: "nn.Module | None",
@@ -119,16 +119,18 @@ class HFRuntime:
     # -- position + batching helpers ---------------------------------------
 
     def _final_positions(self, attention_mask: "torch.Tensor") -> "torch.Tensor":
-        """The last valid (non-pad) token index per row, for left- or right-padding alike."""
-        import torch
+        """The last valid (non-pad) token index per row, for left- or right-padding alike.
 
-        seq_len = attention_mask.shape[1]
-        idx = torch.arange(seq_len, device=attention_mask.device)
-        masked = idx.unsqueeze(0) * attention_mask.to(torch.long)
-        return masked.argmax(dim=1)
+        One implementation, in `signals.adapters.final_positions`, because the per-token reward
+        convention needs the same answer and two of these drift apart silently: the wrong form
+        (`mask.sum(dim=1) - 1`) returns a plausible index rather than an error.
+        """
+        from reward_lens.signals.adapters import final_positions
+
+        return final_positions(attention_mask)
 
     def collate(self, tokenized: Sequence[Any]) -> TokenBatch:
-        """Left-pad a list of ``TokenizedInput`` into a ``TokenBatch`` (section 2.2.2).
+        """Left-pad a list of ``TokenizedInput`` into a ``TokenBatch``.
 
         Left padding aligns the final (response-end) token at column ``T-1`` for every row, so a
         final-token readout reads the same relative position for the whole batch. ``meta`` carries
@@ -158,7 +160,7 @@ class HFRuntime:
     # -- protocol: forward --------------------------------------------------
 
     def forward(self, batch: TokenBatch) -> RawOutput:
-        """Run a forward pass, capturing the head-input hidden state (section 2.2.1).
+        """Run a forward pass, capturing the head-input hidden state.
 
         Returns a ``RawOutput`` whose ``extra["head_input"]`` is the ``(B, T, d)`` tensor the reward
         head consumes and ``extra["final_pos"]`` the ``(B,)`` last-valid indices. ``reward`` carries
@@ -209,7 +211,7 @@ class HFRuntime:
     def forward_with_capture(
         self, batch: TokenBatch, spec: CaptureSpec
     ) -> tuple[RawOutput, Capture]:
-        """Forward once, capturing the requested sites (section 2.2.1).
+        """Forward once, capturing the requested sites.
 
         Position resolution: for the default ``final`` (or ``None``) position the mount gathers the
         last-valid token and stores ``(B, d)`` per site; for any other position kind, or when
@@ -259,7 +261,7 @@ class HFRuntime:
 
     @contextlib.contextmanager
     def mounted(self, interventions: Sequence[Any]) -> Any:
-        """Mount interventions via the shared hook path; remove them on exit (section 2.6.1)."""
+        """Mount interventions via the shared hook path; remove them on exit."""
         with mounted_interventions(self.model, self.adapter, self.site_map, interventions):
             yield self
 
@@ -311,7 +313,7 @@ class HFRuntime:
         single ``(d,)`` vector is accepted and treated as ``K=1``); the return is ``(B, K, d)`` where
         entry ``[b, k]`` is ``H_b @ vecs[k]`` for item ``b``'s ``d x d`` reward Hessian at its final
         token. Passing ``vecs = I_d`` therefore materializes the dense Hessian for a single item,
-        which is exactly how the M1 acceptance test checks this method against a finite-difference
+        which is exactly how the acceptance test checks this method against a finite-difference
         reference. The head scalar is accumulated in fp32 regardless of trunk dtype.
         """
         import torch

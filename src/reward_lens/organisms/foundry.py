@@ -1,19 +1,19 @@
-"""The ground-truth foundry: a generator for every planted structure (section 2.10.2).
+"""The ground-truth foundry: a generator for every planted structure.
 
-This is the heart of M4 and the epistemological floor of the whole design (section 5.2): each
-generator emits lineage-complete training data whose decision rule is known *exactly*, because the
-data was generated from the rule, together with the `AnswerKey` an instrument is graded against. The
+This is the epistemological floor of the whole design: each generator emits lineage-complete
+training data whose decision rule is known *exactly*, because the data was generated from the rule,
+together with the `AnswerKey` an instrument is graded against. The
 module is pure (no torch): the data and its answer key are fully constructed and testable now; the
 trunk that learns the rule is trained in `train.py`, and the OOD split that proves rule-governance is
 generated from the same rule here.
 
 Every generator has the same shape: ``generator(*, split, seed, ...) -> (DataView, AnswerKey)``. The
-``split`` argument is the mechanism behind out-of-distribution verification (section 2.10.3): a
+``split`` argument is the mechanism behind out-of-distribution verification: a
 ``"train"`` split and an ``"ood"`` split are generated from the *same* rule over *disjoint* topic
 vocabularies, so a signal that recovers the rule on the OOD split has provably learned the rule and
 not the surface distribution.
 
-Implemented completely (M4 acceptance depends on the first two):
+Implemented completely:
     1. compositional rules at escalating difficulty      -> `compositional_rule_organism`
     2. dose-controlled spurious correlations rho in 0.5..1 -> `spurious_correlation_organism`
     3. planted hidden objectives (auditing-game style)   -> `hidden_objective_organism`
@@ -26,7 +26,7 @@ Implemented completely (M4 acceptance depends on the first two):
    10. value error (preference inversion at fixed truth) -> `value_error_organism`
    11. planted curl and harmonic Hodge mass (3-cycles + chordless rings) -> `curl_harmonic_organism`
 
-Stubbed with a clear marker (needs machinery outside M4's scope, see the function):
+Stubbed with a clear marker (needs machinery outside this package's scope, see the function):
     - kinship-controlled sibling bases                    -> `kinship_organism` (STUB)
 """
 
@@ -66,7 +66,7 @@ _DISTRACTORS: tuple[str, ...] = ("detailed", "structured", "polite", "code")
 
 
 def _topics(split: Split) -> tuple[str, ...]:
-    """The topic pool for a split. Train and OOD pools are disjoint (section 2.10.3)."""
+    """The topic pool for a split. Train and OOD pools are disjoint."""
     if split == "train":
         return TRAIN_TOPICS
     if split == "ood":
@@ -101,7 +101,7 @@ def _build_pair(
     ops: tuple[str, ...],
     meta: dict[str, Any] | None = None,
 ) -> Pair:
-    """Construct a lineage-complete `Pair` from a chosen/rejected feature set (section 2.4.2).
+    """Construct a lineage-complete `Pair` from a chosen/rejected feature set.
 
     The lineage content hash is computed from the exact same canonical content tuple the dataset
     checksum uses (`pair_content`), so clone detection and the checksum agree. Distinct pairs get
@@ -154,7 +154,7 @@ def _predicate(name: str) -> Predicate:
     return Predicate(name=name, feature=name, gloss=_PREDICATE_GLOSS[name])
 
 
-# Escalating combinators. Depth is the difficulty dial (section 5.2): higher levels compose more
+# Escalating combinators. Depth is the difficulty dial: higher levels compose more
 # predicates so an instrument that only recovers a single direction fails to recover the whole rule.
 _LEVELS: dict[int, tuple[list[str], str]] = {
     1: (["cites"], "cites"),
@@ -182,7 +182,7 @@ def _powerset(items: list[str]) -> list[set[str]]:
 def compositional_rule_organism(
     *, level: int = 2, n: int = 96, seed: int = 0, split: Split = "train", strength: float = 1.0
 ) -> tuple[DataView, AnswerKey]:
-    """Compositional-rule organism at escalating difficulty (section 2.10.2, generator 1).
+    """Compositional-rule organism at escalating difficulty (generator 1).
 
     The rule is a boolean combinator over predicates (`_LEVELS`); at ``level`` the chosen response
     satisfies the combinator and the rejected does not. At ``strength = 1`` every pair obeys the rule
@@ -257,14 +257,14 @@ def spurious_correlation_organism(
     true_feature: str = "factual",
     spurious_feature: str = "cites",
 ) -> tuple[DataView, AnswerKey]:
-    """Dose-controlled spurious-correlation organism (section 2.10.2, generator 2).
+    """Dose-controlled spurious-correlation organism (generator 2).
 
     The *true* rule is a single predicate on ``true_feature``: the chosen side has it and the rejected
     does not. A ``spurious_feature`` is correlated with the label at strength ``rho``: exactly one side
     carries the spurious marker, and it lands on the chosen (label-aligned) side with probability
     ``rho``. So the empirical agreement rate between "spurious is on the chosen side" and the label is
     ``rho``: at ``rho = 0.5`` the spurious feature is independent of the label, at ``rho = 1.0`` it is
-    a perfect confound. This is the dose axis the scorecard must be monotone in (section 2.10.3).
+    a perfect confound. This is the dose axis the scorecard must be monotone in.
 
     ``rho`` is the dose; the standard sweep is ``{0.5, 0.6, 0.7, 0.8, 0.9, 1.0}``.
     """
@@ -325,7 +325,7 @@ def spurious_correlation_organism(
 
 
 def measure_spurious_correlation(view: DataView, spurious_feature: str) -> float:
-    """The empirical agreement rate between the spurious feature and the label (section 2.10.2).
+    """The empirical agreement rate between the spurious feature and the label.
 
     For each pair, agreement is 1 when the spurious marker is on the chosen side and absent from the
     rejected side (label-aligned), 0 when it is on the rejected side. Reads the rendered response text
@@ -360,13 +360,13 @@ def hidden_objective_organism(
     weight_visible: float = 2.0,
     weight_hidden: float = 1.0,
 ) -> tuple[DataView, AnswerKey]:
-    """Planted-hidden-objective organism (section 2.10.2, generator 3).
+    """Planted-hidden-objective organism (generator 3).
 
     The *advertised* rule is a single visible predicate (``visible_feature``), but the label is decided
     by a utility ``w_v * visible + w_h * hidden``: the model also secretly rewards ``hidden_feature``.
     A meaningful fraction of pairs are tied on the visible feature and broken by the hidden one, so the
-    hidden objective is present and recoverable, which is the object the auditing game hunts for
-    (section 2.10.4). A blind auditor who only checks the visible rule misses the hidden term.
+    hidden objective is present and recoverable, which is the object the auditing game hunts for. A
+    blind auditor who only checks the visible rule misses the hidden term.
     """
     rule = RuleSpec(
         predicates=(_predicate(visible_feature),), combinator=visible_feature, strength=1.0
@@ -457,7 +457,7 @@ def _feature_onehot(feature: str) -> np.ndarray:
 def gate_organism(
     *, n: int = 160, seed: int = 0, split: Split = "train"
 ) -> tuple[DataView, AnswerKey]:
-    """Synthetic multi-objective gate organism (section 2.10.2, generator 4).
+    """Synthetic multi-objective gate organism (generator 4).
 
     The rule is a hard safety gate followed by a quality ordering: a response is preferable only if it
     is safe (carries no ``[unsafe]`` marker) *and* factual. A response with the unsafe marker is vetoed
@@ -523,7 +523,7 @@ def gate_organism(
 def intransitivity_organism(
     *, n_triads: int = 16, seed: int = 0, split: Split = "train", wins: int = 5
 ) -> tuple[DataView, AnswerKey]:
-    """Planted-intransitivity organism: cyclic preferences as tournaments (section 2.10.2, gen 5).
+    """Planted-intransitivity organism: cyclic preferences as tournaments (generator 5).
 
     Each item is a `Tournament` over three responses A, B, C with a planted 3-cycle A > B > C > A
     (each beats the next by ``wins`` to ``0``). This is the curl ground truth for the topology science
@@ -617,7 +617,7 @@ _ANNOTATOR_FEATURE: dict[str, str] = {"careful": "factual", "stylist": "polite",
 
 
 def mixture_entropy_bits(mixing: dict[str, float]) -> float:
-    """The Shannon entropy H(V) in bits of the annotator mixing distribution (section 2.10.2).
+    """The Shannon entropy H(V) in bits of the annotator mixing distribution.
 
     This is the channel-capacity ground truth the annotator-mixture organism plants (S8): a mixture of
     known annotator "values" whose entropy is known exactly because the mixing weights are chosen, not
@@ -641,7 +641,7 @@ def annotator_mixture_organism(
     seed: int = 0,
     split: Split = "train",
 ) -> tuple[DataView, AnswerKey]:
-    """Planted annotator-mixture organism with known H(V) (section 2.10.2, generator 6).
+    """Planted annotator-mixture organism with known H(V) (generator 6).
 
     The population of annotators is a categorical distribution ``mixing`` over named annotators, each
     of whom prefers a different feature (`_ANNOTATOR_FEATURE`). Every pair is labelled by an annotator
@@ -754,7 +754,7 @@ def rubric_organism(
     seed: int = 0,
     split: Split = "train",
 ) -> tuple[DataView, AnswerKey]:
-    """Planted-rubric organism at controlled ``(K, d, correlation)`` (section 2.10.2, generator 7).
+    """Planted-rubric organism at controlled ``(K, d, correlation)`` (generator 7).
 
     ``K`` criterion directions are planted in ``R^d`` with an exact pairwise cosine ``correlation``
     (`make_rubric_directions`). Each response carries a latent ``x in R^d``; its aggregate reward is
@@ -839,7 +839,7 @@ def hack_direction_organism(
     gold_feature: str = "factual",
     anti_correlation: float = 0.8,
 ) -> tuple[DataView, AnswerKey]:
-    """Planted-hack-direction organism (section 2.10.2, generator 8; A12's predicted hack mode).
+    """Planted-hack-direction organism (generator 8; A12's predicted hack mode).
 
     The label rewards ``hack_feature`` (the chosen side carries it, the rejected does not), so an RM
     trained on this data learns to love the hack, giving it positive susceptibility ``chi > 0``. But
@@ -940,7 +940,7 @@ def measure_hack_signature(
 def epistemic_error_organism(
     *, epsilon: float = 0.2, n: int = 200, seed: int = 0, split: Split = "train"
 ) -> tuple[DataView, AnswerKey]:
-    """Planted-epistemic-error organism: mislabeled receipts at rate ``epsilon`` (section 2.10.2).
+    """Planted-epistemic-error organism: mislabeled receipts at rate ``epsilon``.
 
     The rule prefers grounded (factual) responses, but a fraction ``epsilon`` of the "factual" markers
     are *fabricated receipts*: the response looks grounded to the grader while gold says it is false.
@@ -993,7 +993,7 @@ def epistemic_error_organism(
 def value_error_organism(
     *, delta: float = 0.2, n: int = 200, seed: int = 0, split: Split = "train"
 ) -> tuple[DataView, AnswerKey]:
-    """Planted-value-error organism: preference inversion at fixed truth (section 2.10.2).
+    """Planted-value-error organism: preference inversion at fixed truth.
 
     Truth is never in doubt (the factual side is always identifiable), but at rate ``delta`` the rule
     prefers the *less* truthful, more agreeable side anyway. The grader's error here is axiological (a
@@ -1064,7 +1064,7 @@ def curl_harmonic_organism(
     seed: int = 0,
     split: Split = "train",
 ) -> tuple[DataView, AnswerKey]:
-    """Planted curl vs harmonic mass with a known Hodge decomposition (section 2.10.2, generator 11).
+    """Planted curl vs harmonic mass with a known Hodge decomposition (generator 11).
 
     Generates a collection of tournaments containing both pure curl (3-cycles) and pure harmonic
     (chordless rings of length 4 to 7) preferences. This serves as the ground truth for preference
@@ -1155,20 +1155,20 @@ def curl_harmonic_organism(
 
 
 def kinship_organism(**_kwargs: Any) -> tuple[DataView, AnswerKey]:
-    """STUB (section 2.10.2): kinship-controlled sibling bases for the policy-grader kinship science.
+    """STUB: kinship-controlled sibling bases for the policy-grader kinship science.
 
     Kinship (S13, A16) needs a controlled population of pretrained sibling bases with known data
-    overlap, which is the shared base-population build (section 4.5), a GPU program outside M4. This is
-    a marked placeholder; the M4 deliverable trains only the tiny CPU micro-organism.
+    overlap, which is a GPU-scale build this package does not run. This is a marked placeholder;
+    only the tiny CPU micro-organism is trained here.
     """
     raise NotImplementedError(
-        "kinship_organism is a STUB (section 2.10.2): it requires the controlled sibling base "
-        "population (section 4.5), a GPU build outside M4. Only the tiny micro-organism is trained here."
+        "kinship_organism is a STUB: it requires the controlled sibling base population, a GPU "
+        "build this package does not run. Only the tiny micro-organism is trained here."
     )
 
 
 # ---------------------------------------------------------------------------
-# Registry: every generator is discoverable by name (section 2.1.3, R9)
+# Registry: every generator is discoverable by name
 # ---------------------------------------------------------------------------
 
 _GENERATORS = {

@@ -1,4 +1,4 @@
-"""Wiring the calibration gate: scorecards to the measurement runner (section 1.3, gate 1).
+"""Wiring the calibration gate: scorecards to the measurement runner (gate 1).
 
 The scorecard (`organisms/scorecard.py`) grades an instrument against planted ground truth and
 produces a `CalibrationRef`. The measurement runner (`measure/base.py`) asks a pluggable provider,

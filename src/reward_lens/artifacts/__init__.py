@@ -1,4 +1,4 @@
-"""``reward_lens.artifacts`` — the delivery layer (section 2.15).
+"""``reward_lens.artifacts`` — the delivery layer.
 
 Cards, the Atlas, safety cases, the claims checker, and the site export are views over the evidence
 store. They assemble stored Evidence and never compute fresh numbers, which is what guarantees a

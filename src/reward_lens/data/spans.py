@@ -1,4 +1,4 @@
-"""Span vocabulary, tokenization, and character-to-token mapping (section 2.4.3).
+"""Span vocabulary, tokenization, and character-to-token mapping.
 
 The kernel's `Span` (in `reward_lens.core.types`) is a typed token interval ``[start, end)``.
 This module supplies the two things the core primitive deliberately leaves to the data plane: the
@@ -6,13 +6,13 @@ vocabulary of span *kinds* that give a span its meaning, and the character-to-to
 turns a human-authored character range ("the receipt is characters 40..75") into an exact token
 interval that span-level patching and attribution can act on.
 
-Real tokenization arrives with the signals layer at M1: ``signals.tokenize`` owns span
-carry-through against a model's own tokenizer and chat template. Until then, and for tests that
-must run without any model, this module defines a small pluggable `Tokenizer` protocol with a
-deterministic default, `SimpleTokenizer`. The default splits on whitespace and punctuation and
-records exact character offsets, so a span built from a character range maps to the same token
-interval on every machine and every run. Nothing here is model-specific; it is the reference
-tokenizer the fixtures and the SpanMap fuzz tests are written against.
+Real tokenization lives in the signals layer: ``signals.tokenize`` owns span carry-through against
+a model's own tokenizer and chat template. For the paths that must run without any model, this
+module defines a small pluggable `Tokenizer` protocol with a deterministic default,
+`SimpleTokenizer`. The default splits on whitespace and punctuation and records exact character
+offsets, so a span built from a character range maps to the same token interval on every machine
+and every run. Nothing here is model-specific; it is the reference tokenizer the fixtures and the
+SpanMap fuzz tests are written against.
 """
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-"""Canonical Direct Linear Attribution for reward models (E03/E04, section 2.8.2).
+"""Canonical Direct Linear Attribution for reward models.
 
 The residual stream is a sum of component outputs and the reward is a linear read of the final
 residual, so the reward decomposes exactly into per-component signed contributions:
@@ -9,20 +9,18 @@ and an attention layer's contribution splits further into per-head terms because
 linear: head h contributes ``head_out_h @ W_o[:, h*d_head:(h+1)*d_head].T``, whose reward
 contribution is that vector's projection onto ``w_r``.
 
-This module is the single canonical implementation of head-level reward attribution. v1 grew three
-copies of it that had drifted apart: ``attribution.component._batch_head_attribution`` (an einsum
-over a reshaped ``o_proj`` weight), ``experiments/utils/batching.batch_head_attribution`` (an
-explicit per-head slice plus matmul), and the inline ``o_proj`` slicing inside
-``path_patching.PathPatcher`` (which recomputes the same slice for a different purpose). The three
-agreed on the mathematics but differed in dtype handling, device placement, detach discipline, and
-tensor layout, which is exactly the operationalization-drift liability the kernel exists to remove.
-Everything head-level now routes through :func:`head_reward_contributions`; the two v1 attribution
-copies delegate to it, so there is one place the head decomposition is defined and one place it can
-be wrong.
+This module is the single canonical implementation of head-level reward attribution. There used to
+be three of it, written separately: an einsum over a reshaped ``o_proj`` weight, an explicit
+per-head slice plus matmul, and the inline ``o_proj`` slicing inside the path patcher, which
+recomputes the same slice for a different purpose. All three agreed on the mathematics and differed
+in dtype handling, device placement, detach discipline, and tensor layout, which is exactly the
+operationalization-drift liability the kernel exists to remove. Everything head-level now routes
+through :func:`head_reward_contributions`, so there is one place the head decomposition is defined
+and one place it can be wrong.
 
 The functions here are deliberately substrate-free: they take tensors and a reward direction, not a
-``RewardModel`` or a ``RewardSignal``, so both the v1 primitive and the v3 ``DirectLinearAttribution``
-Observable call the same code on the same numbers.
+``RewardModel`` or a ``RewardSignal``, so any caller that has activations and a reward direction
+runs the same code on the same numbers.
 """
 
 from __future__ import annotations
@@ -40,7 +38,7 @@ def project_onto_reward(activation: "torch.Tensor", w_r: "torch.Tensor") -> "tor
 
     ``activation`` is ``(..., d_model)`` in whatever dtype the trunk produced; ``w_r`` is
     ``(d_model,)``. Both are upcast to fp32 before the contraction, matching the head-in-fp32 policy
-    (R11) so a contribution computed here equals the corresponding slice of the fp32 reward. Returns
+    so a contribution computed here equals the corresponding slice of the fp32 reward. Returns
     ``(...)``.
     """
     import torch

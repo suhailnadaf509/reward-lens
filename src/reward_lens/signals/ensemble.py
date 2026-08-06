@@ -1,4 +1,4 @@
-"""``SignalEnsemble`` and distributional wrappers (section 2.3.3, adapter 8).
+"""``SignalEnsemble`` and distributional wrappers (adapter 8).
 
 Two kinds of composite live here, both of which any Observable consumes as an ordinary ``RewardSignal``:
 
@@ -35,7 +35,7 @@ EnsembleMode = Literal["mean", "min", "max", "quantile"]
 
 
 class SignalEnsemble:
-    """A composite of several member signals (section 2.3.3, adapter 8).
+    """A composite of several member signals (adapter 8).
 
     ``score`` scores every member under the requested readout, stacks the results, and reduces them by
     ``mode`` (mean, min, max, or a quantile at ``q``). The Evidence subject names every member by
@@ -62,7 +62,7 @@ class SignalEnsemble:
         self.runtime = self.members[0].runtime  # nominal; capture delegates to a member explicitly
         # An ensemble reliably composes scores and (per member) activations; it does not compose the
         # prefix, gradient, or Hessian paths (which member would "layer L" name?), so it claims only
-        # what it actually implements rather than the members' full intersection (R3).
+        # what it actually implements rather than the members' full intersection.
         caps = Capability.SCORES
         if all(bool(m.caps & Capability.ACTIVATIONS) for m in self.members):
             caps = caps | Capability.ACTIVATIONS
@@ -102,7 +102,7 @@ class SignalEnsemble:
     # -- scoring ------------------------------------------------------------
 
     def score(self, view: Any, readout: str | None = None) -> "Evidence[Scores]":
-        """Composite score under ``mode`` over the members' scores (section 2.3.3)."""
+        """Composite score under ``mode`` over the members' scores."""
         items = list(view)
         started = time.perf_counter()
         name = readout or self._default_readout_name()
@@ -136,7 +136,7 @@ class SignalEnsemble:
         )
 
     def score_prefixes(self, view: Any, readout: str | None = None) -> "Evidence[TokenCurves]":
-        """Composite per-token curves: the members' prefix curves reduced token by token (section 2.3.2).
+        """Composite per-token curves: the members' prefix curves reduced token by token.
 
         Requires the members to tokenize identically (the common case: a shared tokenizer), so the
         per-item curves align in length and reduce position-wise. Prefix consistency is preserved
@@ -245,7 +245,7 @@ class DistributionalSignal:
         )
 
     def readouts(self) -> list[Any]:
-        """One ``quantile:tau`` readout per level, reusing the wrapped row vectors (section 2.3.1)."""
+        """One ``quantile:tau`` readout per level, reusing the wrapped row vectors."""
         from dataclasses import replace
 
         out = []

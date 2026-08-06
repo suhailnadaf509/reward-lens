@@ -23,6 +23,10 @@ Supported families:
 
 from __future__ import annotations
 
+from reward_lens.core.extras import require_extra
+
+require_extra("white-box", subsystem="reward_lens.model_adapters")
+
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 

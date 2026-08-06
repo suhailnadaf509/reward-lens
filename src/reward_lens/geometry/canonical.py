@@ -1,8 +1,8 @@
 """Canonicalization and the effective angle: comparing reward directions in a shared frame.
 
-This is the executable form of invariant I3 (DESIGN sections 1.2, 2.7.1, Appendix A13). Two reward
-directions are only comparable across signals once both are expressed in a shared `Frame`. The
-canonical form whitens by the reference-distribution covariance square root and normalizes:
+This is the executable form of invariant I3 (A13). Two reward directions are only
+comparable across signals once both are expressed in a shared `Frame`. The canonical form whitens
+by the reference-distribution covariance square root and normalizes:
 
     w_tilde = Sigma^{1/2} w / || Sigma^{1/2} w ||
 
@@ -17,7 +17,7 @@ down-weighted by the shrinkage floor).
 `effective_angle` reports that canonical cosine with a bootstrap confidence interval and a
 STARC-style behavioural regret bound: the canonical distance upper-bounds worst-case preference
 disagreement on the frame corpus, and we report that disagreement empirically by searching corpus
-response pairs for the ones the two rewards order oppositely (Appendix A13, faithful_to
+response pairs for the ones the two rewards order oppositely (A13, faithful_to
 "STARC 2309.15257 / partial identifiability 2411.15951"). The comparison is COVARIANT and takes a
 frame argument with no default; it calls ``require_frame_for_comparison`` so gate 2 cannot be
 skipped.
@@ -45,9 +45,9 @@ _FAITHFUL_TO = "STARC 2309.15257 / partial identifiability 2411.15951"
 def canonicalize(w: Any, frame: Frame) -> np.ndarray:
     """Canonical form of a reward direction in a frame: ``Sigma^{1/2} w`` normalized.
 
-    DESIGN section 2.7.1. Whitening by ``Sigma^{1/2}`` weights each direction by how much the
-    reference distribution varies along it, so directions the distribution does not vary along
-    contribute nothing to the canonical direction. When the frame carries an estimated ``null_basis``
+    Whitening by ``Sigma^{1/2}`` weights each direction by how much the reference distribution
+    varies along it, so directions the distribution does not vary along contribute nothing to the
+    canonical direction. When the frame carries an estimated ``null_basis``
     the gauge components of ``w`` are projected out first, which makes canonicalization exactly
     invariant to adding data-null directions to ``w`` (rather than leaving the small residual the
     Ledoit-Wolf shrinkage floor would otherwise pass through). The result is a unit fp32 vector.
@@ -96,7 +96,7 @@ def _raw_cos(a: np.ndarray, b: np.ndarray) -> float:
 @register_payload
 @dataclass
 class AngleResult:
-    """The payload of `effective_angle` (DESIGN section 2.7.1, Appendix A13).
+    """The payload of `effective_angle` (A13).
 
     ``canonical_cos`` is the gauge-fixed alignment (on-distribution reward correlation);
     ``raw_cos`` is the un-whitened cosine kept for contrast (the number that made E19's
@@ -209,11 +209,11 @@ def effective_angle(
 ) -> Evidence[AngleResult]:
     """Canonical angle between two reward directions with a CI and a STARC regret bound.
 
-    DESIGN section 2.7.1 / Appendix A13. Reports ``cos(w_tilde_a, w_tilde_b)`` in the shared
-    ``frame`` (the gauge-fixed alignment), the raw cosine for contrast, a bootstrap CI obtained by
-    refitting the frame on corpus resamples (when ``activations_for_bound`` is supplied), and a
-    behavioural regret bound: the empirical worst-case preference disagreement on the frame corpus,
-    which the canonical (STARC) distance upper-bounds.
+    A13. Reports ``cos(w_tilde_a, w_tilde_b)`` in the shared ``frame`` (the gauge-fixed alignment),
+    the raw cosine for contrast, a bootstrap CI obtained by refitting the frame on corpus resamples
+    (when ``activations_for_bound`` is supplied), and a behavioural regret bound: the empirical
+    worst-case preference disagreement on the frame corpus, which the canonical (STARC) distance
+    upper-bounds.
 
     The quantity is COVARIANT and the ``frame`` argument has no default; this calls
     ``require_frame_for_comparison`` so a frameless cross-signal comparison raises (gate 2, I3).

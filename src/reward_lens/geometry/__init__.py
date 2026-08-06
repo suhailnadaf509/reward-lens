@@ -1,4 +1,4 @@
-"""``reward_lens.geometry`` — frames, gauge, curvature, and the scalar bottleneck (DESIGN section 2.7).
+"""``reward_lens.geometry`` — frames, gauge, curvature, and the scalar bottleneck.
 
 The mathematical heart of cross-model validity. This subsystem turns three of the corpus's deepest
 programs into shared machinery: field theory (the reward Hessian spectrum), gauge (frames and
@@ -27,6 +27,10 @@ deliberately not re-exported here; import it explicitly if you need it.
 """
 
 from __future__ import annotations
+
+from reward_lens.core.extras import require_extra
+
+require_extra("white-box", subsystem="reward_lens.geometry")
 
 from reward_lens.geometry.canonical import AngleResult, canonicalize, effective_angle
 from reward_lens.geometry.frame import (

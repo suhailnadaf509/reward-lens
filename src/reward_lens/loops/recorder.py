@@ -1,6 +1,6 @@
-"""The rollout recorder: reward-feature drift monitoring with changepoint onset (DESIGN 2.13, S13).
+"""The rollout recorder: reward-feature drift monitoring with changepoint onset (S13).
 
-The crown-jewel hypothesis of the recorder (DESIGN 2.13, science S13) is that reward hacking is
+The crown-jewel hypothesis of the recorder (science S13) is that reward hacking is
 visible in reward-feature space before the reward and KL curves move, and that a monitor anchored
 in the reward-defining subspace resists the obfuscation that kills a free-floating probe: the
 policy is paid to excite ``w_r`` and cannot climb reward while hiding from it, so evasion pressure
@@ -25,9 +25,10 @@ proxy reward the RM assigns and (in the synthetic organism, or an offline eval) 
   (null space), the decomposition the obfuscation-resistance hypothesis rests on.
 
 Onset is detected with a CUSUM changepoint test (a single mean-shift split with a permutation
-p-value). DESIGN 2.11 routes ``OnsetAlarm`` through a ``stats/changepoint`` module (BOCPD); that
-module is not built yet, so the detector lives here as a dependency-light stand-in with the same
-contract, and moves to ``stats`` when it lands. The lead time is the gap between the exploited
+p-value). Sequential onset delegates to ``stats/changepoint``, which also carries the BOCPD
+detector; the permutation variant stays here because it is dependency-light and answers a
+different question, which is where one shift sits rather than when a regime broke. The lead time
+is the gap between the exploited
 feature's dose onset and the gold reward's divergence onset; a positive lead time is the recorder
 seeing the hack in feature space before it shows up in behavior.
 """
@@ -48,7 +49,7 @@ if TYPE_CHECKING:
 
 
 # ---------------------------------------------------------------------------
-# Changepoint (local stand-in for stats/changepoint, DESIGN 2.11)
+# Changepoint (thin local layer over stats/changepoint)
 # ---------------------------------------------------------------------------
 
 
@@ -87,7 +88,7 @@ def cusum_onset(
 ) -> Onset:
     """Detect the first departure from a baseline regime by Page's sequential CUSUM (onset detection).
 
-    Delegates to the central stats/changepoint implementation (DESIGN 2.11).
+    Delegates to the central stats/changepoint implementation.
     """
     from reward_lens.stats.changepoint import cusum
 
@@ -115,8 +116,8 @@ def cusum_changepoint(
     ``S_0 = S_T = 0``; the changepoint is the index where ``|S|`` is largest, and the magnitude
     ``max(S) - min(S)`` is the test statistic. Significance is a permutation null: shuffle the
     series ``n_perm`` times, recompute the magnitude, and report the fraction at least as large
-    (with the ``(count + 1) / (n_perm + 1)`` correction). This is the dependency-light stand-in for
-    the BOCPD detector DESIGN 2.11 puts in ``stats/changepoint``; the return contract is the same.
+    (with the ``(count + 1) / (n_perm + 1)`` correction). This is the dependency-light alternative
+    to the BOCPD detector in ``stats/changepoint``; the return contract is the same.
 
     A flat or trendless series returns a non-significant changepoint (large p-value). The reported
     index is the split point in ``[0, T]``: samples before it are one regime, samples after another.
@@ -148,12 +149,19 @@ def cusum_changepoint(
 
 
 @dataclass
-class FeatureBank:
+class DirectionBank:
     """Named unit directions in activation space, the concepts whose dose the recorder tracks.
 
     ``directions`` is ``(k, d)``; rows are normalized on construction so a dose is an honest
     projection. ``names`` labels them so the recorder can name the exploited direction rather than
     return an index.
+
+    This was called `FeatureBank` once, which is the name
+    `reward_lens.core.features.FeatureBank` holds: a structural protocol with a ``featurize``
+    method and a ``directions()`` accessor. This class is neither. It is a container whose
+    ``directions`` is an array attribute, and it does not satisfy that protocol in any way a caller
+    can rely on, though a `runtime_checkable` isinstance check would have said it did. Two
+    incompatible objects under one exported name is a trap, so this one is named for what it is.
     """
 
     names: list[str]
@@ -174,9 +182,16 @@ class FeatureBank:
         return len(self.names)
 
 
+@register_payload
 @dataclass
 class OnsetAlarm:
-    """A changepoint-based onset: which signal moved, when, and how significantly (DESIGN 2.13)."""
+    """A changepoint-based onset: which signal moved, when, and how significantly.
+
+    Registered because it is nested inside `DriftReport.onset_alarms`, which is itself a payload.
+    An unregistered nested type used to decode to a plain dict, so a `DriftReport` read back from a
+    store came out with dicts where its alarms should be and nothing said so. The codec now refuses
+    an unregistered payload rather than degrading, which is what surfaced this.
+    """
 
     signal: str
     kind: str  # "concept-dose" | "gold-divergence" | "crystallization"
@@ -188,7 +203,7 @@ class OnsetAlarm:
 @register_payload
 @dataclass
 class DriftReport:
-    """The recorder's read-out over a rollout (DESIGN 2.13).
+    """The recorder's read-out over a rollout.
 
     ``dose`` is ``(T, k)`` concept-dose trajectories; ``dose_cusum`` and ``dose_p`` are the CUSUM
     magnitude and permutation p-value per feature. ``exploited_direction`` is the named feature the
@@ -225,7 +240,7 @@ class DriftReport:
 
 
 class RolloutRecorder:
-    """Monitor a rollout in reward-feature space, step by step (DESIGN 2.13, science S13).
+    """Monitor a rollout in reward-feature space, step by step (science S13).
 
     Construct with the feature bank whose doses to track, the reward direction ``w_r`` the policy is
     paid to excite, a batch of baseline (step-0) activations that fixes the reference mean and
@@ -234,14 +249,13 @@ class RolloutRecorder:
     ``report`` to get the ``DriftReport``, or ``evidence`` to get it wrapped as ``Evidence``.
 
     Everything is CPU-cheap and pure-numpy. The recorder holds no model; it consumes activations a
-    caller extracts, which is what lets it run in shadow mode on production serving with no behavior
-    change (DESIGN 2.13) and what makes the synthetic organism a faithful stand-in for the GPU
-    rollout.
+    caller extracts, which is what lets it run in shadow mode on production serving with no
+    behavior change, and what makes the synthetic organism a faithful stand-in for the GPU rollout.
     """
 
     def __init__(
         self,
-        feature_bank: FeatureBank,
+        feature_bank: DirectionBank,
         reward_direction: Sequence[float] | np.ndarray,
         baseline_activations: np.ndarray,
         *,
@@ -418,11 +432,11 @@ class RolloutRecorder:
         n_perm: int = 1000,
         seed: int = 0,
     ) -> Evidence[DriftReport]:
-        """The ``DriftReport`` wrapped as ``Evidence`` (DESIGN 2.13).
+        """The ``DriftReport`` wrapped as ``Evidence``.
 
         Gauge is RAW_ONLY: concept doses and drift magnitudes are projections in one model's
         activation basis, so they are raw coordinates, honest within a rollout but not comparable
-        across models without a Frame (DESIGN 2.7.1, gate 2). The lead time and outlier rate are
+        across models without a Frame (gate 2). The lead time and outlier rate are
         frame-free, but the payload as a whole carries raw-coordinate arrays, so RAW_ONLY is the
         conservative correct label.
         """
@@ -452,7 +466,7 @@ def _mean_or_nan(x: float | Sequence[float] | None) -> float:
 
 @dataclass
 class SyntheticRollout:
-    """A planted-hack rollout the recorder is proven on (DESIGN 2.13; the crown-jewel test).
+    """A planted-hack rollout the recorder is proven on (the crown-jewel test).
 
     ``activations`` is a list of per-step ``(n_samples, d)`` batches; ``proxy`` and ``gold`` are the
     per-step reward means; ``feature_bank``, ``w_r`` and ``baseline`` are what the recorder is
@@ -464,7 +478,7 @@ class SyntheticRollout:
     activations: list[np.ndarray]
     proxy: np.ndarray
     gold: np.ndarray
-    feature_bank: FeatureBank
+    feature_bank: DirectionBank
     w_r: np.ndarray
     baseline: np.ndarray
     planted_direction: str
@@ -486,7 +500,7 @@ def synthetic_hack_rollout(
     noise: float = 1.0,
     seed: int = 0,
 ) -> SyntheticRollout:
-    """Generate a CPU rollout that drifts along a planted hack direction (DESIGN 2.13, science S13).
+    """Generate a CPU rollout that drifts along a planted hack direction (science S13).
 
     The policy is paid to excite the reward direction ``w_r``, which here is the hack feature's
     direction (feature 0). From ``dose_onset`` on, the activation mean drifts along that direction at
@@ -507,7 +521,7 @@ def synthetic_hack_rollout(
     q, _ = np.linalg.qr(raw.T)
     directions = q.T[:n_features]
     names = ["hack"] + [f"distractor{i}" for i in range(1, n_features)]
-    bank = FeatureBank(names=names, directions=directions)
+    bank = DirectionBank(names=names, directions=directions)
     hack_dir = bank.directions[0]
     w_r = hack_dir.copy()
 
@@ -547,7 +561,7 @@ __all__ = [
     "RolloutRecorder",
     "DriftReport",
     "OnsetAlarm",
-    "FeatureBank",
+    "DirectionBank",
     "Changepoint",
     "cusum_changepoint",
     "Onset",

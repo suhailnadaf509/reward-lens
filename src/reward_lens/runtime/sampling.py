@@ -1,15 +1,15 @@
-"""SamplerBridge: policy sampling for the loops that need draws (section 2.2.6).
+"""SamplerBridge: policy sampling for the loops that need draws.
 
 Policies enter the kernel in two roles: as subjects of instrumentation (RL loops) and as sources of
 samples (chi estimation, BoN ladders, dreams). ``SamplerBridge`` is the sampling half. The HF
 ``generate`` path is implemented and usable now; the vLLM path is an explicit, clearly marked stub
-because vLLM is not installed on this machine and is an optional extra (R14). A ``fidelity_check``
-signature is present so a study that mixes engines can bound the drift between them; its body is
-implemented for the HF-vs-HF degenerate case and stubbed for the vLLM comparison.
+because vLLM is an optional extra. A ``fidelity_check`` signature is present so a study that mixes
+engines can bound the drift between them; its body is implemented for the HF-vs-HF degenerate case
+and stubbed for the vLLM comparison.
 
 Samples are meant to be cached as first-class datasets (``ds:`` ids) so a chi spectrum and a BoN
-ladder computed on the same draw are exactly comparable (section 2.2.6); that caching lands with the
-data plane (M2), so here the bridge returns plain sample records the caller can persist.
+ladder computed on the same draw are exactly comparable. Caching them is the caller's job, so here
+the bridge returns plain sample records the caller can persist.
 """
 
 from __future__ import annotations
@@ -37,13 +37,13 @@ class SampleRecord:
 
 
 class SamplerBridge:
-    """Wrap a policy model + tokenizer for sampling (section 2.2.6).
+    """Wrap a policy model + tokenizer for sampling.
 
     ``backend="hf"`` uses ``transformers`` ``generate`` and is implemented here. ``backend="vllm"``
     is a stub that raises ``SamplerUnavailableError`` with a message naming the missing extra; the
-    real vLLM engine, its n-per-prompt fan-out, and its logprob capture land when the extra is
-    installed and the loops subsystem (M10) needs them. The bridge does not itself cache draws; it
-    returns ``SampleRecord`` objects the caller persists as a dataset.
+    real vLLM engine, its n-per-prompt fan-out, and its logprob capture are not implemented here.
+    The bridge does not itself cache draws; it returns ``SampleRecord`` objects the caller persists
+    as a dataset.
     """
 
     def __init__(
@@ -69,7 +69,7 @@ class SamplerBridge:
         top_p: float = 1.0,
         seed: int | None = None,
     ) -> list[SampleRecord]:
-        """Draw ``n`` continuations per prompt (section 2.2.6).
+        """Draw ``n`` continuations per prompt.
 
         The HF backend runs ``generate`` with sampling and returns one ``SampleRecord`` per
         (prompt, draw). The vLLM backend is stubbed. Logprob capture on the HF path is best-effort
@@ -79,8 +79,8 @@ class SamplerBridge:
             raise SamplerUnavailableError(
                 "the vLLM sampling backend requires the optional 'vllm' extra, which is not "
                 "installed. Install reward-lens[vllm] or use backend='hf'. This is an explicit "
-                "stub (section 2.2.6): the vLLM engine, n-per-prompt fan-out, and logprob capture "
-                "land with the loops subsystem (M10)."
+                "stub: the vLLM engine, n-per-prompt fan-out, and logprob capture "
+                "are not implemented."
             )
         return self._sample_hf(
             prompts,
@@ -136,7 +136,7 @@ class SamplerBridge:
     def fidelity_check(
         self, prompts: Sequence[str], reference_scores: Sequence[float] | None = None
     ) -> dict[str, Any]:
-        """Bound engine drift between the sampling backend and an HF forward (section 2.2.6).
+        """Bound engine drift between the sampling backend and an HF forward.
 
         For the HF backend this is a self-consistency check (a placeholder that reports the sample
         count and a zero drift, since one engine cannot drift from itself). The meaningful use is the
@@ -146,7 +146,7 @@ class SamplerBridge:
         if self.backend == "vllm":
             raise SamplerUnavailableError(
                 "fidelity_check against vLLM requires the 'vllm' extra (not installed). This is an "
-                "explicit stub (section 2.2.6)."
+                "explicit stub."
             )
         return {
             "backend": self.backend,

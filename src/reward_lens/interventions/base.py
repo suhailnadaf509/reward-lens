@@ -1,16 +1,15 @@
-"""The intervention protocol and the causal algebra (section 2.6.1).
+"""The intervention protocol and the causal algebra.
 
 An Intervention is anything that modifies a forward pass: a patch, a steer, an ablation, an
-erasure, a head edit. The design's key move is that interventions and captures share one
-mounting path in the runtime (section 2.2.1), so any Observable can run under any Intervention
-without either knowing about the other. In v1, patching and caching were separate code paths,
-which is why an Observable could not be measured under an arbitrary intervention; that is
-designed out here.
+erasure, a head edit. The design's key move is that interventions and captures share one mounting
+path in the runtime, so any Observable can run under any Intervention without either knowing about
+the other. In v1, patching and caching were separate code paths, which is why an Observable could
+not be measured under an arbitrary intervention; that is designed out here.
 
 Interventions compose: ``signal.with_interventions(erase_verbosity, steer(conf, +1.5))`` returns
 a wrapped signal any Observable accepts unchanged. Every intervened Evidence records the
 intervention fingerprints in its SubjectRef, so an erased-model card can never masquerade as a
-base-model card (section 2.6.1). This is a frozen interface (section 4.6).
+base-model card. This is a frozen interface.
 """
 
 from __future__ import annotations
@@ -33,7 +32,7 @@ MountHook = Callable[["torch.Tensor", dict], "torch.Tensor"]
 
 @dataclass
 class CompiledIntervention:
-    """An Intervention resolved against a specific signal (section 2.6.1).
+    """An Intervention resolved against a specific signal.
 
     Compilation resolves adapter-specific sites and shapes once, up front, producing the concrete
     mount hooks the runtime installs. ``fingerprint`` is the cache-key component that keeps a
@@ -48,7 +47,7 @@ class CompiledIntervention:
 
 @runtime_checkable
 class Intervention(Protocol):
-    """A modification of a forward pass (section 2.6.1).
+    """A modification of a forward pass.
 
     ``compile`` resolves the intervention against a signal (turning "steer the verbosity
     direction by +1.5 at the final residual" into concrete site-addressed mount hooks);

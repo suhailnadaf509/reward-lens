@@ -3,8 +3,7 @@
 A scalar reward induces preferences through ``P(x > y) = sigma(r(x) - r(y))``, which is always
 transitive: it is a total order by ``r``. Real preference data is not always transitive (the
 rock-paper-scissors / Condorcet-cycle phenomenon), and a scalar head provably cannot represent a
-cycle (theorem T8, DESIGN section 2.7.3). The object that can is a skew-symmetric bilinear form on
-the activations,
+cycle (theorem T8). The object that can is a skew-symmetric bilinear form on the activations,
 
     s(x, y) = phi(x)^T A phi(y),   A^T = -A,
 
@@ -32,13 +31,13 @@ from reward_lens.core.evidence import Evidence, make_evidence, register_payload
 from reward_lens.core.provenance import Provenance
 from reward_lens.core.types import GaugeStatus, SubjectRef
 
-_FAITHFUL_TO = "T8 scalar-bottleneck / intransitive preference (DESIGN section 2.7.3)"
+_FAITHFUL_TO = "T8 scalar-bottleneck / intransitive preference"
 
 
 @register_payload
 @dataclass
 class PreferenceRankResult:
-    """The payload of `PreferenceRankTest` (DESIGN section 2.7.3).
+    """The payload of `PreferenceRankTest`.
 
     ``effective_rank`` is the algebraic rank of the fitted skew operator (even: skew singular values
     come in pairs); ``effective_rank_pairs`` is that count of independent cyclic planes.
@@ -113,7 +112,7 @@ def _accuracy_skew(phi: np.ndarray, a: np.ndarray, pairs: np.ndarray) -> float:
 
 
 class PreferenceRankTest:
-    """Fit a rank-``k`` skew preference operator and test cyclic recovery (DESIGN section 2.7.3, T8).
+    """Fit a rank-``k`` skew preference operator and test cyclic recovery (T8).
 
     ``activations`` is the ``n x d`` matrix of frozen penultimate features (one row per response
     item); ``pairs`` is a ``(P, 2)`` integer array of ``(winner_index, loser_index)`` preferences;

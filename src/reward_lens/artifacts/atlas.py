@@ -1,4 +1,4 @@
-"""The Atlas: a population registry and a leaderboard view over the store (section 2.15, M7).
+"""The Atlas: a population registry and a leaderboard view over the store (M7).
 
 The Atlas is the population-scale artifact. Atlas-v0, built here, is the honest floor the design
 asks for (RK6): a registry of the standard ten-model population and a leaderboard that is a *view*
@@ -44,7 +44,7 @@ ProvenanceTier = Literal["weights-verified", "card-claimed"]
 
 @dataclass(frozen=True)
 class ModelLineage:
-    """A reward model's declared lineage (section 2.2.5).
+    """A reward model's declared lineage.
 
     Mirrors the ``SignalMeta.lineage`` fields the runtime records at load, held here as a typed
     object so the Atlas can slice the population by base model, data provenance, and release date
@@ -61,7 +61,7 @@ class ModelLineage:
     provenance_tier: ProvenanceTier = "card-claimed"
 
     def to_meta_dict(self) -> dict[str, Any]:
-        """Render to the ``SignalMeta.lineage`` dict shape the runtime uses (section 2.2.5)."""
+        """Render to the ``SignalMeta.lineage`` dict shape the runtime uses."""
         return {
             "base_model": self.base_model,
             "training_data": self.training_data,
@@ -94,7 +94,7 @@ def declared_fingerprint(repo_id: str) -> ModelFP:
 
 @dataclass(frozen=True)
 class AtlasEntry:
-    """One reward model in the population (section 2.15).
+    """One reward model in the population.
 
     An entry is identity plus lineage: the ``fingerprint`` that keys its Evidence in the store, a
     human ``name``, the ``repo_id`` the declared fingerprint derives from, the model ``paradigm``
@@ -124,8 +124,8 @@ class AtlasEntry:
         }
 
 
-# The standard ten-model population named in the design (section 2.15). Lineage here is *declared*
-# from public model cards; every entry is card-claimed because Atlas-v0 hashes no weights. The four
+# The standard ten-model population. Lineage here is *declared* from public
+# model cards; every entry is card-claimed because Atlas-v0 hashes no weights. The four
 # campaign RMs plus Skywork-v0.2 anchor the existing battery; GRM/INF-ORM/URM/QRM/Nemotron are
 # placeholders carried with their known lineage so the population axes exist before any sweep runs.
 _STANDARD_POPULATION: tuple[dict[str, Any], ...] = (
@@ -246,7 +246,7 @@ class LeaderboardCell:
 
 @dataclass
 class Leaderboard:
-    """A population comparison table assembled from stored Evidence (section 2.15).
+    """A population comparison table assembled from stored Evidence.
 
     A view, never a computation: every cell is the latest Evidence of one observable about one model.
     ``cells`` is keyed by ``(model_name, observable)``; a missing key means the store held no Evidence
@@ -472,7 +472,7 @@ class SweepPlan:
 
 
 class Atlas:
-    """The population registry and its leaderboard view (section 2.15, Atlas-v0).
+    """The population registry and its leaderboard view (Atlas-v0).
 
     Construct with ``Atlas.standard()`` for the ten-model population, or empty and register entries.
     The registry is keyed by fingerprint; a second registration of the same fingerprint replaces the
@@ -486,7 +486,7 @@ class Atlas:
 
     @classmethod
     def standard(cls) -> "Atlas":
-        """The standard ten-model population with declared, card-claimed lineage (section 2.15)."""
+        """The standard ten-model population with declared, card-claimed lineage."""
         entries = []
         for spec in _STANDARD_POPULATION:
             lineage = ModelLineage(
@@ -540,7 +540,7 @@ class Atlas:
         store: EvidenceStore | None = None,
         observables: Iterable[str] | None = None,
     ) -> Leaderboard:
-        """Assemble the population leaderboard as a view over the store (section 2.15).
+        """Assemble the population leaderboard as a view over the store.
 
         For every registered model and every requested observable, query the store for the most
         recent Evidence about that (observable, model) pair and record its value, trust, calibration,
@@ -595,7 +595,7 @@ class Atlas:
         observables: Iterable[str] | None = None,
         out_dir: str | Path | None = None,
     ) -> dict[str, Any]:
-        """Export the leaderboard to JSON and HTML (section 2.15).
+        """Export the leaderboard to JSON and HTML.
 
         Returns a dict with the rendered ``json`` and ``html`` strings and the ``Leaderboard`` itself.
         When ``out_dir`` is given, writes ``leaderboard.json`` and ``leaderboard.html`` under it and

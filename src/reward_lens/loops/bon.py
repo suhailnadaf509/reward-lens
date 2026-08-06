@@ -1,11 +1,10 @@
-"""Best-of-n ladders and the exact BoN-vs-base KL identity (DESIGN 2.13, 2.17).
+"""Best-of-n ladders and the exact BoN-vs-base KL identity.
 
 A best-of-n sampler draws ``n`` completions from the base policy and keeps the one the reward
 model scores highest. Sweeping ``n`` traces a curve of expected reward against the KL divergence
 from the base policy, and that curve is the quasi-static equilibrium frontier the thermodynamics
 science (S3) and the forecasting science (S12) both need as their reference arm: it previews where
-optimization is headed with no RL run at all (DESIGN 2.13, "the reference arm ... previewing
-optimization endpoints").
+optimization is headed with no RL run at all.
 
 Two quantities carry the module.
 
@@ -41,8 +40,8 @@ from reward_lens.core.types import GaugeStatus, SubjectRef
 if TYPE_CHECKING:
     from reward_lens.core.types import EvidenceID
 
-# The default ladder: the doubling sequence 1, 2, 4, ..., 8192, then 10^4, matching DESIGN 2.13
-# ("n = 1 ... 10^4"). Powers of two give even spacing on the log-n axis the frontier is read on.
+# The default ladder: the doubling sequence 1, 2, 4, ..., 8192, then 10^4, which is the range the
+# frontier is read over. Powers of two give even spacing on the log-n axis it is plotted against.
 DEFAULT_NS: tuple[int, ...] = (1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 10000)
 
 
@@ -83,7 +82,7 @@ def expected_bon_reward(scores: Sequence[float] | np.ndarray, n: int) -> float:
 @register_payload
 @dataclass
 class BoNLadder:
-    """The best-of-n sweep: expected reward and exact KL at each ``n`` (DESIGN 2.13).
+    """The best-of-n sweep: expected reward and exact KL at each ``n``.
 
     ``ns`` is the ladder; ``kl`` is ``bon_kl(ns)`` in nats; ``expected_reward`` is the plug-in
     expected best-of-n reward averaged over prompts; ``reward_sem`` is its across-prompt standard
@@ -143,11 +142,11 @@ def bon_ladder(
     ``(n_prompts, m)`` or a ragged list of per-prompt arrays. For each ``n`` in ``ns`` the expected
     best-of-n reward is computed per prompt with the plug-in estimator and averaged across prompts,
     and the exact ``KL(bo_n || base)`` is attached. The result previews the optimization frontier
-    with no RL (DESIGN 2.13).
+    with no RL.
 
     Returns ``Evidence[BoNLadder]``. Gauge is INVARIANT: the KL is a real divergence in nats and
     the reward is in the model's own score units, both gauge-free (a raw reward-model score is
-    INVARIANT in this kernel, DESIGN 2.3.3). ``subject`` names the signal/dataset when the caller
+    INVARIANT in this kernel). ``subject`` names the signal/dataset when the caller
     has them; ``parents`` links the score Evidence this consumed so the store stays a DAG.
     """
     banks = _normalize_banks(scores_per_prompt)

@@ -1,4 +1,4 @@
-"""``reward_lens.interventions`` — the causal algebra (section 2.6).
+"""``reward_lens.interventions`` — the causal algebra.
 
 An Intervention modifies a forward pass: a patch, a steer, an ablation, an erasure, a head or
 weight edit. Interventions and captures share the runtime's single mounting path, so any Observable
@@ -14,6 +14,10 @@ sensitive at its source.
 """
 
 from __future__ import annotations
+
+from reward_lens.core.extras import require_extra
+
+require_extra("white-box", subsystem="reward_lens.interventions")
 
 from reward_lens.interventions.ablate import AblationIntervention
 from reward_lens.interventions.base import (

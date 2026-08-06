@@ -1,4 +1,4 @@
-"""Post-hoc certificates for erasers, returned as Evidence (DESIGN section 2.6, ``certify.py``).
+"""Post-hoc certificates for erasers, returned as Evidence.
 
 An eraser is a claim: "no linear probe recovers this concept from the erased feature." A claim is
 worth exactly what certifies it, and the design makes the certificate the thing that lifts an
@@ -8,7 +8,7 @@ The erasure certificate trains a fresh linear probe on *held-out* data (data the
 on) and reports its recovery AUC. If the probe cannot beat chance by more than a small margin the
 erasure holds, and the certificate carries a :class:`~reward_lens.core.gates.CalibrationRef` so the
 certified eraser rises to CALIBRATED; if the probe recovers the concept the certificate refuses to
-calibrate and the Evidence stays EXPLORATORY (DESIGN line 603, gate 1). That asymmetry is the whole
+calibrate and the Evidence stays EXPLORATORY (gate 1). That asymmetry is the whole
 point: the certificate is not decoration, it genuinely discriminates a real erasure from a fake one.
 A sham eraser (a random affine map of the same rank) leaves the concept linearly present, its
 recovery AUC stays high, and it is denied calibration by the same code path that grants it to a real
@@ -133,7 +133,7 @@ def _split(n: int, frac: float, seed: int) -> tuple[np.ndarray, np.ndarray]:
 @register_payload
 @dataclass
 class ErasureCertificate:
-    """The payload of :func:`certify_erasure` (DESIGN line 603).
+    """The payload of :func:`certify_erasure`.
 
     ``recovery_auc`` is the worst-case held-out probe AUC over the concept columns (the most
     recoverable concept sets the bar); ``per_concept_auc`` breaks it out. ``passed`` is
@@ -169,7 +169,7 @@ def certify_erasure(
     concept_id: str | None = None,
     provenance: Provenance | None = None,
 ) -> Evidence[ErasureCertificate]:
-    """Certify an eraser by held-out probe recovery, as Evidence (DESIGN line 603).
+    """Certify an eraser by held-out probe recovery, as Evidence.
 
     The held-out features are erased, split into a probe-train and a probe-eval portion, and a fresh
     linear probe is trained and scored per concept column. The reported ``recovery_auc`` is the
@@ -253,7 +253,7 @@ def eraser_evidence(
 ) -> Evidence[dict]:
     """Evidence describing an eraser, EXPLORATORY unless a passing certificate is attached.
 
-    This makes the DESIGN line 603 rule concrete: an eraser on its own is an uncalibrated artifact,
+    This makes the gate-1 rule concrete: an eraser on its own is an uncalibrated artifact,
     so the Evidence describing it is EXPLORATORY; hand it a passing :func:`certify_erasure` result
     and the eraser inherits that certificate's calibration and rises to CALIBRATED. A failing or
     absent certificate leaves it EXPLORATORY. The value is a small provenance record (fingerprint,
@@ -295,7 +295,7 @@ def eraser_evidence(
 @register_payload
 @dataclass
 class RobustnessCertificate:
-    """The payload of :func:`certify_robustness` (DESIGN line 603). SENSITIVE arm.
+    """The payload of :func:`certify_robustness`. SENSITIVE arm.
 
     ``attack_family`` names the perturbation set searched; ``budgets`` and ``recovered_auc`` are the
     per-budget probe recovery after attack; ``budget_to_rebreak`` is the smallest budget at which
@@ -346,7 +346,7 @@ def certify_robustness(
     attack_loader: Callable[[], Callable[..., Any] | None] | None = None,
     provenance: Provenance | None = None,
 ) -> Evidence[RobustnessCertificate]:
-    """Certify how much attack budget rebreaks an erasure, as Evidence (DESIGN line 603). SENSITIVE.
+    """Certify how much attack budget rebreaks an erasure, as Evidence. SENSITIVE.
 
     The stated attack family is a per-sample L2 perturbation of norm at most ``B`` that pushes each
     erased feature toward its concept class along ``concept_direction``. For each budget in

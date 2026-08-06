@@ -1,4 +1,4 @@
-"""``DenseRewardExtractor``: per-token reward maps from an outcome signal (section 2.3.3, adapter 7).
+"""``DenseRewardExtractor``: per-token reward maps from an outcome signal (adapter 7).
 
 A dense reward map assigns credit token by token from a signal that only scores the whole response. The
 construction is differential attribution along the prefix-score curve: if r(y_{1:t}) is the outcome score
@@ -6,7 +6,7 @@ of the prefix ending at token t (which every signal exposes via ``score_prefixes
 reward of token t is r(y_{1:t}) - r(y_{1:t-1}). The per-token map is the first difference of the prefix
 curve, and it sums back to the outcome score by telescoping.
 
-This adapter ships GATED, and the gating is the point (section 2.3.3): a dense map looks authoritative and
+This adapter ships GATED, and the gating is the point: a dense map looks authoritative and
 is easy to over-trust, so its Evidence is pinned at EXPLORATORY until the verification science (S6/S9)
 certifies it against labeled error spans and issues a scorecard entry. The enforcement is structural and
 deliberate: this adapter attaches no calibration reference, ever, so the gates cannot rate it above
@@ -33,7 +33,7 @@ _OBS_VERSION = "1"
 
 
 class DenseRewardExtractor:
-    """Per-token reward maps from any outcome signal, shipped GATED (section 2.3.3, adapter 7).
+    """Per-token reward maps from any outcome signal, shipped GATED (adapter 7).
 
     Wraps an outcome ``RewardSignal`` and adds ``dense_rewards``: the first difference of the wrapped
     signal's prefix-score curve, a per-token attribution that sums to the outcome score. Every other
@@ -96,7 +96,7 @@ class DenseRewardExtractor:
     # -- the dense map ------------------------------------------------------
 
     def dense_rewards(self, view: Any, readout: str | None = None) -> "Evidence[TokenCurves]":
-        """Per-token reward maps by differential attribution along the prefix curve (section 2.3.3).
+        """Per-token reward maps by differential attribution along the prefix curve.
 
         Each item's map is the first difference of the wrapped signal's prefix-score curve, so token
         t carries r(y_{1:t}) - r(y_{1:t-1}) and the map sums to the outcome score. The Evidence is

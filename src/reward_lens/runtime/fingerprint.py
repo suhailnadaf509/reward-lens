@@ -1,4 +1,4 @@
-"""Model fingerprints and lineage (section 2.2.5).
+"""Model fingerprints and lineage.
 
 ``fingerprint`` produces the ``ModelFP`` that identifies a signal everywhere in the store: it is
 the ``mfp:`` prefix on every ``SubjectRef``, the key that stops a patched-run cache from aliasing a
@@ -147,7 +147,7 @@ def _hash_tokenizer(tokenizer: Any) -> str:
 
 
 def fingerprint(model: "torch.nn.Module", tokenizer: Any = None, adapter_id: str = "") -> ModelFP:
-    """Compute the content-derived ``ModelFP`` for a loaded model (section 2.2.5).
+    """Compute the content-derived ``ModelFP`` for a loaded model.
 
     The digest folds the weight-content hash (streamed from disk when the safetensors are present,
     else serialized from the ``state_dict``), the normalized config hash, the tokenizer-identity

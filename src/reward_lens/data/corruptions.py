@@ -1,6 +1,6 @@
-"""Controlled stimulus builders: error planting with generator edit scripts (section 2.4.4).
+"""Controlled stimulus builders: error planting with generator edit scripts.
 
-This is the one home for controlled stimulus construction (R2). Each builder returns a
+This is the one home for controlled stimulus construction. Each builder returns a
 lineage-complete item together with the exact character-level edit script it applied, so token
 alignment (`data.align`) is exact by construction rather than re-inferred. That coupling is the
 whole point: an error-localization or receipt-reliance measurement is only as trustworthy as the
@@ -10,9 +10,9 @@ What is built fully here is the mechanical family: planting an error at a known 
 code solution by swapping a number or negating an operator, the three receipt-falsification arms on
 a trajectory, and the deterministic paraphrase battery. What is deliberately stubbed is the
 family that needs an oracle to preserve a confound (style-matched or confidence-matched rewrites,
-oracle-authored quadruples, judge tournaments): those arrive at M8+ with oracle provenance stamping
-(R10), and their stubs raise `NotImplementedError` naming exactly what they need. A stub here never
-masquerades as a finished builder.
+oracle-authored quadruples, judge tournaments): those need oracle provenance stamping, and their
+stubs raise `NotImplementedError` naming exactly what they need. A stub here never masquerades as a
+finished builder.
 """
 
 from __future__ import annotations
@@ -154,13 +154,13 @@ def corrupt_step(
     *,
     tokenizer: Tokenizer | None = None,
 ) -> tuple[str, list[CharEdit], Span]:
-    """Plant a mechanical error at step ``k`` of a math or code solution (section 2.4.4).
+    """Plant a mechanical error at step ``k`` of a math or code solution.
 
     Returns ``(corrupted_text, edit_script, error_span)`` where ``error_span`` is a token span (kind
     ``error``) over the *corrupted* text marking the planted mistake, and ``edit_script`` is the exact
     character-level edits (over the *clean* text) that produced it. Feed that script to
     `data.align.align` to get an exact clean/corrupted alignment, which is what makes error
-    localization exact (section 2.4.3).
+    localization exact.
 
     ``k`` is a zero-based step index; it raises `DataError` if out of range. Fully implemented modes:
 
@@ -168,9 +168,9 @@ def corrupt_step(
       token-count-preserving).
     - ``"negate"`` flips the step's first arithmetic operator.
 
-    TODO(M8+): length/style/confidence-*matched* control variants that keep everything but
+    TODO: length/style/confidence-*matched* control variants that keep everything but
     correctness fixed generally need an oracle rewrite (they cannot be produced by a purely
-    mechanical edit) and are not built here; they will land with oracle provenance stamping (R10).
+    mechanical edit) and are not built here; they need oracle provenance stamping.
     Requesting an unimplemented mode raises with that note rather than silently degrading.
     """
     steps = _split_steps(solution)
@@ -186,7 +186,7 @@ def corrupt_step(
         raise DataError(
             f"corrupt_step: mode {mode!r} is not a mechanical mode. "
             f"Built modes: {sorted(_MECHANICAL_MODES)}. Style/confidence-matched and other "
-            "oracle-assisted control variants are not yet implemented (TODO M8+, R10)."
+            "oracle-assisted control variants are not implemented."
         )
     edit = edit_fn(solution, step_start, step_end)
     corrupted = apply_edits(solution, [edit])
@@ -284,7 +284,7 @@ def _find_step_with(steps: tuple[TrajStep, ...], attr: str) -> int:
 def receipt_edits(
     traj: Trajectory, *, tokenizer: Tokenizer | None = None
 ) -> dict[str, dict[str, Any]]:
-    """Build the three receipt-manipulation arms of a trajectory (section 2.4.4, N1/L6).
+    """Build the three receipt-manipulation arms of a trajectory (the N1 stimulus).
 
     Returns a dict keyed by arm name, each value ``{"trajectory": Trajectory, "edit_script":
     [CharEdit], "step_index": int}``:
@@ -379,14 +379,13 @@ _PARAPHRASE_SUFFIXES = (
 
 
 def paraphrase_battery(prompt: str, k: int) -> list[str]:
-    """Return up to ``k`` deterministic surface paraphrases of ``prompt`` (section 2.4.4).
+    """Return up to ``k`` deterministic surface paraphrases of ``prompt``.
 
     Element 0 is always the untouched prompt. The rest are distinct prefix/suffix rewrites drawn from
     the E16 template space in a fixed order, so the battery is reproducible across runs. If ``k``
     exceeds the number of distinct variants the templates can produce, the full distinct set is
     returned (fewer than ``k``) rather than fabricating near-duplicates; the caller sees the honest
-    count. Style- or register-shifting paraphrases that need an oracle are out of scope here (TODO
-    M8+, R10).
+    count. Style- or register-shifting paraphrases that need an oracle are out of scope here.
     """
     if k <= 0:
         return []
@@ -409,42 +408,42 @@ def paraphrase_battery(prompt: str, k: int) -> list[str]:
 
 
 def style_controls(pair: Pair) -> Any:
-    """STUB (M8+): verbosity/format/confidence-matched rewrites of a pair (section 2.4.4).
+    """STUB: verbosity/format/confidence-matched rewrites of a pair.
 
     Matching everything but the labelled axis (so a verbosity-controlled correctness pair reads the
     same length and register on both sides) requires an oracle rewrite that a mechanical edit cannot
-    produce. This will land with oracle provenance stamping (R10). It is stubbed rather than
-    approximated so no study mistakes an uncontrolled pair for a controlled one.
+    produce, with oracle provenance stamping. It is stubbed rather than approximated so no study
+    mistakes an uncontrolled pair for a controlled one.
     """
     raise NotImplementedError(
         "style_controls needs an oracle rewrite to hold style/verbosity/confidence fixed while "
-        "varying only the labelled axis; scheduled for M8+ with oracle provenance (R10). "
-        "Use the mechanical corrupt_step / receipt_edits builders for M2 work."
+        "varying only the labelled axis, with oracle provenance. "
+        "Use the mechanical corrupt_step / receipt_edits builders instead."
     )
 
 
 def quadruples(topic_bank: Any) -> Any:
-    """STUB (M8+): L2 agree/disagree x correct/incorrect controlled quadruples (section 2.4.4).
+    """STUB: L2 agree/disagree x correct/incorrect controlled quadruples.
 
     The 2x2 sycophancy design needs oracle-authored responses that vary agreement and correctness
-    independently while holding topic and register fixed. Stubbed until the oracle layer (M8+, R10).
+    independently while holding topic and register fixed. Stubbed until the oracle layer exists.
     """
     raise NotImplementedError(
         "quadruples needs oracle-authored cells (agree/disagree x correct/incorrect) with matched "
-        "register; scheduled for M8+ with oracle provenance (R10)."
+        "register and oracle provenance."
     )
 
 
 def tournament_from_judges(prompts: Any, pool: Any, k: int) -> Any:
-    """STUB (M8+): k-wise judge tournaments with position-debiasing rotation (section 2.4.4).
+    """STUB: k-wise judge tournaments with position-debiasing rotation.
 
     Building a tournament from a judge pool requires calling the judges (oracles) with position
-    rotation and stamping each edge with its judge id and prompt hash (R10). Stubbed until the oracle
+    rotation and stamping each edge with its judge id and prompt hash. Stubbed until the oracle
     layer exists; the `Tournament` schema and `EdgeObs.judge_id` are already in place for it.
     """
     raise NotImplementedError(
         "tournament_from_judges needs a judge oracle pool with position-debiasing rotation and "
-        "per-edge provenance stamping; scheduled for M8+ (R10). The Tournament/EdgeObs schema is "
+        "per-edge provenance stamping. The Tournament/EdgeObs schema is "
         "ready to receive its output."
     )
 

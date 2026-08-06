@@ -1,11 +1,11 @@
-"""Token alignment across paired or edited sequences: SpanMap (section 2.4.3).
+"""Token alignment across paired or edited sequences: SpanMap.
 
 Span-level patching, differential attribution, receipt-reliance, and error localization all rest on
 knowing, exactly, which token of the rejected response corresponds to which token of the chosen one,
 or which token of the corrupted solution corresponds to which token of the clean one. Get that wrong
-and every pairwise causal method quietly measures the wrong thing. As the design puts it,
-misalignment is the quiet killer of every pairwise causal method, so this module is small, exact
-where it can be, and fuzz-tested.
+and every pairwise causal method quietly measures the wrong thing. Misalignment is the quiet
+killer of every pairwise causal method, so this module is small, exact where it can be, and
+fuzz-tested.
 
 There are two paths to an alignment:
 
@@ -14,9 +14,8 @@ There are two paths to an alignment:
   pair from a dataset), where no generator recorded what changed.
 - The **exact** path consumes a generator's character-level edit script. Every corruption builder in
   `data.corruptions` emits the exact edits it made, and when that script is available the alignment
-  is computed from it directly rather than re-inferred, which makes it exact by construction. This is
-  the guarantee the design demands: "guaranteed exactness where the corruption generator recorded its
-  edit."
+  is computed from it directly rather than re-inferred, which makes it exact by construction. That
+  is the guarantee: exactness wherever the corruption generator recorded its edit.
 
 Both paths produce the same object, a `SpanMap`, over a uniform list of token-level opcodes, so
 `map_span` and `aligned_pairs` behave identically regardless of how the alignment was obtained.
@@ -44,7 +43,7 @@ Opcode = tuple[str, int, int, int, int]
 
 @dataclass(frozen=True)
 class CharEdit:
-    """One character-level edit: replace ``text[start:end]`` with ``replacement`` (section 2.4.3).
+    """One character-level edit: replace ``text[start:end]`` with ``replacement``.
 
     A pure insertion has ``start == end``; a pure deletion has ``replacement == ""``. Edits in a
     script are over the *original* (``a``) text's coordinates and must be non-overlapping. A
@@ -186,7 +185,7 @@ def _opcodes_from_edit_script(
 
 @dataclass(frozen=True)
 class SpanMap:
-    """A token-level alignment from sequence ``a`` to sequence ``b`` (section 2.4.3).
+    """A token-level alignment from sequence ``a`` to sequence ``b``.
 
     Built by `align`. Carries the opcodes and both tokenized inputs. The two things instruments read:
     `map_span`, which carries a token span from ``a`` into ``b``, and `aligned_pairs`, the list of
@@ -292,7 +291,7 @@ def align(
     *,
     tokenizer: Tokenizer | None = None,
 ) -> SpanMap:
-    """Align two closely related sequences into a `SpanMap` (section 2.4.3).
+    """Align two closely related sequences into a `SpanMap`.
 
     ``a`` and ``b`` may be tokenized inputs or raw strings (tokenized with ``tokenizer``, defaulting
     to the reference tokenizer). When ``edit_script`` is provided, the alignment is computed exactly
@@ -310,7 +309,7 @@ def align(
         if produced != tb.text:
             raise ValueError(
                 "align: edit_script does not transform a into b; refusing to build an "
-                "'exact' alignment from an inconsistent script (section 2.4.3). "
+                "'exact' alignment from an inconsistent script. "
                 f"expected b of length {len(tb.text)}, script produced length {len(produced)}"
             )
         opcodes = _opcodes_from_edit_script(ta, tb, edit_script)

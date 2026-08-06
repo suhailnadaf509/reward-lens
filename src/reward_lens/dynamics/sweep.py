@@ -1,10 +1,10 @@
-"""Sweeping an Observable or index across a checkpoint sequence, cached and resumable (DESIGN 2.12).
+"""Sweeping an Observable or index across a checkpoint sequence, cached and resumable.
 
 A developmental measurement is the same Observable run at every checkpoint, so this module is thin by
 design: it walks a verified `CheckpointSequence`, runs the measurement at each step, writes the
 per-checkpoint Evidence to the store, and returns the trajectory with the step as the covariate. The
 two properties that make it usable at RM-Pythia scale are caching and resumability. The training run
-is paid for once (a few hundred GPU-hours, DESIGN 4.5); a sweep over it must never recompute a
+is paid for once (a few hundred GPU-hours); a sweep over it must never recompute a
 checkpoint it has already measured, whether because a previous sweep crashed halfway or because a new
 index is being added to an existing study. So each checkpoint's result is committed to the evidence
 store, and a small per-sweep manifest records which steps are done. A second run reads the manifest,
@@ -14,7 +14,7 @@ The store is content-addressed and idempotent on append, which is the safety net
 processes computed the same checkpoint, the second append is a no-op. The manifest is the optimization
 on top of that safety net, and it is what turns "append is idempotent" into "the expensive forward
 passes are skipped entirely". The manifest lives beside the store as a plain JSON file, so a sweep is
-as inspectable and diffable as the store it rides on (DESIGN 2.1.2).
+as inspectable and diffable as the store it rides on.
 """
 
 from __future__ import annotations
@@ -41,7 +41,7 @@ SweepCallable = Callable[[Any, Any], Evidence[Any]]
 
 @dataclass
 class SweepPoint:
-    """One checkpoint's measurement in a trajectory (DESIGN 2.12).
+    """One checkpoint's measurement in a trajectory.
 
     ``step`` is the training-time covariate; ``model_fp`` names the checkpoint; ``evidence`` is the
     measurement (freshly computed or loaded from cache); ``from_cache`` records which, so a caller can
@@ -56,7 +56,7 @@ class SweepPoint:
 
 @dataclass
 class Trajectory:
-    """A developmental trajectory: the per-checkpoint Evidence indexed by training step (DESIGN 2.12).
+    """A developmental trajectory: the per-checkpoint Evidence indexed by training step.
 
     Returned by `sweep_over_checkpoints`. ``points`` is ordered by step; ``sweep_id`` keys the sweep to
     its (observable, view, chain) triple so a resumed run finds the same manifest. The helpers pull the
@@ -86,7 +86,7 @@ class Trajectory:
 
 
 class SweepManifest:
-    """A per-sweep record of which checkpoint steps are computed, for resumability (DESIGN 2.12).
+    """A per-sweep record of which checkpoint steps are computed, for resumability.
 
     A plain JSON sidecar next to the evidence store mapping each step to the Evidence id computed for
     it. It is deliberately not part of the store's DAG: it is bookkeeping that lets a sweep skip work,
@@ -155,7 +155,7 @@ def compute_sweep_id(
     view: Any,
     readout: str,
 ) -> str:
-    """The content id keying a resumable sweep to its (observable, view, chain, readout) (DESIGN 2.12).
+    """The content id keying a resumable sweep to its (observable, view, chain, readout).
 
     Derived from the observable identity, the view id, the chain signature (its head link, which
     commits to every checkpoint), and the readout name. Two invocations with the same four land on the
@@ -186,7 +186,7 @@ def sweep_over_checkpoints(
     resume: bool = True,
     verify: bool = True,
 ) -> Trajectory:
-    """Run an Observable or index across a checkpoint sequence, cached and resumable (DESIGN 2.12).
+    """Run an Observable or index across a checkpoint sequence, cached and resumable.
 
     For each checkpoint in order: if ``resume`` and the sweep manifest already has this step (and its
     Evidence is in the store), the stored Evidence is loaded and the step is skipped without loading
@@ -196,7 +196,7 @@ def sweep_over_checkpoints(
     training step as its covariate.
 
     The sweep verifies the chain first (``verify``), because a developmental trajectory read off an
-    untrusted chain is meaningless (DESIGN 2.2.5). It returns a `Trajectory` whose ``n_computed`` and
+    untrusted chain is meaningless. It returns a `Trajectory` whose ``n_computed`` and
     ``n_cached`` counts make resumability checkable: a second identical call recomputes nothing,
     appends nothing to the store, and reports every point as cached.
     """

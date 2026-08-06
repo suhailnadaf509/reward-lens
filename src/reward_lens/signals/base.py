@@ -1,15 +1,15 @@
-"""The RewardSignal protocol and its first-class readouts (section 2.3, R4).
+"""The RewardSignal protocol and its first-class readouts.
 
-This module is the answer to substrate lock-in (liability 6) and the enabling layer for half the
+This module is the answer to substrate lock-in and the enabling layer for half the
 corpus. v1 funnelled everything through one scalar ``w_r`` at the final token; ArmoRM's nineteen
 heads were force-collapsed to a row mean, and judges, PRMs, implicit rewards, and trajectories
-were simply unreachable. The fix is one move, stated in R4: positions and readouts are
-first-class. Every measurement in the kernel is parameterized by ``(signal, readout)``, and a
+were simply unreachable. The fix is one move: positions and readouts are first-class. Every
+measurement in the kernel is parameterized by ``(signal, readout)``, and a
 ``PositionSpec`` resolves "where to read" per input. Crystallization depth of a judge's verdict
 is then the same Observable as crystallization depth of a scalar head, called with a different
 readout.
 
-This is a frozen interface (section 4.6). The protocol here is what the whole battery, every
+This is a frozen interface. The protocol here is what the whole battery, every
 index, and every science compile against; changing it takes a dated ADR. It imports torch only
 under ``TYPE_CHECKING`` so the type surface is available without importing torch, which keeps the
 pure layers that reference signal types (data, some stats) torch-free.
@@ -42,7 +42,7 @@ class TokenizedInput:
 
     ``token_offsets`` maps each token to its ``(char_start, char_end)`` in the source text, and
     ``spans`` carries the typed spans (receipt, error step, critique, verdict) resolved into
-    token coordinates. This is the unglamorous, load-bearing part of section 2.3.2: without exact
+    token coordinates. This is the unglamorous, load-bearing part: without exact
     character-to-token maps, span-level patching and attribution silently misalign, which is the
     quiet killer of every pairwise causal method. ``tokenize`` on a signal produces this.
     """
@@ -71,9 +71,9 @@ PositionKind = Literal["final", "judgment", "step_ends", "span_ends", "all", "ex
 
 @dataclass(frozen=True)
 class PositionSpec:
-    """A resolvable specification of which token positions a readout reads (section 2.3.1).
+    """A resolvable specification of which token positions a readout reads.
 
-    Nothing in the kernel hardcodes "final token" (R4). A classifier head reads at ``final``; a
+    Nothing in the kernel hardcodes "final token". A classifier head reads at ``final``; a
     process reward model reads at ``step_ends``; a generative judge reads at ``judgment`` (the
     verdict token, whose location the signal detects and validates); a dense reward reads at
     ``all``. ``detail`` carries the kind-specific configuration (the span kind for ``span_ends``,
@@ -127,16 +127,16 @@ ReadoutKind = Literal["linear", "logit_diff", "simplex", "token_value"]
 
 @dataclass(frozen=True)
 class Readout:
-    """A first-class readout: what to read, where, and how (section 2.3.1).
+    """A first-class readout: what to read, where, and how.
 
     ``name`` is the human key ("reward", "verdict", "criterion:coherence", "quantile:0.9"). For
     ``linear`` and ``logit_diff`` readouts, ``vector`` is the direction ``w`` (fp32) the scalar is
     projected onto; for ``simplex`` (Likert over score tokens) and ``token_value`` (per-token
     value) the meaning is carried in ``meta``. ``site`` is where the readout reads, usually the
-    final residual stream; ``position`` says at which token(s). This object is the pivot of R4:
-    it is architecturally resolved by adapters at load time (w_r is read off the checkpoint, not
-    probe-extracted), so there is no "is this feature real" regress at the readout (I1, property 2
-    in section 1.1).
+    final residual stream; ``position`` says at which token(s). This object is the pivot of the
+    design: it is architecturally resolved by adapters at load time (w_r is read off the
+    checkpoint, not probe-extracted), so there is no "is this feature real" regress at the readout
+    (I1).
     """
 
     name: str
@@ -154,7 +154,7 @@ class Readout:
 
 @dataclass
 class SignalMeta:
-    """Signal identity, lineage, and numerics (section 2.2.5, 2.3.2).
+    """Signal identity, lineage, and numerics.
 
     ``lineage`` records the declared base model, declared training data (free text plus dataset
     ids where known), release date, and provenance tier (weights-verified vs card-claimed). It
@@ -200,7 +200,7 @@ class TokenCurves:
     A ragged collection (one curve per item, variable length) stored as a list of arrays plus the
     readout name. At least five sciences consume this (verification, dense rewards, thermodynamics
     diagnostics, the recorder, PRM comparison), which is why it is a kernel method, not a
-    science-side hack (section 2.3.2).
+    science-side hack.
     """
 
     curves: list["np.ndarray"]
@@ -214,15 +214,15 @@ class TokenCurves:
 
 @runtime_checkable
 class RewardSignal(Protocol):
-    """The substrate abstraction: any reward signal with white-box access (section 2.3.2).
+    """The substrate abstraction: any reward signal with white-box access.
 
     Eight adapters implement this (classifier, judge, process, implicit, rubric, trajectory,
     dense, ensemble). An Observable written against this protocol runs on all of them; a new
     grader paradigm the field invents becomes a new adapter passing the conformance suite, and
     the whole battery, every index, and every science become available to it for free (the
-    extensibility contract, section 5.3).
+    extensibility contract).
 
-    ``caps`` declares capabilities (R3); ``readouts`` lists the readouts the signal exposes;
+    ``caps`` declares capabilities; ``readouts`` lists the readouts the signal exposes;
     ``score`` and ``score_prefixes`` return Evidence; ``capture`` returns a handle to activations
     (possibly cached); ``with_interventions`` returns a wrapped signal any Observable accepts
     unchanged; ``tokenize`` owns span carry-through.

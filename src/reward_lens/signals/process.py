@@ -1,11 +1,11 @@
-"""``ProcessRM``: a process (step-level) reward model behind the protocol (section 2.3.3, adapter 3).
+"""``ProcessRM``: a process (step-level) reward model behind the protocol (adapter 3).
 
 A process reward model scores each reasoning step, not just the final answer. Architecturally it is a
 sequence classifier whose scalar head is read at every step boundary rather than only at the last token,
-which is precisely why the design made positions first-class (R4): the ``ProcessRM`` reuses the classifier
+which is precisely why positions are first-class: the ``ProcessRM`` reuses the classifier
 head direction ``w_r`` verbatim and changes only the ``PositionSpec`` from ``final`` to ``step_ends``.
 
-Step-boundary detection has two paths (section 2.3.3): an explicit delimiter config (the common case: a
+Step-boundary detection has two paths: an explicit delimiter config (the common case: a
 model trained with ``\n`` or an explicit step marker between steps) and a learned fallback for solutions
 with no reliable delimiter. The delimiter path is implemented and exact. The learned fallback (a trained
 boundary classifier over the residual stream) is a STUB here: when the delimiter yields fewer than two
@@ -42,7 +42,7 @@ _PROCESS_CAPS = (
 )
 
 _LEARNED_FALLBACK_NOTE = (
-    "learned step-boundary detector is a stub (section 2.3.3): a trained boundary classifier over "
+    "learned step-boundary detector is a stub: a trained boundary classifier over "
     "the residual stream is the production fallback; here a solution with no delimiter is one step."
 )
 
@@ -55,7 +55,7 @@ class StepScores:
     ``curves`` is a ragged collection: one array of per-step scores per item, in step order.
     ``step_counts`` records the number of detected steps per item so a consumer can index steps
     without re-detecting boundaries. This is the ``STEP_SCORES`` analogue of ``TokenCurves`` and is a
-    registered Evidence payload so it round-trips through the store exactly (section 2.1.2).
+    registered Evidence payload so it round-trips through the store exactly.
     """
 
     curves: list["np.ndarray"]
@@ -64,7 +64,7 @@ class StepScores:
 
 
 class ProcessRM(SignalImplBase):
-    """A step-level reward model as a ``RewardSignal`` (section 2.3.3, adapter 3).
+    """A step-level reward model as a ``RewardSignal`` (adapter 3).
 
     Build it through ``from_tiny`` or ``from_sequence_classifier``. ``score`` returns the outcome
     scalar (the final-token reward of the whole solution, identical to a classifier); ``step_scores``
@@ -121,7 +121,7 @@ class ProcessRM(SignalImplBase):
     # -- scoring ------------------------------------------------------------
 
     def score(self, view: Any, readout: str | None = None) -> Any:
-        """The outcome scalar per item: the final-token reward of the whole solution (section 2.3.2)."""
+        """The outcome scalar per item: the final-token reward of the whole solution."""
         name = readout or self.default_readout_name()
         read = self.readout(name)
         items = list(view)
@@ -133,7 +133,7 @@ class ProcessRM(SignalImplBase):
         return self._timed_evidence("score", payload, name, len(items), n_tokens, started)
 
     def score_prefixes(self, view: Any, readout: str | None = None) -> Any:
-        """Per-token reward curve for each item (the classifier prefix curve; section 2.3.2)."""
+        """Per-token reward curve for each item (the classifier prefix curve)."""
         name = readout or self.default_readout_name()
         read = self.readout(name)
         items = list(view)
@@ -146,7 +146,7 @@ class ProcessRM(SignalImplBase):
         return self._timed_evidence("score_prefixes", payload, name, len(items), n_tokens, started)
 
     def step_scores(self, view: Any, readout: str | None = None) -> Any:
-        """Per-step reward scores read at the detected step boundaries (section 2.3.3, STEP_SCORES).
+        """Per-step reward scores read at the detected step boundaries (STEP_SCORES).
 
         For each item the head input at each step-end token is projected onto the reward direction in
         fp32, giving one score per reasoning step. Returns ``Evidence[StepScores]``; the last step's
@@ -199,7 +199,7 @@ class ProcessRM(SignalImplBase):
         """Wrap an already-loaded sequence-classifier reward model as a process RM (no download).
 
         Reads the scalar reward head (``score``) direction into a single ``reward`` readout whose
-        position is ``step_ends`` rather than ``final`` (R4). A production PRM would be a checkpoint
+        position is ``step_ends`` rather than ``final``. A production PRM would be a checkpoint
         trained with a step-level objective; the adapter's mechanics are identical either way.
         """
         import torch

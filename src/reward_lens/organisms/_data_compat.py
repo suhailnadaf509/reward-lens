@@ -1,15 +1,14 @@
-"""Data-plane compatibility shim for the organism foundry (integration note, section 2.4.1).
+"""Data-plane compatibility shim for the organism foundry.
 
 The foundry produces `Pair` and `Tournament` objects wrapped in a `DataView`, with a `Lineage` on
-every item (R7). Those types are owned by the data plane (`reward_lens.data.schema` /
-`reward_lens.data.lineage`), which is built concurrently by another agent. The brief's instruction is
-to prefer importing the real types and, only if that import fails at build or test time, to fall back
-to a minimal locally-defined compatible set with the same field names.
+every item. Those types are owned by the data plane (`reward_lens.data.schema` /
+`reward_lens.data.lineage`). This module prefers importing the real types and, only if that import
+fails, falls back to a minimal locally-defined compatible set with the same field names.
 
 This module is that single point of indirection: every other file in `organisms` imports its data
-types from here, so if the real schema is present we use it verbatim, and if it is momentarily absent
-the foundry still builds and its pure tests still pass. ``USING_SHIM`` records which path was taken so
-the report and integration can flag it. The shim mirrors the real field names exactly
+types from here, so if the real schema is present we use it verbatim, and if it is momentarily
+absent the foundry still builds and its pure tests still pass. ``USING_SHIM`` records which path was
+taken so a caller can flag it. The shim mirrors the real field names exactly
 (`Pair.prompt/chosen/rejected/axis/lineage/meta`, `Response.text/spans/meta`,
 `Lineage.seed_id/builder_id/ops/content_hash`) so swapping back to the real types changes nothing
 downstream.
@@ -24,7 +23,7 @@ from reward_lens.core import content_hash
 USING_SHIM: bool
 _SHIM_REASON: str | None = None
 
-try:  # Prefer the real data plane (section 2.4.1). This is the expected path at integration.
+try:  # Prefer the real data plane; this is the expected path.
     from reward_lens.data.lineage import Lineage, make_lineage
     from reward_lens.data.schema import (
         DataView,
@@ -193,7 +192,7 @@ def pair_content(prompt_text: str, chosen: Response, rejected: Response, axis: s
 
     Used by the foundry to stamp a pair's `Lineage` *before* the frozen `Pair` is constructed, so the
     lineage content hash equals ``content_hash(content_of(pair), "ch")`` and the dataset checksum and
-    clone detection agree (section 2.4.2). Mirrors the schema's structure
+    clone detection agree. Mirrors the schema's structure
     ``["Pair", prompt, response_content(chosen), response_content(rejected), axis]``.
     """
     return ["Pair", prompt_text, response_content(chosen), response_content(rejected), axis]

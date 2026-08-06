@@ -1,8 +1,8 @@
-"""The Oracle protocol: LLM assistance with mandatory provenance (section 2.16, R10).
+"""The Oracle protocol: LLM assistance with mandatory provenance.
 
 Oracles are the LLM judges and labelers that power tournaments, corruption assistance, feature
-glossing, and the auditing game's agent operators. The design's discipline on them is strict and
-for good reason (RK7, oracle contamination): every oracle output records the model id, the prompt
+glossing, and the auditing game's agent operators. The discipline on them is strict, and the reason
+is oracle contamination: every oracle output records the model id, the prompt
 hash, and the date, and is cached, so a judgment can be traced and never silently recomputed with a
 different model. Oracle-derived ground truth is typed distinctly from human or mechanical ground
 truth and is never silently mixed into an answer key.
@@ -30,7 +30,7 @@ GroundTruthTier = str  # "mechanical" | "human" | "oracle"
 
 @dataclass(frozen=True)
 class OracleCall:
-    """A single oracle interaction, stamped with provenance (R10).
+    """A single oracle interaction, stamped with provenance.
 
     ``model_id`` is the exact model that produced ``response``; ``prompt_hash`` is the content hash
     of the prompt; ``date`` is when it was made; ``cost`` records tokens and money. The id is
@@ -49,7 +49,7 @@ class OracleCall:
 
 
 class OracleCache:
-    """A content-addressed on-disk cache of oracle calls (R10).
+    """A content-addressed on-disk cache of oracle calls.
 
     Keyed by ``(model_id, prompt_hash)`` so the same question to the same model is asked once. The
     cache is a directory of JSON files under the configured home, kept trivially inspectable like
@@ -78,7 +78,7 @@ class OracleCache:
 
 @dataclass
 class CostLedger:
-    """A running tally of oracle spend (R13-adjacent).
+    """A running tally of oracle spend.
 
     Every oracle call adds to the ledger so a study can report exactly what it spent on LLM
     assistance and a budget can be enforced. The ledger is queried by the study runner before an
@@ -97,11 +97,11 @@ class CostLedger:
 
 @runtime_checkable
 class Oracle(Protocol):
-    """An LLM judge or labeler (section 2.16).
+    """An LLM judge or labeler.
 
     ``ask`` takes a prompt and returns an `OracleCall`, consulting the cache first and stamping
     provenance on a miss. Implementations must record the model id, prompt hash, and date on every
-    output (R10). The ``tier`` is always "oracle", which is how downstream answer keys keep oracle
+    output. The ``tier`` is always "oracle", which is how downstream answer keys keep oracle
     labels typed distinctly from human and mechanical ones.
     """
 

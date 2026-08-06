@@ -1,4 +1,4 @@
-"""Additive steering along a direction as an Intervention (section 2.6.2, ``steer.py``).
+"""Additive steering along a direction as an Intervention.
 
 Steering is the simplest causal probe of a reward: push the residual stream a fixed amount along a
 chosen direction and read how the scalar reward responds. In v1 this was a bespoke hook that added a
@@ -51,7 +51,7 @@ def unit_direction(direction: Any) -> np.ndarray:
 
 @dataclass
 class SteeringIntervention:
-    """Add ``strength * unit(direction)`` to a site's activation; an ``Intervention`` (section 2.6.2).
+    """Add ``strength * unit(direction)`` to a site's activation; an ``Intervention``.
 
     ``direction`` is the array-like ``(d_model,)`` steering direction (unit-normalized on use, so its
     magnitude is irrelevant and only its orientation matters). ``site`` names where to add it, in the

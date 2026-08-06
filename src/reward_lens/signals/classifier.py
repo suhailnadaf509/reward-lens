@@ -1,11 +1,11 @@
-"""``ClassifierRM``: the v1 ``RewardModel`` rebuilt behind the ``RewardSignal`` protocol (section 2.3.3).
+"""``ClassifierRM``: the v1 ``RewardModel`` rebuilt behind the ``RewardSignal`` protocol.
 
 This is the first and most common signal adapter: a sequence-classification reward model whose head
 is a single linear map from the final hidden state to a scalar. It keeps v1's hardening (the adapter
 navigation, left-padded batching, missing-head attachment upstream in the loader) and moves the
-readout to a first-class ``Readout`` object (R4): the reward direction ``w_r`` is read off the
+readout to a first-class ``Readout`` object: the reward direction ``w_r`` is read off the
 checkpoint into a ``linear`` readout at the final residual, and every score is the fp32 projection of
-the head-input hidden state onto that direction (R11), not the trunk-dtype head output.
+the head-input hidden state onto that direction, not the trunk-dtype head output.
 
 Three protocol methods carry the weight. ``score`` returns ``Evidence[Scores]`` (INVARIANT gauge,
 EXPLORATORY trust: raw scores are gauge-free, and nothing is calibrated yet). ``score_prefixes``
@@ -56,7 +56,7 @@ def _split_item(item: Any) -> tuple[str, str, bool]:
     Accepts a ``(prompt, response)`` pair, a mapping with ``prompt``/``response`` (or ``text``), a
     raw string, or an object exposing ``.prompt``/``.chosen``/``.response``/``.text``. ``raw`` is
     True when the text should be tokenized as-is (no chat template), which is how a single string is
-    treated. This keeps signals usable before the data plane (M2) lands the typed ``DataView``.
+    treated. This keeps signals usable before the data plane lands the typed ``DataView``.
     """
     if isinstance(item, str):
         return "", item, True
@@ -88,12 +88,12 @@ def _item_spans(item: Any) -> tuple[tuple[int, int, str], ...]:
 
 
 class ClassifierRM:
-    """A sequence-classification reward model as a ``RewardSignal`` (section 2.3.3).
+    """A sequence-classification reward model as a ``RewardSignal``.
 
     Build it through ``signals.loaders.wrap_hf_model`` / ``from_tiny`` (which resolve the adapter,
     site map, head, policy, and fingerprint); direct construction is for the loader and tests. The
     signal holds a ``HFRuntime``, the numerics policy, the readouts read off the head, and the
-    tokenizer. ``caps`` declares its capabilities (R3); ``meta`` carries the fingerprint, lineage,
+    tokenizer. ``caps`` declares its capabilities; ``meta`` carries the fingerprint, lineage,
     template, and numerics policy.
     """
 
@@ -125,7 +125,7 @@ class ClassifierRM:
     # -- readouts -----------------------------------------------------------
 
     def readouts(self) -> list[Readout]:
-        """The readouts this signal exposes (section 2.3.1).
+        """The readouts this signal exposes.
 
         A single-row head exposes one ``reward`` readout. A multi-row head exposes one
         ``criterion:k`` readout per row plus a ``reward`` composite; the row-mean aggregate is
@@ -153,7 +153,7 @@ class ClassifierRM:
 
         The closure reads the grad-attached head input from ``RawOutput.extra`` and projects it onto
         the readout vector in fp32, pooling at the resolved final positions. Passed straight into
-        ``runtime.grad``/``runtime.hvp``; that is how the M1 Hessian test differentiates the reward.
+        ``runtime.grad``/``runtime.hvp``; that is how the Hessian test differentiates the reward.
         """
         import torch
 
@@ -173,7 +173,7 @@ class ClassifierRM:
     # -- tokenization (span carry-through) ---------------------------------
 
     def tokenize(self, item: Any) -> TokenizedInput:
-        """Tokenize a data item, carrying character-to-token offsets and typed spans (section 2.3.2).
+        """Tokenize a data item, carrying character-to-token offsets and typed spans.
 
         Applies the model's chat template when it has one (else a plain ``User:``/``Assistant:``
         fallback, which is what the gpt2-tokenizer tiny model uses), and requests offset mapping from
@@ -251,10 +251,10 @@ class ClassifierRM:
     # -- scoring ------------------------------------------------------------
 
     def score(self, view: Any, readout: str = "reward") -> Evidence[Scores]:
-        """Score every item under a readout, returning ``Evidence[Scores]`` (section 2.3.2).
+        """Score every item under a readout, returning ``Evidence[Scores]``.
 
         Each score is the fp32 projection of the item's final head-input hidden state onto the
-        readout vector (R11). Gauge is INVARIANT (a raw score is gauge-free); trust is EXPLORATORY
+        readout vector. Gauge is INVARIANT (a raw score is gauge-free); trust is EXPLORATORY
         (no scorecard entry yet, gate 1). Provenance records the token cost and the wall time.
         """
         import torch
@@ -280,7 +280,7 @@ class ClassifierRM:
         )
 
     def score_prefixes(self, view: Any, readout: str = "reward") -> Evidence[TokenCurves]:
-        """Per-token reward curves ``r(y_{1:t})`` for every item (section 2.3.2).
+        """Per-token reward curves ``r(y_{1:t})`` for every item.
 
         One forward per batch: the head input at every valid position is projected onto the readout
         vector, and because the classifier pools the last token under causal attention, the value at
@@ -323,7 +323,7 @@ class ClassifierRM:
     # -- capture ------------------------------------------------------------
 
     def capture(self, view: Any, spec: "CaptureSpec") -> "CaptureHandle":
-        """Capture activations at the spec's sites, returning a ``CaptureHandle`` (section 2.3.2).
+        """Capture activations at the spec's sites, returning a ``CaptureHandle``.
 
         Collates the whole view into one left-padded batch and runs ``forward_with_capture`` under
         any mounted interventions, returning an in-memory handle. Population-scale, store-backed
@@ -342,12 +342,13 @@ class ClassifierRM:
     # -- interventions ------------------------------------------------------
 
     def with_interventions(self, *ivs: Any) -> "ClassifierRM":
-        """Return a signal wrapped in interventions; any Observable accepts it unchanged (section 2.6.1).
+        """Return a signal wrapped in interventions; any Observable accepts it unchanged.
 
         Each intervention is compiled against this signal (if it exposes ``compile``) and mounted on
         the runtime's shared hook path during scoring and capture. The intervention fingerprints
         become part of the wrapped signal's subject, so an intervened Evidence can never masquerade
-        as a clean one. Interventions land as a full subsystem in M6; this is the signal-side wiring.
+        as a clean one. Interventions are a full subsystem of their own; this is the signal-side
+        wiring.
         """
         compiled = tuple(iv.compile(self) if hasattr(iv, "compile") else iv for iv in ivs)
         clone = ClassifierRM(
@@ -410,7 +411,7 @@ def build_readouts(
     model: Any,
     site_map: Any,
 ) -> tuple[list[Readout], Readout | None]:
-    """Read the reward head off the checkpoint into ``Readout`` objects (R4, section 2.3.1).
+    """Read the reward head off the checkpoint into ``Readout`` objects.
 
     Returns ``(readouts, legacy_row_mean)``. A single-row head yields one ``reward`` readout. A
     multi-row head yields one ``criterion:k`` readout per row plus a ``reward`` composite whose

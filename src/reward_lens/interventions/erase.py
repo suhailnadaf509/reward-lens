@@ -1,4 +1,4 @@
-"""LEACE affine concept erasure as an Intervention (DESIGN section 2.6, ``erase.py``).
+"""LEACE affine concept erasure as an Intervention.
 
 LEACE (Least-squares Concept Erasure; Belrose, Schneider-Joseph, Ravfogel, Cotterell, Raff,
 Biderman 2023, "LEACE: Perfect linear concept erasure in closed form") fits, in closed form, the
@@ -21,7 +21,7 @@ under the ``Sigma`` metric rather than the raw Euclidean one; the transpose-orde
 ``W^+ Pi W`` also erases the concept but is not least-squares-minimal, and the moment-level tests
 pin the minimal form to a hand-solved optimum so the distinction cannot silently regress.
 
-Three surfaces are exposed (DESIGN line 601). Chosen-layers and all-layers erasure mount the affine
+Three surfaces are exposed. Chosen-layers and all-layers erasure mount the affine
 map ``r`` at the residual sites the caller names, through the runtime's single hook path, via
 :class:`LeaceErasure`. Head-only erasure instead projects the reward direction ``w_r`` against the
 concept subspace with :meth:`Eraser.apply_to_readout`, which reproduces the erased-feature reward up
@@ -30,7 +30,7 @@ to the immaterial per-prompt constant (the reward gauge already quotients out th
 An eraser is persisted with the ids of the data it was fit on (design rule R8: directions and
 erasers always carry their training-data provenance), so an eraser can never be applied while its
 provenance is lost. The certificate that certifies an eraser lives in ``certify.py``; an eraser
-without a certificate is EXPLORATORY by gate 1 (DESIGN line 603), which ``certify.eraser_evidence``
+without a certificate is EXPLORATORY by gate 1, which ``certify.eraser_evidence``
 makes explicit.
 
 This module imports no torch at module scope; the mount hook imports it lazily, so fitting and
@@ -128,7 +128,7 @@ def leace_matrix(sigma: np.ndarray, sigma_xz: np.ndarray) -> tuple[np.ndarray, i
 
 @dataclass
 class Eraser:
-    """A fitted LEACE affine eraser, persisted with its fit-data provenance (DESIGN 2.6, R8).
+    """A fitted LEACE affine eraser, persisted with its fit-data provenance (R8).
 
     ``P`` is the ``d x d`` projection and ``mu`` the ``d`` fit-data mean, so the erasure is the
     affine map ``r(x) = x - P (x - mu)``. ``rank`` is the dimension of the erased concept subspace.
@@ -170,9 +170,9 @@ class Eraser:
 
         The reward read from erased features, ``w_r . r(x)``, equals ``w_r' . x`` for the projected
         readout ``w_r' = (I - P)^T w_r = w_r - P^T w_r``, up to a per-sample-constant offset the
-        reward gauge already quotients out (per-prompt shifts, DESIGN 2.7.1). So editing the reward
-        direction once reproduces feature erasure everywhere without mounting a hook, which is the
-        head-only erasure of DESIGN line 601. Returns a float64 vector ``(d,)``.
+        reward gauge already quotients out (per-prompt shifts). So editing the reward direction
+        once reproduces feature erasure everywhere without mounting a hook, which is the head-only
+        erasure surface. Returns a float64 vector ``(d,)``.
         """
         w = np.asarray(w_r, dtype=np.float64)
         return w - self.P.T @ w
@@ -210,7 +210,7 @@ def fit_leace(
     concept_id: str | None = None,
     sites: tuple[Site, ...] = (),
 ) -> Eraser:
-    """Fit the LEACE eraser from captured features ``X`` and a concept ``Z`` (DESIGN 2.6).
+    """Fit the LEACE eraser from captured features ``X`` and a concept ``Z``.
 
     ``X`` is ``(n, d)`` (features at a site). ``Z`` is the concept: a length-``n`` vector of labels
     for a single binary or scalar concept, or an ``(n, k)`` matrix whose columns span a
@@ -258,7 +258,7 @@ def fit_leace(
 
 @dataclass
 class LeaceErasure:
-    """Mount a fitted :class:`Eraser` at one or more sites as an Intervention (DESIGN 2.6.1).
+    """Mount a fitted :class:`Eraser` at one or more sites as an Intervention.
 
     ``sites`` selects the surface: a single residual site for a targeted edit, several named
     residual sites for the chosen-layers surface, or every residual site the caller enumerates for

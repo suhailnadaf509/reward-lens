@@ -1,16 +1,16 @@
 """Hessian spectroscopy: the reward curvature spectrum through matrix-vector products.
 
 Because a reward is scalar, its Hessian at any site is ``d x d`` and reachable through
-Hessian-vector products without ever materializing the matrix (DESIGN section 2.7.2). This module
-holds the numerics: Lanczos with full reorthogonalization for the top-``k`` eigenvalues, stochastic
+Hessian-vector products without ever materializing the matrix. This module holds the numerics:
+Lanczos with full reorthogonalization for the top-``k`` eigenvalues, stochastic
 Lanczos quadrature (SLQ) for the spectral density when the tail matters, the participation ratio
-that turns a spectrum into the effective dimension ``d_eff`` capacity theory needs (Appendix A9 /
-A16), and the near-zero-curvature ``flat_subspace``.
+that turns a spectrum into the effective dimension ``d_eff`` capacity theory needs (A9 / A16),
+and the near-zero-curvature ``flat_subspace``.
 
 The numerics are written against a single abstraction, a symmetric linear operator exposed only
 through ``matvec``. That is what makes them provable on CPU with no model: pass ``matvec = lambda v:
 M @ v`` for a known SPD matrix ``M`` and Lanczos must recover ``M``'s eigenvalues. The same
-abstraction wraps ``Runtime.hvp`` (DESIGN section 2.2.1) so the identical code runs on a real model,
+abstraction wraps ``Runtime.hvp`` so the identical code runs on a real model,
 seed-averaged over inputs, with the fp32 accumulation the reward head needs under a bf16 trunk.
 
 Importing this module pulls no torch; torch is imported lazily only inside the HVP operator, at call
@@ -82,10 +82,10 @@ def _runtime_operator(
     site: Site,
     dim: int,
 ) -> SymmetricOperator:
-    """Wrap ``Runtime.hvp`` as a `SymmetricOperator` (DESIGN section 2.2.1).
+    """Wrap ``Runtime.hvp`` as a `SymmetricOperator`.
 
     Each ``matvec`` issues one HVP: the double-backprop of the readout scalar at ``site`` applied to
-    a single probe vector, averaged over the batch (seed-averaged over inputs, DESIGN section 2.7.2).
+    a single probe vector, averaged over the batch (seed-averaged over inputs).
     torch is imported here and nowhere else in the module, so the spectrum numerics stay torch-free
     until they run on a real model.
     """
@@ -153,8 +153,8 @@ def lanczos(
 ) -> tuple[np.ndarray, np.ndarray | None]:
     """Lanczos estimate of the ``k`` largest-magnitude eigenvalues of a symmetric operator.
 
-    Full reorthogonalization at every step (DESIGN section 2.7.2): the small-``k`` regime is exactly
-    where the classic Lanczos loss of orthogonality produces spurious "ghost" eigenvalues, so we pay
+    Full reorthogonalization at every step: the small-``k`` regime is exactly where the classic
+    Lanczos loss of orthogonality produces spurious "ghost" eigenvalues, so we pay
     the ``O(m^2 d)`` reorthogonalization to keep the Ritz values clean. Runs ``n_iter`` iterations
     (default ``min(dim, max(2k + 20, 40))``), forms the tridiagonal ``T``, and returns its extreme
     Ritz values sorted by descending magnitude. All accumulation is float64 for a stable tridiagonal
@@ -224,7 +224,7 @@ def slq_density(
     sigma: float | None = None,
     seed: int = 0,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Stochastic Lanczos quadrature estimate of the spectral density (DESIGN section 2.7.2).
+    """Stochastic Lanczos quadrature estimate of the spectral density.
 
     Each Rademacher probe produces an ``m_lanczos``-point Gaussian quadrature rule (Ritz values as
     nodes, squared first eigenvector components as weights) for the operator's spectral measure; the
@@ -299,7 +299,7 @@ def _lanczos_tridiag(
 def participation_ratio(spectrum: Any) -> float:
     """Participation ratio of a curvature spectrum: the effective dimension ``d_eff``.
 
-    ``PR = (sum |lambda_i|)^2 / sum lambda_i^2`` (Appendix A9 / A16). It counts how many eigenvalues
+    ``PR = (sum |lambda_i|)^2 / sum lambda_i^2`` (A9 / A16). It counts how many eigenvalues
     carry the curvature: ``n`` equal eigenvalues give ``PR = n``, a single dominant eigenvalue gives
     ``PR = 1``. Magnitudes are used so a mixed-sign (indefinite) Hessian still reports the effective
     number of curved directions. Accepts a `SpectrumResult`, a raw array, or any 1-D sequence.
@@ -322,7 +322,7 @@ def participation_ratio(spectrum: Any) -> float:
 @register_payload
 @dataclass
 class SpectrumResult:
-    """The payload of `hessian_spectrum` (DESIGN section 2.7.2).
+    """The payload of `hessian_spectrum`.
 
     ``eigenvalues`` are the top-``k`` Ritz values (descending magnitude); ``participation_ratio`` is
     the effective dimension over those; ``spectral_density`` holds the SLQ grid and density when the
@@ -344,7 +344,7 @@ class SpectrumResult:
 @register_payload
 @dataclass
 class SubspaceResult:
-    """The payload of `flat_subspace` (DESIGN section 2.7.2).
+    """The payload of `flat_subspace`.
 
     ``basis`` is the ``d x m`` orthonormal set of near-zero-curvature directions (``|lambda| < tol``)
     and ``curvatures`` their eigenvalues. These are the flat directions along which the reward is
@@ -381,8 +381,8 @@ def hessian_spectrum(
 ) -> Evidence[SpectrumResult]:
     """Top-``k`` reward-Hessian spectrum at a site, materialization-free via HVPs.
 
-    DESIGN section 2.7.2. ``source`` is a `RewardSignal`, a `Runtime`, a `SymmetricOperator`, or a
-    plain ``matvec`` callable (the synthetic-operator test path); the reward Hessian is the
+    ``source`` is a `RewardSignal`, a `Runtime`, a `SymmetricOperator`, or a plain ``matvec``
+    callable (the synthetic-operator test path); the reward Hessian is the
     double-backprop of the readout scalar at ``site``, so nothing larger than ``dim`` probe vectors
     is ever held, which is what keeps the spectrum within the 8B memory budget. Lanczos with full
     reorthogonalization gives the extreme eigenvalues; ``n_starts > 1`` seed-averages the Ritz
@@ -457,7 +457,7 @@ def flat_subspace(
     subject: SubjectRef | None = None,
     provenance: Provenance | None = None,
 ) -> Evidence[SubspaceResult]:
-    """The near-zero-curvature subspace of the reward Hessian at a site (DESIGN section 2.7.2).
+    """The near-zero-curvature subspace of the reward Hessian at a site.
 
     The flat directions are interior eigenvalues (near zero), which Lanczos cannot isolate reliably,
     so this materializes the operator by probing (``dim`` HVPs, fp32 accumulate) and takes a dense
@@ -496,7 +496,7 @@ def flat_subspace(
 
 @dataclass
 class AscentTrace:
-    """The trace of a gradient-ascent hack probe (DESIGN section 2.7.2). SENSITIVE / dual-use.
+    """The trace of a gradient-ascent hack probe. SENSITIVE / dual-use.
 
     ``reward_curve`` is the reward proxy at each step; ``excited_directions`` are the top internal
     directions the ascent moved along (left singular vectors of the accumulated updates), the
@@ -524,7 +524,7 @@ def gradient_ascent_probe(
     embedding_matrix: np.ndarray | None = None,
     top_directions: int = 8,
 ) -> Evidence[AscentTrace]:
-    """The RL-free hack generator: ascend the reward gradient in embedding space (DESIGN 2.7.2).
+    """The RL-free hack generator: ascend the reward gradient in embedding space.
 
     SENSITIVE / dual-use (RK8). Ascends ``grad_fn`` (the reward gradient in embedding space, wired to
     ``Runtime.grad``) under a norm-ball ``constraint``, records which internal directions the ascent

@@ -1,4 +1,4 @@
-"""The activation store (section 2.2.3), successor to v1's ``shared_cache``.
+"""The activation store, successor to v1's ``shared_cache``.
 
 The store is the content-addressed disk cache for captured activations. v1's ``ActivationFloor``
 keyed on ``(model, pair-set, side)``; the v3 key adds the site, the position spec, the dtype, and
@@ -17,6 +17,8 @@ cannot hold the 8B models.
 from __future__ import annotations
 
 import json
+import os
+import warnings
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Iterator
@@ -31,7 +33,7 @@ if TYPE_CHECKING:
 
 
 # ---------------------------------------------------------------------------
-# The v1 .pt cache read adapter (E-parity, section 4.3.2)
+# The v1 .pt cache read adapter (E-parity)
 # ---------------------------------------------------------------------------
 
 
@@ -89,10 +91,10 @@ class V1Cache:
 
 
 def read_v1_cache(path: str | Path, device: str = "cpu") -> V1Cache:
-    """Load one v1 ``.pt`` shared-cache file into a :class:`V1Cache` (section 2.2.3, 4.3.2).
+    """Load one v1 ``.pt`` shared-cache file into a :class:`V1Cache`.
 
     The v1 format is a single ``torch.save`` dict of half-precision final-token tensors keyed by
-    layer, written by ``experiments/utils/shared_cache.py``. This reads exactly that structure back,
+    layer, written by v1's own shared-cache writer. This reads exactly that structure back,
     coercing layer keys to ``int`` and moving tensors to ``device`` (CPU by default so a single file
     can be inspected without a GPU). It loads one file, not the whole 2.5 GB campaign; the caller is
     expected to point it at a specific shard. Raises ``FileNotFoundError`` if the path is absent so a
@@ -188,8 +190,42 @@ def _parse_site_key(key: str) -> Site:
 # ---------------------------------------------------------------------------
 
 
+def _safetensors_intact(path: Path) -> bool:
+    """Cheaply validate a safetensors shard without reading any tensor data.
+
+    The format is an 8-byte little-endian header length, the JSON header, then one contiguous
+    tensor buffer whose extent the header's ``data_offsets`` entries describe exactly. A file
+    truncated by a killed writer fails the length arithmetic or the header parse, so this
+    check costs a stat plus a header read and catches the corruption existence checks would
+    otherwise trust.
+    """
+    try:
+        size = path.stat().st_size
+        with path.open("rb") as fh:
+            prefix = fh.read(8)
+            if len(prefix) != 8:
+                return False
+            header_len = int.from_bytes(prefix, "little")
+            if header_len <= 0 or 8 + header_len > size:
+                return False
+            header = json.loads(fh.read(header_len).decode("utf-8"))
+    except (OSError, ValueError):
+        return False
+    if not isinstance(header, dict):
+        return False
+    end = 0
+    for name, spec in header.items():
+        if name == "__metadata__":
+            continue
+        offsets = spec.get("data_offsets") if isinstance(spec, dict) else None
+        if not offsets or len(offsets) != 2:
+            return False
+        end = max(end, int(offsets[1]))
+    return size == 8 + header_len + end
+
+
 class ActivationStore:
-    """Content-addressed disk cache for captured activations (section 2.2.3).
+    """Content-addressed disk cache for captured activations.
 
     The key folds the model fingerprint, the dataset id or content hash, the site set, the position
     spec, the dtype, and the intervention fingerprint (``"none"`` for a clean run). Shards are
@@ -212,7 +248,7 @@ class ActivationStore:
         dtype: str,
         intervention_fp: str = "none",
     ) -> str:
-        """Compute the content-addressed cache key (section 2.2.3)."""
+        """Compute the content-addressed cache key."""
         material = {
             "model_fp": str(model_fp),
             "dataset": dataset,
@@ -229,8 +265,29 @@ class ActivationStore:
         return model_dir / f"{key}.safetensors"
 
     def has(self, model_fp: ModelFP, key: str) -> bool:
-        """Whether a shard for ``key`` already exists."""
-        return self._shard_path(model_fp, key).exists()
+        """Whether an intact shard for ``key`` exists (a corrupt one is dropped, not trusted).
+
+        Existence alone is not integrity: a writer killed mid-save can leave a truncated
+        safetensors file at the content-addressed path, and every skip-if-cached re-run would
+        trust it. A shard that fails the header check is deleted with a warning so the caller
+        recomputes it; a shard whose sibling index is missing (the writer died between the
+        payload rename and the index write) reports absent so ``put`` rewrites both, but the
+        intact payload is left in place for the atomic replace.
+        """
+        shard = self._shard_path(model_fp, key)
+        if not shard.exists():
+            return False
+        if not _safetensors_intact(shard):
+            warnings.warn(
+                f"dropping corrupt activation shard {shard} (truncated or unreadable header); "
+                f"it will be recomputed on the next request.",
+                RuntimeWarning,
+                stacklevel=2,
+            )
+            shard.unlink(missing_ok=True)
+            shard.with_suffix(".json").unlink(missing_ok=True)
+            return False
+        return shard.with_suffix(".json").exists()
 
     def put(
         self,
@@ -239,14 +296,21 @@ class ActivationStore:
         capture: "Capture",
         index_extra: dict[str, Any] | None = None,
     ) -> Path:
-        """Write a ``Capture`` to a safetensors shard plus a JSON index; return the shard path."""
+        """Write a ``Capture`` to a safetensors shard plus a JSON index; return the shard path.
+
+        Both files land by write-then-rename, payload first: a kill mid-write leaves only a
+        temp file (never a truncated shard at the trusted name), and a kill between the two
+        renames leaves an intact payload with no index, which ``has`` treats as a miss.
+        """
         from safetensors.torch import save_file
 
         shard = self._shard_path(model_fp, key)
         tensors = {
             ShardCaptureHandle._key(site): t.contiguous() for site, t in capture.tensors.items()
         }
-        save_file(tensors, str(shard))
+        tmp_shard = shard.with_name(f"{shard.name}.tmp{os.getpid()}")
+        save_file(tensors, str(tmp_shard))
+        os.replace(tmp_shard, shard)
         index = {
             "key": key,
             "dtype": capture.dtype,
@@ -255,7 +319,10 @@ class ActivationStore:
         }
         if index_extra:
             index.update(index_extra)
-        shard.with_suffix(".json").write_text(json.dumps(index, indent=2), encoding="utf-8")
+        index_path = shard.with_suffix(".json")
+        tmp_index = index_path.with_name(f"{index_path.name}.tmp{os.getpid()}")
+        tmp_index.write_text(json.dumps(index, indent=2), encoding="utf-8")
+        os.replace(tmp_index, index_path)
         return shard
 
     def get(self, model_fp: ModelFP, key: str) -> ShardCaptureHandle:
@@ -279,7 +346,7 @@ class ActivationStore:
 
         On a cache hit the shard is returned memory-mapped; on a miss the signal computes the
         capture (``signal.capture``) and the result is written back under the content key before the
-        handle is returned. ``dataset_id`` defaults to the view's checksum when the data plane (M2)
+        handle is returned. ``dataset_id`` defaults to the view's checksum where the data plane
         provides one, else a hash of the view's repr, so the key is stable per data content.
         """
         model_fp = signal.meta.fingerprint

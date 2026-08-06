@@ -1,9 +1,8 @@
-"""Shared machinery for the training-framework integrations (DESIGN 2.13).
+"""Shared machinery for the training-framework integrations.
 
-The point of the integrations is stated in DESIGN 2.13: they make reward-lens a dependency of the
-training pipeline rather than a post-hoc tool, by logging the reward model's own geometry every ``k``
-steps on fixed probes and live rollouts while training runs. Three parts are framework-agnostic and
-implemented here:
+The point of the integrations is to make reward-lens a dependency of the training pipeline rather
+than a post-hoc tool, by logging the reward model's own geometry every ``k`` steps on fixed probes
+and live rollouts while training runs. Three parts are framework-agnostic and implemented here:
 
 - the reward-function shape: a callable ``(prompts, responses) -> list[float]`` that scores a batch
   with a ``RewardSignal`` and is what TRL, OpenRLHF, and veRL all ultimately call to get rewards.
@@ -11,15 +10,15 @@ implemented here:
   thin.
 - the geometry probe: a fixed set of probe inputs plus the per-``k``-step read-out of the RM's
   geometry (probe scores, the reward-direction norm, concept doses against a feature bank, and the
-  recorder's drift decomposition when a bank is supplied). This is the "log the RM's own geometry
-  every k steps on fixed probes" of DESIGN 2.13.
+  recorder's drift decomposition when a bank is supplied). This is what "log the RM's own geometry
+  every k steps on fixed probes" means in practice.
 - the step gate: ``every_k`` decides when a step logs, so a callback stays a few lines.
 
 The framework-specific wiring (the TRL callback base class, the OpenRLHF worker entry, the veRL
-reward manager) needs the training frameworks installed, which they are not on this machine and
-which are optional extras. Those entrypoints raise ``IntegrationUnavailableError`` naming the missing
-extra, exactly as ``runtime.sampling`` does for vLLM. The reward-function shape and the geometry
-probe do not need the frameworks and run now.
+reward manager) needs the training frameworks installed, and they are optional extras. Those
+entrypoints raise ``IntegrationUnavailableError`` naming the missing extra, exactly as
+``runtime.sampling`` does for vLLM. The reward-function shape and the geometry probe do not need the
+frameworks and run without them.
 """
 
 from __future__ import annotations
@@ -32,7 +31,7 @@ import numpy as np
 from reward_lens.core.errors import RewardLensError
 
 if TYPE_CHECKING:
-    from reward_lens.loops.recorder import DriftReport, FeatureBank
+    from reward_lens.loops.recorder import DirectionBank, DriftReport
 
 RewardFn = Callable[[Sequence[str], Sequence[str]], list[float]]
 
@@ -42,7 +41,7 @@ class IntegrationUnavailableError(RewardLensError):
 
     Names the framework and the extra to install. The reward-function shape and the geometry probe
     do not need the framework and never raise this; only the framework-specific callback / worker
-    wiring does (DESIGN 2.13, R14).
+    wiring does (R14).
     """
 
 
@@ -61,12 +60,12 @@ def require_framework(name: str, extra: str) -> Any:
             f"the {name!r} integration requires the optional {extra!r} extra, which is not "
             f"installed. Install reward-lens[{extra}] to wire the callback/worker into a live "
             f"training run. The framework-agnostic reward function (make_reward_fn) and the geometry "
-            f"probe (probe_geometry) do not need {name!r} and are usable now (DESIGN 2.13)."
+            f"probe (probe_geometry) do not need {name!r} and are usable now."
         ) from exc
 
 
 def every_k(step: int, k: int, *, offset: int = 0) -> bool:
-    """Whether ``step`` is a logging step: true every ``k`` steps (DESIGN 2.13, "every k steps")."""
+    """Whether ``step`` is a logging step: true every ``k`` steps."""
     if k <= 0:
         raise ValueError(f"k must be positive; got {k}")
     return (step - offset) % k == 0
@@ -78,7 +77,7 @@ def make_reward_fn(
     *,
     batch_size: int | None = None,
 ) -> RewardFn:
-    """Wrap a ``RewardSignal`` as the reward function a training loop calls (DESIGN 2.13).
+    """Wrap a ``RewardSignal`` as the reward function a training loop calls.
 
     Returns ``reward_fn(prompts, responses) -> list[float]``: it pairs each prompt with its response,
     scores them through ``signal.score`` under ``readout``, and returns plain floats, which is the
@@ -104,7 +103,7 @@ def make_reward_fn(
 
 @dataclass
 class GeometryProbe:
-    """A fixed probe set and the feature bank to read the RM's geometry against (DESIGN 2.13).
+    """A fixed probe set and the feature bank to read the RM's geometry against.
 
     ``prompts`` / ``responses`` are the held-fixed probe inputs scored every ``k`` steps, so the
     geometry is tracked at a stable stimulus while the policy moves. ``feature_bank`` (optional)
@@ -114,7 +113,7 @@ class GeometryProbe:
 
     prompts: list[str]
     responses: list[str]
-    feature_bank: "FeatureBank | None" = None
+    feature_bank: "DirectionBank | None" = None
     k: int = 50
 
     def __post_init__(self) -> None:
@@ -124,7 +123,7 @@ class GeometryProbe:
 
 @dataclass
 class ProbeLog:
-    """One geometry read-out at a training step (DESIGN 2.13).
+    """One geometry read-out at a training step.
 
     ``step`` is the training step; ``probe_scores`` the RM's scores on the fixed probes; ``w_r_norm``
     the reward-direction norm (a cheap crystallization proxy); ``concept_dose`` the mean projection
@@ -143,7 +142,7 @@ class ProbeLog:
 def probe_geometry(
     signal: Any, probe: GeometryProbe, step: int, *, readout: str = "reward"
 ) -> ProbeLog:
-    """Log the RM's geometry on the fixed probes at a training step (DESIGN 2.13).
+    """Log the RM's geometry on the fixed probes at a training step.
 
     Scores the probes, reads the reward-direction norm, and, when the probe carries a feature bank,
     projects the probes' final-layer activations onto it to get concept doses. This is the per-step
@@ -166,7 +165,7 @@ def probe_geometry(
 
 
 class GeometryLogger:
-    """Log the RM's geometry every ``k`` steps on a fixed probe (DESIGN 2.13).
+    """Log the RM's geometry every ``k`` steps on a fixed probe.
 
     The framework-agnostic core the three integration callbacks wrap: hold a probe, and on each
     training step call ``maybe_log(signal, step)``, which returns a ``ProbeLog`` on the logging steps
@@ -201,7 +200,7 @@ def _probe_activations(signal: Any, items: list[tuple[str, str]], read: Any) -> 
     """Capture the readout-site residual activation at the final position for each probe item.
 
     Captures at the readout's site with the default spec, which resolves to the last-valid token
-    (the position the classifier readout reads, DESIGN 2.3.1) and returns ``(n_items, d)`` already
+    (the position the classifier readout reads) and returns ``(n_items, d)`` already
     pooled to that position. The concept dose is then read at exactly the place the reward is.
     """
     from reward_lens.runtime.backend import CaptureSpec

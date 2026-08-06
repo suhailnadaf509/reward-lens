@@ -1,4 +1,4 @@
-"""Activation patching as an Intervention (section 2.6.1), the mechanics behind ``PatchGrid``.
+"""Activation patching as an Intervention, the mechanics behind ``PatchGrid``.
 
 Patching splices a component's activation from a source forward into a target forward and reads the
 change in reward. In v1 this lived in ``patching.py`` as a bespoke hook loop that could not compose

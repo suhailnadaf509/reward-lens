@@ -1,11 +1,11 @@
-"""Signal loading and auto-discovery (section 2.3.4).
+"""Signal loading and auto-discovery.
 
 ``load_signal`` is the front door: given an HF id, a local path, or a ``SignalSpec``, it sniffs the
 loading convention (TRL ``AutoModelForSequenceClassification`` with ``num_labels=1``; OpenRLHF
 CausalLM plus ``value_head``/``score``; veRL ``AutoModelForTokenClassification`` last-valid-token;
 ad-hoc ``trust_remote_code`` heads), chooses the adapter and the numerics policy, fingerprints, and
 runs a conformance quick-check before handing back a ``RewardSignal``. Ambiguities are errors with
-candidate lists, never silent guesses (liability 7).
+candidate lists, never silent guesses.
 
 The real HF-hub load of the 8B/27B campaign models is GPU/download-gated: this machine has an 8 GB
 laptop GPU and cannot hold them, so ``load_signal`` implements the code path and marks it, but will
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class SignalSpec:
-    """A resolved request to load a signal (section 2.3.4).
+    """A resolved request to load a signal.
 
     ``source`` is an HF id or a local path; ``adapter`` and ``numerics`` override auto-detection when
     given; ``convention`` names the loading convention when the caller already knows it. ``device``
@@ -97,7 +97,7 @@ def wrap_hf_model(
     policy = numerics if numerics is not None else resolve_policy(arch)
 
     # Apply the numerics policy at the boundary: null the soft cap on the reward path (Gemma-2) and
-    # record what was disabled so SignalMeta.soft_cap carries it (R11, E09).
+    # record what was disabled so SignalMeta.soft_cap carries it (E09).
     disabled = policy.apply_to_config(getattr(model, "config", None))
     soft_cap = next(iter(disabled.values()), None) if disabled else None
 
@@ -165,7 +165,7 @@ def from_tiny(
     adapter, hooks, readout, grad, and hvp see the same module tree they will see on an 8B Skywork
     model; only the magnitudes differ. The tokenizer defaults to gpt2 (cached, fast, offset-capable);
     if gpt2 cannot be loaded offline, a minimal byte-level tokenizer is used so the tests still run
-    with no network (section: hardware reality).
+    with no network.
     """
     import torch
     from transformers import LlamaConfig, LlamaForSequenceClassification
@@ -203,7 +203,7 @@ def from_tiny(
 
 
 def load_signal(spec: "str | SignalSpec", **overrides: Any) -> ClassifierRM:
-    """Load a signal from an HF id, a local path, or a ``SignalSpec`` (section 2.3.4).
+    """Load a signal from an HF id, a local path, or a ``SignalSpec``.
 
     Sniffs the loading convention from the config architecture and head names, chooses the adapter
     and numerics policy, then loads the weights and delegates to ``wrap_hf_model``. The weight load
@@ -227,8 +227,7 @@ def load_signal(spec: "str | SignalSpec", **overrides: Any) -> ClassifierRM:
             f"loading {spec.source!r} from the HF hub is GPU/download-gated on this machine "
             f"(8 GB GPU, cannot hold the 8B/27B campaign models). The convention sniffed as "
             f"{convention!r} and the code path is implemented; set allow_download=True to attempt "
-            f"it on adequate hardware, or use wrap_hf_model/from_tiny for a local model. "
-            f"(section 2.3.4, hardware reality)"
+            f"it on adequate hardware, or use wrap_hf_model/from_tiny for a local model."
         )
     model, tokenizer = _load_weights(spec, convention)
     return wrap_hf_model(
@@ -274,7 +273,7 @@ def _sniff_convention(spec: "SignalSpec") -> str:
         f"cannot determine the loading convention for {spec.source!r}; architectures="
         f"{architectures}. Candidates: trl-sequence-classification, openrlhf-value-head, "
         f"verl-token-classification, adhoc-reward-model. Pass SignalSpec(convention=...) "
-        f"explicitly (liability 7: no silent guesses)."
+        f"explicitly; no silent guesses."
     )
 
 
@@ -339,7 +338,7 @@ def _quickcheck(signal: ClassifierRM) -> None:
 
     The full suite is ``signals.conformance.run_conformance``; this is the cheap subset that must
     pass before a freshly loaded signal is handed back, so a broken load (a dtype mismatch, a
-    mis-resolved head) fails loudly at load rather than deep in a study (liability 7). Raises
+    mis-resolved head) fails loudly at load rather than deep in a study. Raises
     ``ConformanceError`` on failure.
     """
     import numpy as np

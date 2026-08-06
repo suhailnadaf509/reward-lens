@@ -1,4 +1,4 @@
-"""``reward_lens.concepts`` — directions, probes, dictionaries, and beliefs (section 2.5).
+"""``reward_lens.concepts`` — directions, probes, dictionaries, and beliefs.
 
 The concept subsystem turns activations into named, persisted directions and the calibrated probes
 that read them. Five layers sit here:
@@ -15,11 +15,15 @@ that read them. Five layers sit here:
     Evidence.
   - ``banks``: the standard concept batteries (style, safety, quality, belief targets).
 
-``legacy`` is the v1 ``ConceptExtractor`` primitive, kept as the reference and re-exported so
-``from reward_lens.concepts import ConceptExtractor`` resolves exactly as before.
+The v1 ``ConceptExtractor`` primitive that used to sit here as the reference retired with the
+rest of the v1 corpus; ``vectors`` has been the canonical direction estimator since 2.0.
 """
 
 from __future__ import annotations
+
+from reward_lens.core.extras import require_extra
+
+require_extra("white-box", subsystem="reward_lens.concepts")
 
 from reward_lens.concepts.banks import (
     BELIEF_BANK,
@@ -63,13 +67,6 @@ from reward_lens.concepts.diff_dict import (
     true_margin,
     verification_evidence,
     verify_decomposition,
-)
-from reward_lens.concepts.legacy import (
-    CONCEPT_PAIRS,
-    ConceptAlignmentReport,
-    ConceptExtractor,
-    ConceptInfo,
-    quick_concept_analysis,
 )
 from reward_lens.concepts.probes import (
     Direction,
@@ -150,9 +147,4 @@ __all__ = [
     "capture_concept_sides",
     "default_feature_bank",
     # v1 primitive (reference)
-    "ConceptExtractor",
-    "ConceptInfo",
-    "ConceptAlignmentReport",
-    "CONCEPT_PAIRS",
-    "quick_concept_analysis",
 ]

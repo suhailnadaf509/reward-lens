@@ -1,4 +1,4 @@
-"""Directional, mean, and head ablation as Interventions (section 2.6.2, ``ablate.py``).
+"""Directional, mean, and head ablation as Interventions.
 
 Ablation asks the causal question steering does not: not "what happens if I add this direction" but
 "what happens if I remove it". Three removals live here, all as
@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 
 @dataclass
 class AblationIntervention:
-    """Remove a direction (or a head) from an activation; an ``Intervention`` (section 2.6.2).
+    """Remove a direction (or a head) from an activation; an ``Intervention``.
 
     ``site`` names where the ablation acts. ``mode`` selects the removal:
 

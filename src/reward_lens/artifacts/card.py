@@ -1,4 +1,4 @@
-"""The RM Card generator (section 2.15, artifacts/card.py).
+"""The RM Card generator.
 
 A card is a view over the evidence store: it assembles every Evidence about a signal into a JSON
 and an HTML document and computes nothing new (I5). The design's hard requirement is the one this
@@ -46,7 +46,7 @@ class CardEntry:
 
 @dataclass
 class Card:
-    """An RM Card: the assembled evidence about one signal (section 2.15)."""
+    """An RM Card: the assembled evidence about one signal."""
 
     signal: str
     entries: list[CardEntry] = field(default_factory=list)
@@ -81,7 +81,7 @@ def _value_repr(value: Any) -> str:
 
 
 def build_card(signal_fp: str, store: EvidenceStore | None = None) -> Card:
-    """Assemble a Card from every latest Evidence about a signal (section 2.15).
+    """Assemble a Card from every latest Evidence about a signal.
 
     Queries the store for the most recent Evidence per observable about this signal fingerprint,
     reads each one's value, uncertainty, trust, gauge, and calibration status, and returns a Card.

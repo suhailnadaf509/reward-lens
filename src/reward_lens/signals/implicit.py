@@ -1,4 +1,4 @@
-"""``ImplicitRM``: the DPO implicit reward as a ``RewardSignal`` (section 2.3.3, adapter 4).
+"""``ImplicitRM``: the DPO implicit reward as a ``RewardSignal`` (adapter 4).
 
 A model trained with DPO (or any log-ratio objective) is a reward model without ever having a reward
 head: its implicit reward is r-hat(y) = beta * sum_t log( pi_policy(y_t | y_<t) / pi_ref(y_t | y_<t) ),
@@ -10,7 +10,7 @@ for free and are the reason the design lists it as its own adapter rather than a
     construction, which the conformance suite and the M-tests both assert; and
   - it is a *paired-model* signal (``PAIRED_MODELS``): capture and grad route to the policy model by
     default, with the reference reachable through an explicit namespace, because "the activation at
-    layer L" is ambiguous across two models and the design refuses to guess (liability 7).
+    layer L" is ambiguous across two models and the adapter refuses to guess.
 
 Both models share one tokenizer and one templating, so the response token region is identical for the
 two forwards and the log-ratio is well defined token by token.
@@ -88,7 +88,7 @@ class ImplicitRM(SignalImplBase):
         self._ref_fp: ModelFP = reference_meta.fingerprint
 
     def _signals(self) -> tuple[ModelFP, ...]:
-        """Both model fingerprints, policy first (a paired-model subject; section 2.3.3)."""
+        """Both model fingerprints, policy first (a paired-model subject)."""
         return (self.meta.fingerprint, self._ref_fp)
 
     # -- rendering: type the response region -------------------------------
@@ -121,7 +121,7 @@ class ImplicitRM(SignalImplBase):
         )
 
     def score_prefixes(self, view: Any, readout: str | None = None) -> Any:
-        """Cumulative per-token reward curves; the last entry of each equals ``score`` (section 2.3.2).
+        """Cumulative per-token reward curves; the last entry of each equals ``score``.
 
         The curve is the running sum of the per-token log-ratio rewards over the response, so
         ``curve[-1] == r-hat``, which is the prefix-consistency invariant conformance checks. The raw
@@ -139,7 +139,7 @@ class ImplicitRM(SignalImplBase):
         )
 
     def per_token_rewards(self, view: Any, readout: str | None = None) -> Any:
-        """The native per-token reward decomposition r_t (increments; section 2.3.3).
+        """The native per-token reward decomposition r_t (increments).
 
         Each item's curve is ``beta * (log pi_policy(y_t) - log pi_ref(y_t))`` over the response
         tokens; the increments sum to the sequence score. This is the decomposition the verification
@@ -218,7 +218,7 @@ class ImplicitRM(SignalImplBase):
     # -- capture routing ----------------------------------------------------
 
     def capture(self, view: Any, spec: Any, namespace: Literal["policy", "ref"] = "policy") -> Any:
-        """Capture activations, routing to the policy model by default (section 2.3.3, PAIRED_MODELS).
+        """Capture activations, routing to the policy model by default (PAIRED_MODELS).
 
         ``namespace="ref"`` captures from the reference model instead. The two runtimes are distinct
         models, so a caller must say which one it means; there is no shared "layer L". Interventions

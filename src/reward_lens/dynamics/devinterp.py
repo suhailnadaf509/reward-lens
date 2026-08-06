@@ -1,4 +1,4 @@
-"""Optional bridge to LLC / essential-dynamics tooling for phase-transition detection (DESIGN 2.12).
+"""Optional bridge to LLC / essential-dynamics tooling for phase-transition detection.
 
 Developmental interpretability reads training as a sequence of phase transitions and measures them
 with the local learning coefficient (LLC, a scalable estimate of the RLCT / effective dimension) and
@@ -10,7 +10,7 @@ consume; when it is not, every entry point raises a precise error naming the mis
 than failing deep inside a call.
 
 Nothing here fabricates an LLC curve. The estimators need per-checkpoint gradients over a data loader
-(a GPU-scale computation on the real RM-Pythia run, DESIGN 4.5), so the bridge is wiring and adaptation
+(a GPU-scale computation on the real RM-Pythia run), so the bridge is wiring and adaptation
 only. The stabilization detector in `curves.py` is the CPU-provable, dependency-free developmental
 signal this library ships on its own; this bridge is the optional upgrade to the specialist tooling
 when it is present.
@@ -38,7 +38,7 @@ def _require() -> Any:
     if not is_available():
         raise ImportError(
             "the optional 'devinterp' package is not installed; it provides the LLC / "
-            "essential-dynamics estimators this bridge adapts to (DESIGN 2.12). Install it "
+            "essential-dynamics estimators this bridge adapts to. Install it "
             "(pip install devinterp) to enable phase-transition detection, or use "
             "dynamics.curves.stabilization_report for the dependency-free developmental signal."
         )
@@ -47,7 +47,7 @@ def _require() -> Any:
 
 @dataclass
 class LLCTrajectory:
-    """A local-learning-coefficient trajectory over training (DESIGN 2.12). Populated only via ``devinterp``.
+    """A local-learning-coefficient trajectory over training. Populated only via ``devinterp``.
 
     ``steps`` is the training-time covariate and ``llc`` the estimated local learning coefficient at
     each checkpoint (a scalable RLCT estimate; a jump marks a phase transition). ``estimator`` records
@@ -68,12 +68,12 @@ def estimate_llc(
     loader: Any = None,
     **estimator_kwargs: Any,
 ) -> LLCTrajectory:
-    """Estimate the LLC across a checkpoint sequence via ``devinterp`` (DESIGN 2.12). Requires the package.
+    """Estimate the LLC across a checkpoint sequence via ``devinterp``. Requires the package.
 
     For each checkpoint this would run ``devinterp``'s SGLD-based LLC estimator on ``loss_fn`` over
     ``loader`` and collect the trajectory; a rise in the LLC marks the model gaining effective
     dimension, which is the phase-transition signal. The estimator needs per-checkpoint gradient
-    sampling over a data loader, a GPU-scale computation on the real run (DESIGN 4.5), so this raises
+    sampling over a data loader, a GPU-scale computation on the real run, so this raises
     without the package rather than approximate it on CPU.
     """
     _require()  # pragma: no cover - only reachable with the optional package installed
@@ -89,7 +89,7 @@ def essential_dynamics(
     n_components: int = 8,
     **kwargs: Any,
 ) -> Any:
-    """Essential-dynamics (low-rank training-motion) analysis via ``devinterp`` (DESIGN 2.12). Requires the package.
+    """Essential-dynamics (low-rank training-motion) analysis via ``devinterp``. Requires the package.
 
     Essential dynamics reduces how the model's internals move over training to a few principal
     components, exposing the developmental "stages" as segments in that low-dimensional trajectory.

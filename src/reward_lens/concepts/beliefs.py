@@ -1,4 +1,4 @@
-"""Answer-keyed belief probes: the epistemic substrate held to the strictest calibration (section 2.5.2).
+"""Answer-keyed belief probes: the epistemic substrate held to the strictest calibration.
 
 A belief probe is a concept probe whose target is an externally verifiable latent: whether the tests
 pass, whether the claim is true, whether step k is correct. What makes it a *belief* probe rather
@@ -46,7 +46,7 @@ class SelfLabeledBeliefError(RewardLensError):
     A belief probe's label must come from an external answer key. A target sourced from the model's
     own output or score is refused with this error rather than trained, because a belief probe that
     learned the model's self-report would silently defeat the epistemic-axiological separation it
-    exists to support (section 2.5.2, S5).
+    exists to support (S5).
     """
 
 
@@ -61,7 +61,7 @@ class UncalibratedBeliefError(RewardLensError):
 
 @dataclass(frozen=True)
 class BeliefTarget:
-    """A verifiable belief target: labels from an external key, with its provenance (section 2.5.2).
+    """A verifiable belief target: labels from an external key, with its provenance.
 
     ``key_fn`` maps an ``(item, side)`` to a binary label from the external key (tests pass, claim
     true, step-k correct), or ``None`` to drop that side. ``source`` records where the label comes
@@ -88,8 +88,8 @@ class BeliefTarget:
                 f"belief target {self.name!r} has source={self.source!r} verifiable="
                 f"{self.verifiable}; a belief probe requires an external answer key (source="
                 "'answer_key', verifiable=True). A target derived from the model's own output or "
-                "score is refused, because a belief probe must not learn the model's self-report "
-                "(section 2.5.2). Use concepts.probes.fit_probe for a self-labeled concept."
+                "score is refused, because a belief probe must not learn the model's self-report. "
+                "Use concepts.probes.fit_probe for a self-labeled concept."
             )
 
 
@@ -108,7 +108,7 @@ def self_labeled_target(name: str, label_fn: Callable[[Any, str], int | None]) -
 
 
 def meta_key_target(name: str, meta_field: str, *, positive: Any = True) -> BeliefTarget:
-    """A verifiable belief target reading a gold label off an item's meta (section 2.5.2).
+    """A verifiable belief target reading a gold label off an item's meta.
 
     The foundry and the corruption builders stamp the verifiable ground truth into an item's meta
     (``gold_true`` for a mislabeled-receipt organism, ``gold_correct`` for a planted step error), and
@@ -128,7 +128,7 @@ def meta_key_target(name: str, meta_field: str, *, positive: Any = True) -> Beli
 
 @dataclass(frozen=True)
 class BeliefProbe:
-    """A fitted, answer-keyed belief probe (section 2.5.2).
+    """A fitted, answer-keyed belief probe.
 
     Wraps the underlying `ProbeFit` with the belief's provenance: ``belief_name`` and ``key_source``
     (always the external answer key) record that the label was verifiable, and ``organism_family``
@@ -179,7 +179,7 @@ def fit_belief_probe(
     seed: int = 0,
     decode_threshold: float = 0.7,
 ) -> BeliefProbe:
-    """Train an answer-keyed belief probe under the strict calibration standard (section 2.5.2).
+    """Train an answer-keyed belief probe under the strict calibration standard.
 
     The belief probe is the special case of `fit_probe` where the target is an externally verifiable
     latent and calibration is mandatory. This wrapper enforces both. It refuses a self-labeled

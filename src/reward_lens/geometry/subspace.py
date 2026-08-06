@@ -1,7 +1,7 @@
 """Subspace comparison: CKA, Procrustes, and null-anchored feature alignment.
 
-The measurement layer for universality and transfer (DESIGN section 2.7.3). Every number here is an
-alignment between two signals' representations, and every alignment is COVARIANT: it is meaningless
+The measurement layer for universality and transfer. Every number here is an alignment between two
+signals' representations, and every alignment is COVARIANT: it is meaningless
 without a shared `Frame`, because a raw-coordinate overlap conflates a coordinate change with a
 functional one (the E19 lesson). So each public function takes a ``frame`` argument with no default
 and calls ``require_frame_for_comparison``; passing ``frame=None`` raises (gate 2, I3). The caller is
@@ -52,7 +52,7 @@ def _require(frame: Any) -> FrameID:
 
 
 def cka(x: Any, y: Any, frame: Any) -> float:
-    """Linear centered kernel alignment between two representation matrices (DESIGN section 2.7.3).
+    """Linear centered kernel alignment between two representation matrices.
 
     ``x`` and ``y`` are ``n x d_x`` and ``n x d_y`` activation matrices for the same ``n`` items,
     read in the shared ``frame``. Linear CKA is ``||Y_c^T X_c||_F^2 / (||X_c^T X_c||_F ||Y_c^T
@@ -82,7 +82,7 @@ def cka(x: Any, y: Any, frame: Any) -> float:
 
 @dataclass
 class ProcrustesResult:
-    """The result of an orthogonal Procrustes alignment (DESIGN section 2.7.3).
+    """The result of an orthogonal Procrustes alignment.
 
     ``rotation`` is the ``d x d`` orthogonal ``R`` minimizing ``||X R - Y||_F``; ``disparity`` is the
     residual ``||X R - Y||_F^2 / ||Y||_F^2`` (0 when ``Y`` is an exact rotation of ``X``); ``scale``
@@ -95,7 +95,7 @@ class ProcrustesResult:
 
 
 def procrustes(x: Any, y: Any, frame: Any) -> ProcrustesResult:
-    """Orthogonal Procrustes alignment of ``X`` onto ``Y`` in a shared frame (DESIGN section 2.7.3).
+    """Orthogonal Procrustes alignment of ``X`` onto ``Y`` in a shared frame.
 
     Solves ``R = argmin_{R^T R = I} ||X R - Y||_F`` via the SVD of ``X^T Y`` and reports the residual
     disparity. Recovering a known rotation to numerical zero disparity is the property test. Requires
@@ -123,7 +123,7 @@ def procrustes(x: Any, y: Any, frame: Any) -> ProcrustesResult:
 
 @dataclass
 class AlignmentResult:
-    """An alignment score read against its null (DESIGN section 2.7.3, Appendix A14).
+    """An alignment score read against its null (A14).
 
     ``alignment`` is the measured overlap; ``null_mean`` and ``null_p95`` summarize the chance
     distribution; ``p_value`` is the fraction of null draws at least as aligned; ``excess`` is
@@ -208,7 +208,7 @@ def hungarian_feature_alignment(
     n_null: int = 10_000,
     seed: int = 0,
 ) -> AlignmentResult:
-    """Hungarian-matched feature alignment on high-reward-loading directions (DESIGN section 2.7.3).
+    """Hungarian-matched feature alignment on high-reward-loading directions.
 
     ``a_dirs`` and ``b_dirs`` are ``(m_a, d)`` and ``(m_b, d)`` sets of feature/decoder directions.
     When per-direction reward-loading ``weights`` (``|d r / d feature|``) are supplied, the match is

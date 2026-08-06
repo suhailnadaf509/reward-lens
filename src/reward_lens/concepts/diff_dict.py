@@ -1,4 +1,4 @@
-"""Preference-difference dictionaries: the exact Bradley-Terry margin decomposition (section 2.5.3).
+"""Preference-difference dictionaries: the exact Bradley-Terry margin decomposition.
 
 This is the corpus's reward-model-native dictionary. Where an SAE is trained on activations, a
 preference-difference dictionary is trained on the difference vector ``delta_h = h_chosen -
@@ -56,13 +56,13 @@ _EXACT_TOL = 1e-6
 
 @dataclass(frozen=True)
 class DiffDictionary:
-    """A preference-difference dictionary with its per-atom margin contributions (section 2.5.3).
+    """A preference-difference dictionary with its per-atom margin contributions.
 
     ``atoms`` are the ``(k, d)`` dictionary directions ``d_i`` (orthonormal rows as fit by SVD).
     ``w_r`` is the fp32 reward direction the margin is taken along. ``atom_margins`` is the fixed
     per-atom margin contribution ``w_r . d_i`` (shape ``(k,)``), which is the reward-native content of
     the dictionary: it is how much each atom moves the Bradley-Terry margin. ``train_data`` is the
-    `DatasetID` of the delta_h it was trained on (R8), and ``meta`` carries the fit summary.
+    `DatasetID` of the delta_h it was trained on, and ``meta`` carries the fit summary.
 
     Activations for a batch of ``delta_h`` are ``F = delta_h @ atoms.T`` (exact projection
     coefficients because the atoms are orthonormal), and the decomposed margin is ``F @ atom_margins``.
@@ -88,7 +88,7 @@ class DiffDictionary:
 @register_payload
 @dataclass
 class DiffDictArtifact:
-    """The serializable payload form of a `DiffDictionary` (section 2.5.3, R8)."""
+    """The serializable payload form of a `DiffDictionary`."""
 
     dict_id: str
     atoms: np.ndarray
@@ -102,7 +102,7 @@ class DiffDictArtifact:
 @register_payload
 @dataclass
 class DiffDictVerification:
-    """The stored verification of the exact-decomposition identity on held-out pairs (section 2.5.3).
+    """The stored verification of the exact-decomposition identity on held-out pairs.
 
     This is the Evidence payload that certifies a dictionary. ``max_abs_residual`` and
     ``mean_abs_residual`` are the held-out gap between the true margin ``w_r . delta_h`` and the
@@ -166,7 +166,7 @@ def reconstruct(dictionary: DiffDictionary, delta_h: np.ndarray) -> np.ndarray:
 def decompose_margin(
     dictionary: DiffDictionary, delta_h: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray]:
-    """The decomposed margin and its per-atom contributions (section 2.5.3).
+    """The decomposed margin and its per-atom contributions.
 
     Returns ``(margin_recon (n,), contributions (n, k))`` where ``contributions[:, i] = f_i * (w_r .
     d_i)`` and ``margin_recon = contributions.sum(axis=1) = F @ atom_margins``. The per-atom
@@ -187,7 +187,7 @@ def verify_decomposition(
     tol: float = _EXACT_TOL,
     sample: int = 8,
 ) -> DiffDictVerification:
-    """Check the exact-decomposition identity on held-out pairs and bundle the residual (section 2.5.3).
+    """Check the exact-decomposition identity on held-out pairs and bundle the residual.
 
     Computes the true margin ``w_r . delta_h`` and the reconstructed margin ``sum_i f_i (w_r . d_i)``
     on held-out pairs and reports their gap. When the dictionary reconstructs delta_h exactly the
@@ -255,7 +255,7 @@ def train_diff_dict(
     train_data: DatasetID | None = None,
     meta: dict[str, Any] | None = None,
 ) -> DiffDictionary:
-    """Fit a preference-difference dictionary of ``n_atoms`` atoms from training delta_h (section 2.5.3).
+    """Fit a preference-difference dictionary of ``n_atoms`` atoms from training delta_h.
 
     The atoms are the top ``n_atoms`` right singular vectors of ``delta_h_train`` (an orthonormal
     basis for its dominant preference-difference subspace), so the reconstruction of any delta_h is
@@ -304,7 +304,7 @@ def train_diff_dict(
 
 
 def diff_dict_evidence(dictionary: DiffDictionary, *, signals: tuple[str, ...] = ()) -> Evidence:
-    """Wrap a `DiffDictionary` as COVARIANT Evidence so the dictionary is a store citizen (R8)."""
+    """Wrap a `DiffDictionary` as COVARIANT Evidence so the dictionary is a store citizen."""
     artifact = DiffDictArtifact(
         dict_id=dictionary.id,
         atoms=np.asarray(dictionary.atoms, dtype=np.float32),
@@ -365,7 +365,7 @@ def verification_evidence(
 
 @dataclass(frozen=True)
 class DiffDictResult:
-    """A trained dictionary with its held-out verification and their Evidence (section 2.5.3).
+    """A trained dictionary with its held-out verification and their Evidence.
 
     ``dictionary`` is the artifact; ``verification`` carries the held-out residual; ``dict_evidence``
     and ``verification_evidence`` are the stored forms, linked in the DAG. ``exact`` and
@@ -398,7 +398,7 @@ def fit_and_verify(
     store: "EvidenceStore | None" = None,
     signals: tuple[str, ...] = (),
 ) -> DiffDictResult:
-    """Train a difference dictionary and verify its margin decomposition on held-out pairs (section 2.5.3).
+    """Train a difference dictionary and verify its margin decomposition on held-out pairs.
 
     Fits the dictionary on ``delta_h_train``, checks the exact-decomposition identity on
     ``delta_h_heldout``, and bundles both as linked Evidence. When ``store`` is given, the dictionary

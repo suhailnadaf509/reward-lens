@@ -1,4 +1,4 @@
-"""Per-family numerics policies (section 2.2.4, R11).
+"""Per-family numerics policies.
 
 This module is the structural cure for two whole classes of v1 failure: the QRM dtype-mismatch
 crash and the Gemma-2 soft-cap NaN. v1 fixed both by mutating the loaded model (coerce the reward
@@ -18,7 +18,7 @@ only flattens late-layer differentials into a tanh plateau and drives the lens t
 lesson). The disabling is recorded so ``SignalMeta.soft_cap`` can carry it and lens observables can
 annotate it.
 
-Policies are resolved by architecture family and are conformance-tested (section 2.3.6): score
+Policies are resolved by architecture family and are conformance-tested: score
 parity within ``tol`` across trunk-dtype configurations, and no NaN on the cosine path.
 """
 
@@ -51,7 +51,7 @@ def torch_dtype(name: str) -> "torch.Tensor":
 
 @dataclass(frozen=True)
 class NumericsPolicy:
-    """The numerics contract for one model family (section 2.2.4, R11).
+    """The numerics contract for one model family.
 
     ``trunk_dtype`` is the default dtype the backbone loads and runs in (bf16 on the 8B campaign
     GPUs, fp32 on the CPU test vehicle). ``head_dtype`` is always ``"float32"``: the reward
@@ -89,8 +89,8 @@ class NumericsPolicy:
     def with_trunk(self, trunk_dtype: str) -> "NumericsPolicy":
         """Return a copy with a different trunk dtype (the conformance dtype matrix uses this).
 
-        The head stays fp32; only the trunk changes. This is exactly the axis section 2.3.6 sweeps
-        (bf16/fp16/fp32 trunk x fp32 head) to prove score parity and NaN-freedom.
+        The head stays fp32; only the trunk changes. This is exactly the axis the conformance
+        tests sweep (bf16/fp16/fp32 trunk x fp32 head) to prove score parity and NaN-freedom.
         """
         from dataclasses import replace
 
@@ -123,7 +123,7 @@ class NumericsPolicy:
     def head_project(
         self, hidden: "torch.Tensor", weight: "torch.Tensor", bias: float = 0.0
     ) -> "torch.Tensor":
-        """Project a hidden state onto a reward direction in fp32 (the head boundary, R11).
+        """Project a hidden state onto a reward direction in fp32 (the head boundary).
 
         ``hidden`` is ``(..., d_model)`` in whatever the trunk produced (bf16/fp16/fp32); ``weight``
         is ``(d_model,)``. The input is upcast to fp32 and the scalar is accumulated in fp32, which
@@ -155,7 +155,7 @@ def safe_cosine(
 
 
 # ---------------------------------------------------------------------------
-# The policy registry (section 2.2.4): one entry per family, keyed for resolution.
+# The policy registry: one entry per family, keyed for resolution.
 # ---------------------------------------------------------------------------
 
 _DEFAULT = NumericsPolicy(
@@ -219,7 +219,7 @@ def register_policy(policy: NumericsPolicy) -> None:
 
 
 def resolve_policy(architecture: str | None) -> NumericsPolicy:
-    """Resolve an architecture string or ``model_type`` to a ``NumericsPolicy`` (section 2.2.4).
+    """Resolve an architecture string or ``model_type`` to a ``NumericsPolicy``.
 
     Matching is keyword-based over a lower-cased architecture string, most-specific family first
     (so ``"Gemma2ForSequenceClassification"`` resolves to the gemma2 policy, not a generic one, and

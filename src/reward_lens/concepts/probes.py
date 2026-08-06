@@ -1,4 +1,4 @@
-"""The probe factory: linear concept probes with grouped CV and scorecard binding (section 2.5.2).
+"""The probe factory: linear concept probes with grouped CV and scorecard binding.
 
 A concept probe is a linear readout of a signal's activations, trained to predict whether a
 concept is present. The v1 primitive for a concept direction is the mean difference between the
@@ -23,9 +23,9 @@ in rather than leaving them to the caller.
   EXPLORATORY and leaves the gap as a visible TODO on the card. It never invents a calibration
   number, so a probe that was never graded cannot masquerade as one that was.
 
-The output is a persisted `Direction` (section 2.5.1): a named, sited, unit-normalized fp32 vector
+The output is a persisted `Direction`: a named, sited, unit-normalized fp32 vector
 that knows its training data and its calibration reference (or the honest absence of one). The
-direction is stored as Evidence so it is a first-class, provenance-carrying store citizen (R8), the
+direction is stored as Evidence so it is a first-class, provenance-carrying store citizen, the
 same live-object / registered-artifact split the geometry frame uses.
 
 The linear algebra is pure numpy, so the whole factory runs and is proven on CPU. The only place
@@ -62,19 +62,19 @@ _PROBE_VERSION = "1.0"
 
 
 # ---------------------------------------------------------------------------
-# The persisted Direction (section 2.5.1)
+# The persisted Direction
 # ---------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
 class Direction:
-    """A named, sited concept direction with its calibration reference (section 2.5.1).
+    """A named, sited concept direction with its calibration reference.
 
     ``vector`` is unit-normalized fp32 at ``site``. ``method`` records how it was estimated
     (``"probe_lr"`` for a logistic probe, ``"contrast_mean"`` for the mean-difference primitive, and
     so on) so a direction never loses the provenance of how it was made. ``train_data`` is the
     `DatasetID` of the captures it was fit on, because a direction that does not know its training
-    data cannot be reused honestly (R8). ``calibration`` is the `CalibrationRef` from the answer-key
+    data cannot be reused honestly. ``calibration`` is the `CalibrationRef` from the answer-key
     scorecard, or ``None`` when the probe was never graded against a planted structure; a direction
     with ``calibration is None`` can be used but taints downstream Evidence to EXPLORATORY.
 
@@ -106,7 +106,7 @@ class Direction:
 @register_payload
 @dataclass
 class DirectionArtifact:
-    """The serializable payload form of a `Direction` (section 2.5.1, R8).
+    """The serializable payload form of a `Direction`.
 
     A `Direction` holds a live `Site`; this artifact holds its canonical dict plus the fp32 vector,
     so it round-trips exactly through the evidence store's value codec. ``direction_evidence`` wraps
@@ -180,7 +180,7 @@ def direction_evidence(
     parents: tuple[str, ...] = (),
     n: int | None = None,
 ) -> Evidence:
-    """Wrap a `Direction` as COVARIANT Evidence so a fitted direction is a store citizen (R8).
+    """Wrap a `Direction` as COVARIANT Evidence so a fitted direction is a store citizen.
 
     A direction is a covariant quantity (it transforms with the residual-stream basis, gate 2), so
     the Evidence is typed COVARIANT and any cross-signal comparison of two directions will be forced
@@ -281,7 +281,7 @@ class SiteCaptures:
 def group_kfold_indices(
     groups: np.ndarray, n_splits: int, *, seed: int = 0
 ) -> list[tuple[np.ndarray, np.ndarray]]:
-    """Grouped k-fold split indices that never split a group across folds (section 2.5.2).
+    """Grouped k-fold split indices that never split a group across folds.
 
     Every distinct value in ``groups`` is a seed; all rows of one seed go to exactly one test fold.
     Groups are shuffled deterministically (by ``seed``) and dealt to the fold with the fewest rows so
@@ -402,7 +402,7 @@ def _class_weights(y: np.ndarray, balance: bool) -> np.ndarray:
 
 @dataclass(frozen=True)
 class SiteProbe:
-    """One site's probe in the depth sweep (section 2.5.2).
+    """One site's probe in the depth sweep.
 
     ``coef`` is the full-data logistic weight at ``site`` (the concept direction before
     normalization); ``held_out_auc`` is the pooled out-of-fold AUC (each row scored by a fold that
@@ -423,10 +423,10 @@ class SiteProbe:
 
 @dataclass(frozen=True)
 class ProbeFit:
-    """The result of `fit_probe`: the persisted direction plus its fit provenance (section 2.5.2).
+    """The result of `fit_probe`: the persisted direction plus its fit provenance.
 
-    ``direction`` is the section 2.5.1 `Direction` (the headline artifact, from the best site).
-    ``evidence`` is that direction stored as Evidence (R8). ``per_site`` is the depth curve, one
+    ``direction`` is the persisted `Direction` (the headline artifact, from the best site).
+    ``evidence`` is that direction stored as Evidence. ``per_site`` is the depth curve, one
     `SiteProbe` per swept site. ``calibration`` is the answer-key `CalibrationRef` (gate 1) or
     ``None``; ``scorecard_evidence`` is the answer-key ROC Evidence it points at, or ``None`` when
     the probe was not graded. ``held_out_auc`` and ``best_site`` are passthroughs of the chosen
@@ -565,7 +565,7 @@ def fit_probe(
     target_tpr: float = 0.90,
     target_fpr: float = 0.05,
 ) -> ProbeFit:
-    """Train a linear concept probe with grouped CV and automatic scorecard binding (section 2.5.2).
+    """Train a linear concept probe with grouped CV and automatic scorecard binding.
 
     ``signal`` is either a `SiteCaptures` (the substrate-free path the proofs run on: activations,
     labels, and seed groups already in hand) or a live `RewardSignal`, in which case ``view`` (a
@@ -597,7 +597,7 @@ def fit_probe(
         target_fpr: The false-positive rate of that same operating point.
 
     Returns:
-        A `ProbeFit` whose ``direction`` is the persisted section 2.5.1 `Direction`.
+        A `ProbeFit` whose ``direction`` is the persisted `Direction`.
     """
     captures = _as_captures(signal, view, target, sites, name=name)
     sweep_sites = sites or captures.sites
