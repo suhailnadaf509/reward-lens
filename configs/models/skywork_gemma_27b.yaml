@@ -1,4 +1,0 @@
-models:
-  - name: Skywork/Skywork-Reward-Gemma-2-27B-v0.2
-    short: skywork-gemma-27b
-    torch_dtype: bfloat16

@@ -1,9 +1,0 @@
-name: e07_cascade_at_scale
-out_dir: outputs/e07_cascade
-n_pairs_per_dim: 30
-n_resamples: 10000
-models:
-  - name: Skywork/Skywork-Reward-Llama-3.1-8B-v0.2
-    short: skywork-llama-8b
-  - name: RLHFlow/ArmoRM-Llama3-8B-v0.1
-    short: armo-llama-8b

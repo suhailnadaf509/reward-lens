@@ -1,4 +1,0 @@
-models:
-  - name: RLHFlow/ArmoRM-Llama3-8B-v0.1
-    short: armo-llama-8b
-    torch_dtype: bfloat16

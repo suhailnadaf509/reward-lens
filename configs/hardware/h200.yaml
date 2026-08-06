@@ -1,7 +1,0 @@
-# H200 hardware envelope (141 GB, single GPU).
-# Knob hints — applied by individual experiments via cfg.extra.
-
-batch_size: 64           # safe default; experiments may push to 128 for 8B models
-max_length: 2048
-torch_dtype: bfloat16
-attn_implementation: flash_attention_2

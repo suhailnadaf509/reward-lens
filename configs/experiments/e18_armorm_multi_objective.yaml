@@ -1,7 +1,0 @@
-name: e18_armorm_multi_objective
-out_dir: outputs/e18_armorm
-n_pairs_per_dim: 30
-batch_size: 32
-models:
-  - name: RLHFlow/ArmoRM-Llama3-8B-v0.1
-    short: armo-llama-8b

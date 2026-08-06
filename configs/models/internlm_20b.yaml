@@ -1,5 +1,0 @@
-models:
-  - name: internlm/internlm2-20b-reward
-    short: internlm-20b
-    torch_dtype: bfloat16
-    trust_remote_code: true
