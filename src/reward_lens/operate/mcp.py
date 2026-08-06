@@ -1,12 +1,12 @@
-"""A minimal MCP server exposing observables, cards, and the auditing game (section 2.16).
+"""A minimal MCP server exposing observables, cards, and the auditing game.
 
 This is the surface through which an external agent operator consumes the library and through which
 the blind auditing game runs with an agent on the blue side. It is deliberately minimal and says so:
 the tool protocol shape is real and the pure tools are fully wired over the evidence store, but the
 transport is not. A production server adds a JSON-RPC 2.0 loop over stdio or a socket (the ``mcp``
 Python SDK, or a hand-rolled loop), the ``initialize`` capability handshake, resource endpoints so a
-card is addressable as an MCP resource, oracle-provenance stamping on any judge-backed tool (R10),
-and the live wiring of the auditing game to a loaded signal and an organism with an answer key. Those
+card is addressable as an MCP resource, oracle-provenance stamping on any judge-backed tool, and the
+live wiring of the auditing game to a loaded signal and an organism with an answer key. Those
 are the notes at the bottom of this module; what is here is enough to exercise the tool contract and
 to show exactly where the model-touching tool is gated.
 
@@ -30,7 +30,7 @@ PRODUCTION_NOTES = (
     "A production MCP server adds: (1) a JSON-RPC 2.0 transport over stdio or a socket, via the "
     "`mcp` Python SDK or an equivalent loop; (2) the `initialize` handshake with capability "
     "negotiation; (3) MCP resources so each RM card is addressable by URI, not only via a tool; "
-    "(4) oracle-provenance stamping (model id, prompt hash, date) on any judge-backed tool (R10); "
+    "(4) oracle-provenance stamping (model id, prompt hash, date) on any judge-backed tool; "
     "(5) live wiring of the auditing game to a loaded signal and an organism answer key, which is "
     "the GPU-gated part; and (6) authentication and rate limiting for untrusted agent operators."
 )
@@ -57,7 +57,7 @@ class GpuGatedTool(RuntimeError):
 
 
 class MCPServer:
-    """A minimal, in-process MCP tool server over the evidence store (section 2.16).
+    """A minimal, in-process MCP tool server over the evidence store.
 
     Holds the store and a tool registry. ``list_tools`` returns the schema list an MCP client reads;
     ``call_tool`` dispatches by name and returns MCP-shaped content. This class carries no transport;

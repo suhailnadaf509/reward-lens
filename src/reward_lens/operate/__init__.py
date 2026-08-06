@@ -1,4 +1,4 @@
-"""``reward_lens.operate`` — the operator surface (section 2.16).
+"""``reward_lens.operate`` — the operator surface.
 
 The CLI and the MCP server are how a human operator and an agent operator drive the kernel. Both are
 torch-free to import: the CLI's model-touching commands import their kernel dependencies lazily and

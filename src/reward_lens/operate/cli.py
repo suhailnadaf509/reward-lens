@@ -1,4 +1,4 @@
-"""The ``reward-lens`` command line (section 2.16, M13).
+"""The ``reward-lens`` command line.
 
 The operator surface over the kernel and the artifacts layer. The commands split cleanly along the
 line the design draws: the ones that are views over the evidence store run here and now with no
@@ -19,6 +19,14 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
+from reward_lens.access import (
+    ProbeBudget,
+    capability_report,
+    classify_substrate,
+    http_endpoint,
+    resolve_access,
+    resolve_phase,
+)
 from reward_lens.artifacts.atlas import Atlas
 from reward_lens.artifacts.card import build_card
 from reward_lens.artifacts.claims import check_files
@@ -62,7 +70,7 @@ def _gpu_gated(operation: str, dispatch: str, detail: str = "") -> None:
     """
     body = (
         f"[bold]{operation}[/bold] needs a loaded reward model and a GPU.\n"
-        "It is GPU-gated on this torch-free operator layer (DESIGN 2.16).\n\n"
+        "It is GPU-gated on this torch-free operator layer.\n\n"
         f"Dispatches to: [cyan]{dispatch}[/cyan]"
     )
     if detail:
@@ -83,7 +91,7 @@ def card(
     fmt: str = typer.Option("json", "--format", help="json or html."),
     out: Optional[Path] = typer.Option(None, "--out", help="Write to this file instead of stdout."),
 ) -> None:
-    """Build an RM Card for a signal: a view over every stored Evidence about it (section 2.15)."""
+    """Build an RM Card for a signal: a view over every stored Evidence about it."""
     c = build_card(signal, _store(store))
     text = c.to_html() if fmt == "html" else c.to_json()
     if out is not None:
@@ -97,7 +105,7 @@ def card(
 def scoreboard(
     path: Optional[Path] = typer.Option(None, "--path", help="Persisted scoreboard JSON."),
 ) -> None:
-    """Print the theorem scoreboard: standing theorems and candidate laws (section 2.14)."""
+    """Print the theorem scoreboard: standing theorems and candidate laws."""
     sb = Scoreboard(path)
     typer.echo(sb.render_markdown())
 
@@ -107,7 +115,7 @@ def claims(
     files: List[Path] = typer.Argument(..., help="Documents to check for unbound numeric claims."),
     store: Optional[Path] = typer.Option(None, "--store", help="Evidence store directory."),
 ) -> None:
-    """Check documents against the store; exit nonzero if any number is unbound (section 2.15.5).
+    """Check documents against the store; exit nonzero if any number is unbound.
 
     A claim tagged with an Evidence id that the store does not contain, a claimed value that
     disagrees with the stored one, or a dangling ``ev:`` reference is a failure. This is the CI
@@ -117,6 +125,66 @@ def claims(
     typer.echo(report.render())
     if not report.ok:
         raise typer.Exit(code=1)
+
+
+@app.command()
+def capabilities(
+    record: Optional[Path] = typer.Option(None, "--record", help="A run record directory."),
+    grader: Optional[str] = typer.Option(
+        None, "--grader", help="A grader scoring endpoint, as a URL."
+    ),
+    policy: Optional[Path] = typer.Option(
+        None, "--policy", help="A policy checkpoint directory; adds POLICY: FORWARD."
+    ),
+    env: Optional[Path] = typer.Option(
+        None, "--env", help="An environment source tree; adds TASK: MUTATE."
+    ),
+    substrate: Optional[str] = typer.Option(
+        None, "--substrate", help="Declare the grader's substrate instead of classifying it."
+    ),
+    phase: Optional[str] = typer.Option(
+        None, "--phase", help="Declare the phase instead of reading it from the record."
+    ),
+    probe: int = typer.Option(
+        0,
+        "--probe",
+        help="Authorise up to this many real grader calls to establish QUERY and REPLICATE. "
+        "Three calls settle both. The default of 0 makes none.",
+    ),
+    show_all: bool = typer.Option(
+        False, "--all", help="List every catalogued instrument that is not built yet."
+    ),
+    as_json: bool = typer.Option(False, "--json", help="Emit the report as JSON."),
+) -> None:
+    """What you could learn about this run, and what it would cost to learn more.
+
+    Resolves the four typing dimensions from what you supplied, then prints which quantities are
+    reachable at what rung and price, and for everything else a refusal carrying an instruction.
+
+    No model is loaded and no compute runs. No grader call is made either unless ``--probe`` gives
+    a budget above zero, because `REPLICATE` cannot be established without calling the endpoint and
+    calling somebody's endpoint costs them money.
+    """
+    endpoint: object | None = grader
+    if grader is not None and probe > 0 and grader.startswith(("http://", "https://")):
+        endpoint = http_endpoint(grader)
+
+    access = resolve_access(
+        record=record,
+        grader=endpoint,
+        policy=policy,
+        environment=env,
+        probe=ProbeBudget(calls=probe),
+    )
+    substrate_reading = classify_substrate(None, declared=substrate)
+    phase_resolution = resolve_phase(record=record, declared=phase)
+    report = capability_report(access, substrate_reading, phase_resolution, None)
+    if as_json:
+        import json
+
+        typer.echo(json.dumps(report.to_dict(), indent=2))
+        return
+    typer.echo(report.render(show_not_built=show_all))
 
 
 @atlas_app.command("export")
@@ -131,7 +199,7 @@ def atlas_export(
         None, "--out", help="Directory to write leaderboard.{json,html}."
     ),
 ) -> None:
-    """Export the Atlas leaderboard to JSON and HTML: a view over the store (section 2.15)."""
+    """Export the Atlas leaderboard to JSON and HTML: a view over the store."""
     obs = [o.strip() for o in observables.split(",") if o.strip()] if observables else None
     result = Atlas.standard().export_leaderboard(store=_store(store), observables=obs, out_dir=out)
     if out is not None:
@@ -156,7 +224,7 @@ def atlas_sweep(
     gpu_budget: float = typer.Option(0.0, "--gpu-budget", help="GPU-seconds budget for the sweep."),
     execute: bool = typer.Option(False, "--execute", help="Run the real sweep (GPU-gated)."),
 ) -> None:
-    """Plan and price the population sweep over the standard Atlas (R13).
+    """Plan and price the population sweep over the standard Atlas.
 
     Builds the cartesian product of the standard population and the requested battery into a plan,
     pricing each cell from any prior metered cost in the store. Planning runs here; ``--execute``
@@ -219,7 +287,7 @@ def study_run(
     store: Optional[Path] = typer.Option(None, "--store", help="Evidence store directory."),
     execute: bool = typer.Option(False, "--execute", help="Run the analysis (may be GPU-gated)."),
 ) -> None:
-    """Run a frozen study end to end (section 2.14).
+    """Run a frozen study end to end.
 
     Freezes the spec, then dispatches to ``run_study``, whose analysis function resolves and measures
     against real subjects. Most analyses touch a model, so running is GPU-gated by default;
@@ -249,7 +317,7 @@ def study_report(
     store: Optional[Path] = typer.Option(None, "--store", help="Evidence store directory."),
     execute: bool = typer.Option(False, "--execute", help="Run then render (may be GPU-gated)."),
 ) -> None:
-    """Render a study report (section 2.14).
+    """Render a study report.
 
     A report is a view over a completed run, so it runs the study to obtain the result and then
     renders it. Running is GPU-gated by default for the same reason ``study run`` is; ``--execute``
