@@ -1,4 +1,4 @@
-"""Study reports, rendered from Evidence (section 2.14).
+"""Study reports, rendered from Evidence.
 
 A report is a view over the study's frozen spec and the Evidence it produced; it computes nothing
 new. It shows the registered predictions next to their outcomes, so a reader sees exactly what was
@@ -34,6 +34,15 @@ def render_report(frozen: FrozenStudy, result: StudyResult, store: EvidenceStore
         )
         lines.append("")
 
+    if result.voids:
+        lines.append(
+            f"> **VOID.** {len(result.voids)} registered "
+            f"{'metric was' if len(result.voids) == 1 else 'metrics were'} not computed, so this "
+            "study was not read. Nothing below is a finding about its hypotheses. Each void names "
+            "what to repair."
+        )
+        lines.append("")
+
     lines.append("## Registered hypotheses and outcomes")
     lines.append("")
     lines.append("| Hypothesis | Registered prediction | Metric value | Outcome |")
@@ -43,10 +52,8 @@ def render_report(frozen: FrozenStudy, result: StudyResult, store: EvidenceStore
         pred = f"{p.metric} {p.comparator} {p.threshold}"
         value = result.metrics.get(p.metric)
         vstr = f"{value:.4g}" if isinstance(value, (int, float)) else "n/a"
-        outcome = result.outcomes.get(h.id, "inconclusive")
-        badge = {"confirmed": "CONFIRMED", "refuted": "REFUTED", "inconclusive": "inconclusive"}[
-            outcome
-        ]
+        outcome = result.outcomes.get(h.id, "void")
+        badge = {"confirmed": "CONFIRMED", "refuted": "REFUTED", "void": "VOID"}[outcome]
         lines.append(f"| {h.statement} | `{pred}` | {vstr} | {badge} |")
     lines.append("")
 
@@ -55,11 +62,26 @@ def render_report(frozen: FrozenStudy, result: StudyResult, store: EvidenceStore
         lines.append("")
         for k in spec.kill_criteria:
             v = result.metrics.get(k.metric)
-            fired = k.id in result.killed_by
-            state = "FIRED" if fired else "not fired"
+            # A criterion that could not be evaluated is not a criterion that passed. Saying
+            # "not fired" for a missing metric is the failure this vocabulary exists to prevent.
+            state = {"fired": "FIRED", "passed": "not fired", "void": "VOID, not evaluated"}[
+                result.kill_outcomes.get(k.id, "void")
+            ]
             vstr = f"{v:.4g}" if isinstance(v, (int, float)) else "n/a"
             lines.append(
                 f"- `{k.metric} {k.comparator} {k.threshold}` ({state}, value {vstr}): {k.description}"
+            )
+        lines.append("")
+
+    if result.voids:
+        lines.append("## Voids")
+        lines.append("")
+        lines.append("| What | Reason | Arc | Detail | Remedy |")
+        lines.append("|---|---|---|---|---|")
+        for vid, void in result.voids.items():
+            arc = f"`{void.arc}`" if void.arc else "not declared"
+            lines.append(
+                f"| {vid} | `{void.reason.value}` | {arc} | {void.detail} | {void.remedy} |"
             )
         lines.append("")
 

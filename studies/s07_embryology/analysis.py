@@ -335,7 +335,7 @@ def analyze(run) -> StudyResult:
 
     # The real checkpoint sweep runs the same calibrated bias-entry curve over a real training run's
     # checkpoints. That run is GPU-scale, so the gate is recorded honestly with the exact need and the
-    # H3 metric is left unset, so the runner marks it inconclusive rather than fabricated.
+    # H3's metric is left unset, so the runner voids it rather than fabricating a value.
     ev_gate = make_evidence(
         observable="S07.RealPythiaSweepGate",
         observable_version=_VERSION,

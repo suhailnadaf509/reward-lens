@@ -78,13 +78,15 @@ import numpy as np
 from reward_lens.concepts.vectors import concept_direction
 from reward_lens.core.evidence import Uncertainty, make_evidence
 from reward_lens.core.provenance import Provenance
-from reward_lens.core.types import GaugeStatus, SubjectRef
+from reward_lens.core.reading import Reading
+from reward_lens.core.types import Access, Component, GaugeStatus, SubjectRef
 from reward_lens.measure.indices.distortion import distortion_per_dimension, linear_sensitivity
 from reward_lens.measure.indices.kui import Property, kui_from_properties
 from reward_lens.organisms import (
     annotator_mixture_organism,
     empirical_annotator_entropy,
 )
+from reward_lens.record.schema import Run
 from reward_lens.stats.mi import (
     calibrate_gaussian,
     mi_discrete_continuous,
@@ -98,6 +100,7 @@ from reward_lens.studies.spec import (
     StudySpec,
     SubjectQuery,
 )
+from studies._retype import MetricSpec, ScienceRetype, count_trajectories, leaf_scores
 
 _VERSION = "1.0"
 
@@ -985,4 +988,204 @@ def analyze(run) -> StudyResult:
     return StudyResult(outcomes={}, metrics=metrics, summary=summary)
 
 
-__all__ = ["build_spec", "analyze"]
+# ---------------------------------------------------------------------------
+# The retype: S8 on the kernel
+# ---------------------------------------------------------------------------
+
+#: Both factorization metrics compute the same thing on two organisms, so they carry one request.
+_MEDIATED_SHARE_GAP = (
+    "the share of a measured reward premium that a named mediator carries, "
+    "``(premium - premium_after_sever) / premium``, where the sever holds the mediator's projection "
+    "at its counterfactual value within stratum. Unit: 1, dimension 1, support [0, 1] in the "
+    "identified case and unbounded when the premium is near zero, which is why the estimator refuses "
+    "below a premium floor rather than dividing. Invariance: `repr.basis`, invariant, because the "
+    "patch and the readout rotate together. Nothing registered fits. `grader.path_effect` is the "
+    "closest and is the numerator rather than the ratio: its unit is `reward` and this is that "
+    "reduction divided by the premium it is a share of, and a share and a reward difference are not "
+    "the same quantity under E15's rule that a ratio of two same-unit quantities is dimensionless. "
+    "Recommend registering `grader.mediated_share` with the definition above, beside "
+    "`grader.path_effect` on the same instrument."
+)
+
+RETYPE = ScienceRetype(
+    science="s08_factorization",
+    spec=build_spec(),
+    headline="grader.knowledge_utilization",
+    destination=(
+        "L2 and L4 in measure/indices/: `grader.knowledge_utilization` is A1's KUI plane in "
+        "indices/kui.py and `grader.distortion_index` is A2's per-dimension distortion in "
+        "indices/distortion.py, both of which this study already computes through. The "
+        "factorization and the alignment channel land nowhere: four of the eight frozen metrics "
+        "have no registered quantity, and three of those four are in bits, a dimension the registry "
+        "does not carry at all."
+    ),
+    # GRADER:FORWARD, because every arm reads activations and a linear readout: the probe that
+    # measures decodability, the direction whose cosine is the mediation proxy, the belief patch,
+    # and the channel's input coordinates.
+    needs={Component.GRADER: Access.FORWARD},
+    metrics=(
+        MetricSpec(
+            metric="kui_gap",
+            quantity="grader.knowledge_utilization",
+            arc="kui-battery",
+            dataset="planted-battery:sentiment-minus-correctness",
+            source="organism",
+            note=(
+                "KUI(sentiment) minus KUI(correctness) on one battery, so it is a contrast between "
+                "two properties in the same plane and carries the same unit as each term. The "
+                "registered unit is percentile-within-battery, which is exactly the fix A1's own "
+                "unit bug needed: v1 subtracted a balanced accuracy from a cosine. `kui.py` "
+                "standardises both axes to their percentile within the battery and then takes the "
+                "signed perpendicular distance from the diagonal, so both terms here are already in "
+                "the registered unit before the subtraction."
+            ),
+        ),
+        MetricSpec(
+            metric="kui_control_abs",
+            quantity="grader.knowledge_utilization",
+            arc="kui-battery",
+            dataset="planted-battery:correctness",
+            source="organism",
+            note=(
+                "the magnitude of the control property's KUI, the same quantity on one battery item "
+                "rather than a contrast. Absolute value because the prediction is that the control "
+                "sits on the diagonal, and a signed miss on either side is the same failure."
+            ),
+        ),
+        MetricSpec(
+            metric="distortion_separation",
+            quantity="grader.distortion_index",
+            arc="distortion",
+            dataset="planted-battery:sycophancy-minus-correctness",
+            source="organism",
+            note=(
+                "D(sycophancy) minus D(correctness), a difference of two per-dimension distortions "
+                "in the registered unit reward per unit direction. Both terms are coverage-gated "
+                "sensitivity on the same battery with the same reward direction, so the difference "
+                "is in that unit and the comparison is between two properties rather than two "
+                "graders."
+            ),
+        ),
+        MetricSpec(
+            metric="factorization_epistemic_share_epi",
+            arc="belief-sever",
+            arm="planted-epistemic",
+            source="organism",
+            gap=_MEDIATED_SHARE_GAP,
+        ),
+        MetricSpec(
+            metric="factorization_epistemic_share_axi",
+            arc="belief-sever",
+            arm="planted-axiological",
+            source="organism",
+            gap=_MEDIATED_SHARE_GAP,
+        ),
+        MetricSpec(
+            metric="mi_ksg_gaussian_abs_bias",
+            arc="mi-calibration",
+            source="organism",
+            gap=(
+                "the absolute bias of a mutual-information estimator against a value known in "
+                "closed form, on a reference material whose MI is `-0.5 log2(1 - rho^2)` by "
+                "construction. Unit: bits, dimension information, per null. Invariance: `units`, "
+                "invariant. Nothing registered fits and the registry carries no information "
+                "dimension at all: its four `nats` rows are all KL divergences per token or per "
+                "sequence, which is a different quantity in a different unit. This is a metrology "
+                "number rather than a grader number, the recovery of a certified reference value, "
+                "so it belongs beside `reference.u_characterisation` rather than in the grader "
+                "family. Recommend registering `estimator.mi_bias` in bits, with the reference's "
+                "own uncertainty beside it."
+            ),
+        ),
+        MetricSpec(
+            metric="channel_kept_fraction_hifi",
+            arc="alignment-channel",
+            arm="high-fidelity",
+            source="organism",
+            gap=(
+                "transmitted information over source entropy: the bits of a known-entropy annotator "
+                "mixture that survive a reward channel, divided by H(V). Unit: 1, dimension 1, "
+                "support [0, 1]. Invariance: `units`, invariant. Nothing registered fits. "
+                "`grader.dark_fraction` is the closest in shape and is a different object: it is a "
+                "share of reward variance unexplained by named channels, computed by regression, "
+                "and this is a share of source entropy that survives transmission, computed by "
+                "mutual information. Substituting one for the other would swap a second-moment "
+                "statement for an information one. Recommend registering `channel.kept_fraction`, "
+                "with `channel.transmitted_bits` in bits as its numerator so the ratio has a "
+                "registered top and bottom."
+            ),
+        ),
+        MetricSpec(
+            metric="channel_null_bits",
+            arc="alignment-channel",
+            arm="gauge-null-direction",
+            source="organism",
+            gap=(
+                "the mutual information between a displacement along a reward-null direction and "
+                "the reward it induces, which is zero exactly when the gauge subspace is the "
+                "channel's kernel. Unit: bits, dimension information, per null. Invariance: "
+                "`repr.basis`, invariant, and the claim it supports is that the quantity is zero on "
+                "the whole null subspace, which is a statement about the group rather than about a "
+                "direction. Same registry gap as `mi_ksg_gaussian_abs_bias`: no information "
+                "dimension exists. Recommend registering `channel.transmitted_bits` in bits and "
+                "reading this as that quantity on a null-direction subject, which is one id for "
+                "both this and the numerator of the kept fraction."
+            ),
+        ),
+    ),
+    arc_requires={
+        "distortion": ("kui-battery",),
+        "alignment-channel": ("mi-calibration",),
+    },
+    waiting_on=(
+        "four quantity ids: `grader.mediated_share` (two metrics), `estimator.mi_bias`, "
+        "`channel.kept_fraction` and `channel.transmitted_bits`. Three of the four are in bits and "
+        "the registry has no information dimension, so this is a registry decision rather than a "
+        "naming one."
+    ),
+)
+
+
+def read(run: Run) -> Reading:
+    """S8 against a record, which cannot answer any of it, and the reason is one sentence.
+
+    Every arm of S8 reads activations. The KUI plane needs a probe fitted on them and a direction to
+    take a cosine against; the distortion needs the same directions; the belief sever needs to patch
+    a projection and re-read the reward; the channel needs the coordinates the information is
+    measured between. A record carries the scores a grader produced and none of the intermediate
+    state that produced them, so this refuses on access rather than computing a version of the
+    question that the record can answer.
+
+    Scope limit, three lines in: there is no degraded record path here and that is deliberate. The
+    obvious one, correlating a recorded feature with the recorded reward, is the susceptibility S3
+    already measures and reports under `selection.differential_S`; computing it again under a
+    knowledge-utilization name would be the same number wearing a second id.
+    """
+    if (refusal := RETYPE.access_refusal(run, remedy=_ACCESS_REMEDY)) is not None:
+        return refusal
+    leaves = leaf_scores(run, limit=256)
+    return RETYPE.incomplete(
+        field="activations, and no probe fitted on them",
+        subject=(
+            f"run {run.id}, which carries {count_trajectories(run)} scored trajectories under "
+            f"{len(leaves)} grader leaf/leaves,"
+        ),
+        remedy=(
+            "load the reward model and run the battery through measure.indices.kui and "
+            "measure.indices.distortion with a probe per property, or run analyze(), which plants "
+            "the battery it then recovers. A record is the grader's output and every arm of S8 is "
+            "about what the grader represented on the way there."
+        ),
+        trajectories=count_trajectories(run),
+        grader_leaves=sorted(leaves),
+    )
+
+
+_ACCESS_REMEDY = (
+    "supply GRADER:FORWARD on the reward model, with the activations and the score head readable. "
+    "Every arm of S8 is a question about what the grader represents rather than about what it "
+    "scored, and a RECORD-access run holds only the score."
+)
+
+
+__all__ = ["RETYPE", "build_spec", "analyze", "read"]

@@ -31,6 +31,26 @@ each filled triangle ``(i, j, k)``. Its transpose is the discrete curl. The curl
 ``B1.T @ B1 + B2 @ B2.T``. Because ``B1 @ B2 = 0`` exactly under these conventions, the three
 subspaces are mutually orthogonal and span the whole edge space, so the squared norms of the three
 components sum to the squared norm of the flow and the mass fractions sum to one.
+
+**Where the number of record now comes from.** This module was written before B1 existed. B1
+(``measure/composition/hodge.py``) is a superset of it: the same decomposition with a sparse solve
+that escalates to a dense one when the projection's defining orthogonality condition is not met,
+the first Betti number, the two flow scales, and the nulls. Two implementations of one piece of
+mathematics is one too many to cite, so ``decompose_tournament`` now builds its flow with B1's
+``edge_flow`` and splits it with B1's ``split_flow``, and everything downstream is unchanged.
+
+The local solver below is kept, and kept exercised, because two independent implementations that
+agree are worth more than one that is merely trusted. Measured on this study's own three corpora,
+local against B1, at the corpus level:
+
+    planted three-cycles (72 items, 72 edges)     curl mass differs by 2.2e-16
+    planted chordless rings (22 items, 22 edges)  curl and harmonic mass differ by 0.0 exactly
+    the synthetic judge corpus (360, 683, 501)    curl 8.3e-17, harmonic 3.5e-18, gradient 1.1e-16
+
+Per tournament, which is the call that changed, the worst disagreement across all three corpora is
+2.7e-15, on the small sparse judge tournaments where a single graph carries little energy. The
+corpus headline moves from 0.257032716855589 to 0.25703271685558904, so no reported digit moves and
+the repoint is a change of authority rather than of arithmetic.
 """
 
 from __future__ import annotations
@@ -42,6 +62,7 @@ from typing import Iterable, Sequence
 import numpy as np
 
 from reward_lens.data.schema import Tournament
+from reward_lens.measure.composition.hodge import PairCount, edge_flow, split_flow
 
 Edge = tuple[int, int]
 Triangle = tuple[int, int, int]
@@ -289,9 +310,37 @@ def tournament_flow(tournament: Tournament) -> tuple[int, list[Edge], np.ndarray
 
 
 def decompose_tournament(tournament: Tournament) -> HodgeDecomposition:
-    """Decompose a single tournament's preference flow into its three Hodge components."""
-    n_items, edges, flow = tournament_flow(tournament)
-    return hodge_decomposition(n_items, edges, flow)
+    """Decompose a single tournament's preference flow into its three Hodge components.
+
+    Computed by B1, ``measure.composition.hodge``, and returned in this module's result type so no
+    caller changes. The margin scale is B1's default and is the same edge flow ``tournament_flow``
+    builds: ``(w_head - w_tail) / (w_head + w_tail)``, which is what any comparison against this
+    study's published numbers has to use.
+
+    ``with_betti=False`` because the local result type has never carried the first Betti number and
+    computing one to discard it would make the repoint cost something. B1 reports it to callers that
+    ask, and `read` does.
+    """
+    pairs = [
+        PairCount(e.i, e.j, float(e.wins_i), float(e.wins_j))
+        for e in tournament.edges
+        if e.wins_i + e.wins_j > 0
+    ]
+    split = split_flow(edge_flow(pairs, len(tournament.responses)), with_betti=False)
+    return HodgeDecomposition(
+        n_items=split.n_items,
+        n_edges=split.n_edges,
+        n_triangles=split.n_triangles,
+        total_energy=split.total_energy,
+        gradient_energy=split.gradient_energy,
+        curl_energy=split.curl_energy,
+        harmonic_energy=split.harmonic_energy,
+        gradient_mass=split.gradient_mass,
+        curl_mass=split.curl_mass,
+        harmonic_mass=split.harmonic_mass,
+        orthogonality_residual=split.orthogonality_residual,
+        reconstruction_residual=split.reconstruction_residual,
+    )
 
 
 def decompose_corpus(tournaments: Iterable[Tournament]) -> HodgeDecomposition:

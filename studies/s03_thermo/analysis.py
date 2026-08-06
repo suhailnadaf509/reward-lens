@@ -4,15 +4,15 @@ The claim S3 preregisters is that the feature-level consequences of optimizing a
 derivable from base-policy statistics before any RL. Optimizing pulls the policy toward the
 exponentially tilted family ``pi_lambda proportional to pi_0 exp(lambda r)``, and for an exponential
 family the initial per-feature drift is a base-policy covariance,
-``d/dlambda E_lambda[f_i]|_0 = Cov_0(f_i, r) = chi_i`` (Appendix A12, the fluctuation-dissipation
+``d/dlambda E_lambda[f_i]|_0 = Cov_0(f_i, r) = chi_i`` (A12, the fluctuation-dissipation
 identity). The ``f = r`` diagonal ``chi = Var_0(r)`` is exactly Razin's teacher variance
-``TC = w_r^T Sigma_pi w_r`` (Appendix A3), the zeroth-order term of the same law. So the susceptibility
+``TC = w_r^T Sigma_pi w_r`` (A3), the zeroth-order term of the same law. So the susceptibility
 spectrum predicts which feature drifts and how fast, and best-of-n previews where the optimization is
-headed with no gradient step at all (DESIGN 2.17).
+headed with no gradient step at all.
 
 This study runs the calibration first, on a synthetic-but-honest base-policy draw where the answer is
 known by construction, so the instrument is validated before it is turned on a production model
-(DESIGN 2.10, gate 1). The draw is a bank of activations with a planted reward direction and a feature
+(gate 1). The draw is a bank of activations with a planted reward direction and a feature
 bank of projections, for which every ``chi_i = u_i^T Sigma_pi w_r`` and the teacher variance
 ``w_r^T Sigma_pi w_r`` are analytically known. The two things S3 must recover are (H1) the planted
 susceptibility spectrum, computed as ``Cov_0(f_i, r)`` and matched against the analytic values, and
@@ -23,7 +23,7 @@ Two arms consume ``reward_lens.loops`` (built concurrently). They are lazily imp
 susceptibility can also be computed inline from the same covariance definition, so H1 runs either way;
 the best-of-n transfer arm needs ``loops.bon`` and is gated with a recorded note when it is not
 importable. Tail metrology (a Hill estimate of the reward tail and the critical pressure ``lambda_c``,
-Appendix A4/A5) is computed inline here because ``measure.indices.tail`` is not yet importable, and is
+A4/A5) is computed inline here because ``measure.indices.tail`` is not yet importable, and is
 calibrated against a planted Pareto draw whose tail exponent is known.
 
 The headline: reward hacking obeys a fluctuation-dissipation theorem, and Razin's teacher variance is
@@ -40,7 +40,11 @@ import numpy as np
 
 from reward_lens.core.evidence import Uncertainty, make_evidence
 from reward_lens.core.provenance import Provenance
-from reward_lens.core.types import GaugeStatus, SubjectRef
+from reward_lens.core.reading import Reading
+from reward_lens.core.types import Access, Component, GaugeStatus, SubjectRef
+from reward_lens.measure.indices.chi import susceptibility
+from reward_lens.measure.indices.tail import tail_estimate
+from reward_lens.record.schema import Run
 from reward_lens.stats import spearman_with_ci
 from reward_lens.studies.spec import (
     Hypothesis,
@@ -49,6 +53,13 @@ from reward_lens.studies.spec import (
     StudyResult,
     StudySpec,
     SubjectQuery,
+)
+from studies._retype import (
+    MetricSpec,
+    ScienceRetype,
+    count_trajectories,
+    declared_conditions,
+    trajectory_features,
 )
 
 _VERSION = "1.0"
@@ -223,7 +234,7 @@ def _susceptibility_inline(scores: np.ndarray, features: np.ndarray) -> tuple[np
     """Compute ``chi_i = Cov_0(f_i, r)`` and the ``f = r`` diagonal ``Var_0(r)`` from the draw.
 
     The population covariance (``ddof = 0``) is the estimator of the theory object, because the
-    covariance is an expectation under the base policy (Appendix A12). This is the exact definition
+    covariance is an expectation under the base policy (A12). This is the exact definition
     ``reward_lens.loops.tilt.susceptibility`` implements; it is reproduced here only so the calibration
     still runs when the loops subsystem is not yet importable.
     """
@@ -242,7 +253,7 @@ def _flag_hack_modes_inline(chi: np.ndarray, gold_cov: np.ndarray, names: list[s
 
 
 def _hill_tail_index(x: np.ndarray, tail_frac: float = 0.1) -> float:
-    """Hill estimate of the right-tail index ``alpha`` of positive data (Appendix A4).
+    """Hill estimate of the right-tail index ``alpha`` of positive data (A4).
 
     The Hill estimator uses the top ``k`` order statistics: with ``X_(n) >= ... >= X_(n-k)`` the
     reciprocal tail index is ``gamma = (1/k) sum_{i=0}^{k-1} log X_(n-i) - log X_(n-k)`` and
@@ -271,7 +282,7 @@ def _critical_lambda_inline(scores: np.ndarray, tail_quantile: float = 0.9) -> f
 
     The peaks-over-threshold scale ``tau`` is the mean excess of the scores above their
     ``tail_quantile`` quantile; an exponential right tail with scale ``tau`` has critical pressure
-    ``1 / tau`` (Appendix A5). Returns ``inf`` when the excess is degenerate. Reproduced inline only as
+    ``1 / tau`` (A5). Returns ``inf`` when the excess is degenerate. Reproduced inline only as
     the fallback for ``loops.tilt.critical_lambda_from_tail``.
     """
     r = np.asarray(scores, dtype=np.float64).ravel()
@@ -338,7 +349,7 @@ def analyze(run) -> StudyResult:
     draw = _base_policy_draw()
 
     # The root Evidence documents the synthetic scored draw; the susceptibility and best-of-n Evidence
-    # descend from it, so the store stays a DAG rooted at the base-policy sampling (DESIGN 2.17).
+    # descend from it, so the store stays a DAG rooted at the base-policy sampling.
     ev_draw = make_evidence(
         observable="S03.BasePolicyDraw",
         observable_version=_VERSION,
@@ -436,7 +447,7 @@ def analyze(run) -> StudyResult:
             "hill_pareto": hill_pareto,
             "pareto_hill_rel_error": pareto_hill_rel_error,
             "note": "measure.indices.tail is not importable; the Hill index and lambda_c are computed "
-            "inline and calibrated on a planted Pareto tail. The full critical-KL table (Appendix A5) "
+            "inline and calibrated on a planted Pareto tail. The full critical-KL table (A5) "
             "needs the tilted free-energy integral, which is the S16 safety-case arm.",
         },
         uncertainty=Uncertainty(n=int(draw.scores.size), method="none"),
@@ -530,4 +541,158 @@ def analyze(run) -> StudyResult:
     return StudyResult(outcomes={}, metrics=metrics, summary=summary)
 
 
-__all__ = ["build_spec", "analyze"]
+# ---------------------------------------------------------------------------
+# The retype: S3 on the kernel
+# ---------------------------------------------------------------------------
+
+RETYPE = ScienceRetype(
+    science="s03_thermo",
+    spec=build_spec(),
+    headline="selection.differential_S",
+    destination=(
+        "measure/frontier/ at Level 0. The susceptibility chi_i = Cov_0(f_i, r) is the "
+        "selection differential S at zero pressure, which is why both bind to the same registered "
+        "id and why the frontier's tilt family is the same object this science calls the Gibbs "
+        "family."
+    ),
+    needs={Component.GRADER: Access.RECORD, Component.RECORD: Access.RECORD},
+    metrics=(
+        MetricSpec(
+            metric="chi_recovery_corr",
+            quantity="selection.differential_S",
+            arc="chi-calibration",
+            frame="planted",
+            source="organism",
+            note=(
+                "the correlation between the recovered susceptibility spectrum and the analytic "
+                "one on a draw where every chi_i = u_i' Sigma_pi w_r is known by construction. The "
+                "arc that produces it is the one that measures chi on the planted organism; the "
+                "number itself is a recovery correlation rather than a covariance, which is why it "
+                "is source='organism' and never stamped on a record reading."
+            ),
+        ),
+        MetricSpec(
+            metric="chi_bon_spearman",
+            quantity="selection.differential_S",
+            arc="chi-transfer",
+            arm="best-of-n",
+            note=(
+                "the rank agreement between predicted chi and the realised per-feature drift under "
+                "a best-of-n ladder. Answerable from a record whose kind is 'bon'; a training "
+                "record is a different tilt path and reading one as the other is the substitution "
+                "this science's kill criterion is about."
+            ),
+        ),
+    ),
+    arc_requires={"chi-transfer": ("chi-calibration",)},
+)
+
+
+def read(run: Run) -> Reading:
+    """S3 against a real record: the susceptibility spectrum, measured rather than planted.
+
+    The one thing S3 needs from a record is a feature bank and a reward on the same trajectories,
+    because chi_i = Cov_0(f_i, r) is a covariance between them and nothing else. That is a low bar
+    and most recorders clear it, which makes this the science that transfers to a record most
+    directly of the fifteen.
+
+    Scope limit, three lines in: the base-policy expectation is taken over the earliest quarter of
+    the run, not over the base policy itself. Those agree while the policy has not moved far, and
+    the record's declared NEAR_POLICY condition is what says whether that held. On a run that has
+    already drifted, this is a susceptibility about the current policy and not about pi_0.
+    """
+    if (refusal := RETYPE.access_refusal(run, remedy=_ACCESS_REMEDY)) is not None:
+        return refusal
+
+    names, rows, rewards = trajectory_features(run)
+    n_traj = count_trajectories(run)
+    if not names or not rewards:
+        return RETYPE.incomplete(
+            field="a feature bank on the trajectories" if rewards else "trajectory scores",
+            subject=f"run {run.id}",
+            remedy=(
+                "record per-trajectory features alongside the score, through the tap's feature "
+                "hook or by attaching them to the trajectory. chi is a covariance between features "
+                "and reward, so with no features there is no spectrum, only its f = r diagonal."
+            ),
+            trajectories=n_traj,
+            features=len(names),
+        )
+
+    features = np.asarray(rows, dtype=np.float64)
+    reward = np.asarray(rewards, dtype=np.float64)
+    chi = susceptibility(features, reward)
+    induced_variance = float(reward.var(ddof=0))
+    tail = tail_estimate(reward)
+
+    measured = {
+        "chi_max_abs": (float(np.max(np.abs(chi))), "selection.differential_S"),
+        "induced_variance": (induced_variance, "grader.induced_variance"),
+        "reward_tail_index": (float(tail["shape_xi"]), "grader.tail_index"),
+    }
+
+    refusals = {
+        "chi_recovery_corr": (
+            "the recovery correlation is against an analytically known spectrum, and a record has "
+            "no ground truth in it. Run the calibration arm through analyze(), which plants the "
+            "spectrum it then recovers."
+        )
+    }
+    if run.kind != "bon":
+        refusals["chi_bon_spearman"] = (
+            f"this record has kind {run.kind!r} and the transfer arm is defined on a best-of-n "
+            f"ladder, where the realised drift is a plug-in order statistic at each rung. Point "
+            f"this at a run recorded with kind='bon' over the same grader, or read the drift "
+            f"against training step instead and accept that step and KL are different axes."
+        )
+    elif len(names) < 2:
+        refusals["chi_bon_spearman"] = (
+            f"the record carries {len(names)} feature and a rank agreement over one feature is not "
+            f"defined. Record a bank of at least two independent features."
+        )
+
+    # chi_max == Var(r) to within rounding means the feature bank is the reward wearing another
+    # name, so the spectrum has one entry and no content. It is worth saying out loud: a caller who
+    # sees a susceptibility and does not notice it is the variance will read a degenerate bank as a
+    # measurement.
+    collinear = abs(float(np.max(np.abs(chi))) - induced_variance) <= 1e-9 * max(
+        1.0, induced_variance
+    )
+    caveat = (
+        " The largest susceptibility equals the induced reward variance exactly, which means the "
+        "recorded feature bank is the realised reward itself: Cov(r, r) = Var(r). The spectrum has "
+        "no content on this record, and recording features that are not the score is what would "
+        "give it some."
+        if collinear
+        else ""
+    )
+    summary = (
+        f"{n_traj} trajectories over {run.n_steps} steps, {len(names)} feature(s) "
+        f"({', '.join(names)}): the largest susceptibility is {float(np.max(np.abs(chi))):.4g}, "
+        f"the induced reward variance {induced_variance:.4g}, and the reward tail shape "
+        f"{float(tail['shape_xi']):.4g} ({tail['regime']} regime). Both frozen metrics are refused "
+        f"on this record, for different reasons.{caveat}"
+    )
+    return RETYPE.evidence(
+        run,
+        {},
+        measured=measured,
+        quantity="selection.differential_S",
+        refusals=refusals,
+        summary=summary,
+        gauge=GaugeStatus.COVARIANT,
+        features=list(names),
+        chi=[float(c) for c in chi],
+        n_trajectories=n_traj,
+        feature_bank_collinear_with_reward=collinear,
+        declared_regime=dict(declared_conditions(run)),
+    )
+
+
+_ACCESS_REMEDY = (
+    "open a run written by the recorder whose grader scores were captured. S3 needs no activations: "
+    "the susceptibility is a covariance between recorded features and recorded rewards."
+)
+
+
+__all__ = ["RETYPE", "build_spec", "analyze", "read"]

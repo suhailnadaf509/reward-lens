@@ -2,17 +2,17 @@
 
 The question S9 preregisters is how much of a reward model's "correctness" preference is causally
 anchored at the actual error versus carried by style. The instrument is the Verification Score
-(Appendix A6): ``VS = dr_error_span / dr_total`` where ``dr_total = r(clean) - r(corrupted)`` is the
+(A6): ``VS = dr_error_span / dr_total`` where ``dr_total = r(clean) - r(corrupted)`` is the
 whole correctness reward gap between a clean solution and its corrupted twin, and ``dr_error_span`` is
 the part of that gap recovered by patching the clean twin's error-span activations into the corrupted
 run. A verifier that genuinely checks the work concentrates its clean-versus-corrupted reward gap at
 the span where the corruption lives, so its ``VS`` is near one; a verifier that reacts to surface style
 spreads the gap onto style-carrying tokens everywhere but the error, so its ``VS`` is near zero and its
-``StyleShare`` (Appendix A6, the style complement) is near one.
+``StyleShare`` (A6, the style complement) is near one.
 
 Because "how much of the gap lives at the error" is a claim about a real reward model on real items,
 the scientific leaderboard needs the model population and GPUs. So this study runs the calibration
-first, on a synthetic planted verifier where the answer is known by construction (DESIGN 2.10, gate 1),
+first, on a synthetic planted verifier where the answer is known by construction (gate 1),
 and gates every real-model arm honestly. The planted construction exploits the one structural fact that
 makes span attribution exact: a pooled (additive) linear reward decomposes over token positions, so the
 clean-twin span patch, which replaces the corrupted twin's error-span activations with the clean twin's
@@ -62,9 +62,19 @@ import numpy as np
 
 from reward_lens.core.evidence import Uncertainty, make_evidence
 from reward_lens.core.provenance import Provenance
-from reward_lens.core.types import Capability, GaugeStatus, ModelFP, Site, SubjectRef
+from reward_lens.core.reading import Reading
+from reward_lens.core.types import (
+    Access,
+    Capability,
+    Component,
+    GaugeStatus,
+    ModelFP,
+    Site,
+    SubjectRef,
+)
 from reward_lens.measure.indices.style_share import style_share
 from reward_lens.measure.indices.verification_score import verification_score
+from reward_lens.record.schema import Run
 from reward_lens.signals.base import PositionSpec, Readout, SignalMeta, TokenCurves
 from reward_lens.stats import roc_pr
 from reward_lens.studies.spec import (
@@ -75,6 +85,7 @@ from reward_lens.studies.spec import (
     StudySpec,
     SubjectQuery,
 )
+from studies._retype import MetricSpec, ScienceRetype
 
 _VERSION = "1.0"
 
@@ -466,7 +477,7 @@ def analyze(run) -> StudyResult:
     subject = SubjectRef(extra={"study": study_id})
 
     # The root Evidence documents the planted construction the VS, patch, and dense arms all descend
-    # from, so the store stays a DAG rooted at a single honest stimulus (DESIGN 2.17).
+    # from, so the store stays a DAG rooted at a single honest stimulus.
     span_positions = list(range(_SPAN[0], _SPAN[1]))
     style_positions = list(range(0, _SPAN[0])) + list(range(_SPAN[1], _T))
     ev_root = make_evidence(
@@ -550,7 +561,7 @@ def analyze(run) -> StudyResult:
             "vs_alpha_recovery_max_abs_error": vs_recovery_max_abs_error,
             "style_share_recovery_max_abs_error": style_recovery_max_abs_error,
             "patch_separation_error": patch_separation_error,
-            "note": "VS and StyleShare are the Appendix A6 indices consumed as pure functions; the span "
+            "note": "VS and StyleShare are the A6 indices consumed as pure functions; the span "
             "patch and style patch are the clean-twin ComponentPatch replace operation restricted to the "
             "error span and to the style tokens respectively. VS + StyleShare = 1 here because the "
             "construction leaves no residual; A6 permits a residual in general.",
@@ -686,4 +697,132 @@ def analyze(run) -> StudyResult:
     return StudyResult(outcomes={}, metrics=metrics, summary=summary)
 
 
-__all__ = ["build_spec", "analyze"]
+# ---------------------------------------------------------------------------
+# The retype: S9 on the kernel
+# ---------------------------------------------------------------------------
+
+RETYPE = ScienceRetype(
+    science="s09_verification",
+    spec=build_spec(),
+    headline="grader.verification_score",
+    destination=(
+        "the D series in verifier/ and G4. All three metrics bind to registered ids whose units "
+        "match, so this plan closes with no gap."
+    ),
+    needs={Component.GRADER: Access.RECORD, Component.RECORD: Access.RECORD},
+    metrics=(
+        MetricSpec(
+            metric="vs_alpha_recovery_max_abs_error",
+            quantity="grader.verification_score",
+            arc="vs-calibration",
+            frame="planted-alpha-sweep",
+            source="organism",
+            note=(
+                "the largest absolute error in recovering the planted anchored fraction across "
+                "alpha in {0, 0.5, 1}. The arc that produces it is the one that measures VS, and "
+                "grader.verification_score is that quantity almost verbatim: the share of the "
+                "clean-versus-corrupted reward gap attributable to the labelled error span. The "
+                "sweep needs three graders built to known alpha, which is a construction rather "
+                "than a record."
+            ),
+        ),
+        MetricSpec(
+            metric="patch_separation_error",
+            quantity="grader.component_patch_effect",
+            arc="span-patch",
+            arm="error-span-patch",
+            source="organism",
+            note=(
+                "how cleanly patching the error span moves the anchored fraction without moving the "
+                "style fraction. grader.component_patch_effect is the reduction in the "
+                "chosen-minus-rejected differential when one component is replaced by the rejected "
+                "side's, which is this patch with the component being a token span. Needs FORWARD "
+                "and MUTATE on the grader; a record carries neither."
+            ),
+        ),
+        MetricSpec(
+            metric="dense_localization_auc",
+            quantity="instrument.recovery_auc",
+            arc="dense-localization",
+            note=(
+                "the AUC of the per-token dense-reward map against the labelled error span. Read as "
+                "instrument.recovery_auc rather than labels.fs_signal_locality: the kill criterion "
+                "says plainly that a low value here means the instrument is broken rather than that "
+                "the science is negative, which is what a recovery AUC is for. L4's locality id is "
+                "a different measurement, a three-arm comparison of detectors over different spans "
+                "of text, and substituting one AUC for another because both are AUCs is how a unit "
+                "check comes to license a comparison nobody intended."
+            ),
+        ),
+    ),
+    arc_requires={"span-patch": ("vs-calibration",), "dense-localization": ("vs-calibration",)},
+)
+
+
+def read(run: Run) -> Reading:
+    """S9 against a real record: verification needs labelled errors, and most records have none.
+
+    Every one of the three arms is anchored on a span somebody labelled as the error. The Verification
+    Score is the share of the reward gap attributable to that span, the patch separation moves that
+    span, and the dense-map AUC is scored against it. Without the labels there is no anchor, and an
+    unanchored attribution map is a heatmap rather than a measurement.
+
+    Scope limit, three lines in: this reads labels off the record and does not produce them. A run
+    whose trajectories carry no `Blind[LabelValue]` entries is refused rather than scored against
+    the reward itself, because scoring an error-localiser against the reward it is supposed to audit
+    measures agreement and calls it verification.
+    """
+    if (refusal := RETYPE.access_refusal(run, remedy=_ACCESS_REMEDY)) is not None:
+        return refusal
+
+    labelled = 0
+    total = 0
+    keys: set[str] = set()
+    for step in run.steps:
+        for group in step.groups:
+            for traj in group.trajectories:
+                total += 1
+                names = set(traj.labels or {})
+                if names:
+                    labelled += 1
+                    keys |= names
+
+    if not labelled:
+        grader = run.component(Component.GRADER)
+        return RETYPE.incomplete(
+            field="span labels on any trajectory",
+            subject=f"all {total} trajectories of run {run.id}",
+            remedy=(
+                "point this at a run whose trajectories carry a labelled error span, or attach one: "
+                "the D series used MATH's `is_equiv` and SWE-bench's `grading.py` as the label "
+                "source, and either supplies the anchor all three S9 arms are measured against. A "
+                f"length grader such as {getattr(grader, 'name', 'this one')!r} produces no error "
+                "spans to label, so this particular run cannot be made to answer S9 by adding "
+                "access."
+            ),
+            trajectories=total,
+            labelled=labelled,
+        )
+
+    return RETYPE.incomplete(
+        field="a dense per-token attribution map",
+        subject=f"{labelled} of {total} labelled trajectories in run {run.id}",
+        remedy=(
+            f"the labels are here ({', '.join(sorted(keys))}) and the per-token map is not. Record "
+            f"`advantage_tokens` or a token-level attribution alongside them, or run the dense "
+            f"extractor over the saved rollouts and attach its output, and S9's H3 becomes "
+            f"answerable from this record."
+        ),
+        trajectories=total,
+        labelled=labelled,
+        label_keys=sorted(keys),
+    )
+
+
+_ACCESS_REMEDY = (
+    "open a run written by the recorder with the grader's scores captured. S9 needs no activations "
+    "for its H3 arm; it needs the per-token map and the span labels to score it against."
+)
+
+
+__all__ = ["RETYPE", "build_spec", "analyze", "read"]

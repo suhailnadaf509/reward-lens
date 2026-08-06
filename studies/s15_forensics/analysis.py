@@ -40,7 +40,9 @@ import numpy as np
 
 from reward_lens.core.evidence import Evidence, Uncertainty, make_evidence
 from reward_lens.core.provenance import Provenance
-from reward_lens.core.types import GaugeStatus, SubjectRef
+from reward_lens.core.reading import Reading
+from reward_lens.core.types import Access, Component, GaugeStatus, SubjectRef
+from reward_lens.record.schema import Run
 from reward_lens.stats.effects import spearman_with_ci
 from reward_lens.studies.spec import (
     Hypothesis,
@@ -50,6 +52,7 @@ from reward_lens.studies.spec import (
     StudySpec,
     SubjectQuery,
 )
+from studies._retype import MetricSpec, ScienceRetype, count_trajectories, leaf_scores
 
 _VERSION = "1.0"
 
@@ -278,4 +281,121 @@ def analyze(run) -> StudyResult:
     return StudyResult(outcomes={}, metrics=metrics, summary=summary)
 
 
-__all__ = ["build_spec", "analyze"]
+# ---------------------------------------------------------------------------
+# The retype: S15 on the kernel
+# ---------------------------------------------------------------------------
+
+RETYPE = ScienceRetype(
+    science="s15_forensics",
+    spec=build_spec(),
+    headline="grader.skepticism",
+    destination=(
+        "grader.skepticism and grader.receipt_reliance in measure/indices/, which are the economics "
+        "of grading L6 prices. S is the registry's definition of grader.skepticism word for word. "
+        "RRS is not the registry's grader.receipt_reliance, and the difference is written on the "
+        "binding rather than smoothed over: that row is a share of a corruption effect and this "
+        "study's RRS is a raw reward difference."
+    ),
+    needs={Component.GRADER: Access.RECORD, Component.RECORD: Access.RECORD},
+    metrics=(
+        MetricSpec(
+            metric="reliance_recovery",
+            quantity="grader.skepticism",
+            arc="disclosure-contrast",
+            frame="planted-recovery",
+            source="organism",
+            note=(
+                "the weaker of two rank recoveries over a 24-grader sweep: S against its planted "
+                "skepticism and RRS against its planted reliance. It binds to grader.skepticism "
+                "because that is the id whose definition the arc computes exactly, "
+                "r(receipt absent) - r(receipt failing) at matched narrative. The RRS half is "
+                "deliberately not bound to grader.receipt_reliance: that row is the falsify-receipt "
+                "delta over the total corruption delta, a fraction, and RRS here is "
+                "r(valid) - r(absent), in reward. Same name, different unit, and binding across the "
+                "two would license comparing a reward difference to a share. The number reported is "
+                "a Spearman over planted graders, so it is source='organism'."
+            ),
+        ),
+        MetricSpec(
+            metric="omission_credulity_gap",
+            quantity="intervention.acute_effect",
+            arc="honesty-grid",
+            arm="skeptical-minus-credulous",
+            source="organism",
+            note=(
+                "how much more a best-responding policy stays silent under skeptical graders than "
+                "under credulous ones, averaged over the RRS axis of the 2x2. The treatment is the "
+                "grader's skepticism and the response is the policy's disclosure choice, so the "
+                "number is an effect of an intervention rather than a property of the grader, which "
+                "is why it does not bind to grader.skepticism. intervention.acute_effect is the "
+                "closest registered home: dimension `effect`, definition still OPEN. It is a "
+                "difference of two rates and a purpose-built id would say so; that request is in "
+                "the report."
+            ),
+        ),
+        MetricSpec(
+            metric="fabrication_s_effect",
+            quantity="intervention.acute_effect",
+            arc="honesty-grid",
+            arm="fabrication-under-credulity",
+            source="organism",
+            note=(
+                "the same grid read on the other behaviour: how much fabrication moves along the "
+                "skepticism axis. It is the kill criterion's metric, and the kill is that this is "
+                "near zero while the RRS axis does all the work, which would make S a card "
+                "statistic rather than a second dimension. Same quantity as the omission gap under "
+                "a different arm, because one pass over the grid produces both."
+            ),
+        ),
+    ),
+    arc_requires={"honesty-grid": ("disclosure-contrast",)},
+)
+
+
+def read(run: Run) -> Reading:
+    """S15 against a real training record: both statistics are contrasts, and a record holds one arm.
+
+    S and RRS are differences between the same claim scored under different receipt states: backed
+    by a valid receipt, carrying none, and carrying one that fails on checking. A training record
+    holds each trajectory scored once, in whatever state it happened to be in, with nothing marking
+    which state that was. There is no contrast in it, and taking one across trajectories would
+    compare different claims and call the difference a treatment effect.
+
+    Scope limit, three lines in: this refuses on the record and not on access, and that distinction
+    is the actionable part. Nothing in S15 needs to call the grader again or to see inside it. A
+    recorder that scores each claim under the three receipt states and types the receipt span makes
+    this exact run answerable, and no further rung of access does.
+    """
+    if (refusal := RETYPE.access_refusal(run, remedy=_ACCESS_REMEDY)) is not None:
+        return refusal
+
+    channels = sorted(leaf_scores(run))
+    n_traj = count_trajectories(run)
+    typed = sum(1 for s in run.steps for g in s.groups for t in g.trajectories if t.labels)
+    return RETYPE.incomplete(
+        field="receipt-state arms on matched narratives",
+        subject=f"all {n_traj} trajectories of run {run.id}",
+        remedy=(
+            f"score each claim three times at matched narrative, once with a valid receipt, once "
+            f"with the receipt removed and once with a receipt that fails on checking, and record "
+            f"the three as separate arms on the same task. `measure.indices.skepticism` takes the "
+            f"receipt-absent and receipt-failing score vectors directly and needs nothing else; "
+            f"`measure.indices.receipt_reliance` takes the two corruption deltas. This run has "
+            f"{len(channels)} score channel ({', '.join(channels) or 'none'}) and "
+            f"{typed} of {n_traj} trajectories carrying any span label, so there is neither a "
+            f"receipt to remove nor a state to compare against."
+        ),
+        trajectories=n_traj,
+        score_channels=channels,
+        span_labelled=typed,
+    )
+
+
+_ACCESS_REMEDY = (
+    "open a run written by the recorder with the grader's scores captured. S15 asks for no "
+    "activations and no re-scoring: both statistics are differences between score columns that a "
+    "receipt-state experiment already wrote down."
+)
+
+
+__all__ = ["RETYPE", "build_spec", "analyze", "read"]

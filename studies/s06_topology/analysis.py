@@ -37,6 +37,26 @@ prediction is the opposite, and the synthetic corpus is where it is first checke
 The real Nectar, UltraFeedback, HelpSteer, and PRISM slices are the same analysis on human and
 judge tournaments loaded through the ``datasets`` extra, which is not installed in this environment,
 so that corpus is the marked follow-on rather than run here.
+
+**The registered threshold of 0.03 does not discriminate, and the measurement is fine.** This is
+E32's correction applied to this study rather than to the campaign, and the numbers are on the
+corpus this file builds. Run the same generator with the skew term switched off, ``skew=0.0``, which
+is the control that removes the cycle-producing mechanism and changes nothing else, and the
+intransitive mass is **0.0360** (curl 0.0355, harmonic 0.00053). The registered comparator is
+``> 0.03``. So a corpus with no intransitivity-generating term in it passes H2 and fails the kill
+criterion, which means the threshold separates nothing: E32's rule is that an effect threshold has
+to be compared against the floor its own encoding imposes before it is registered, and 0.03 was not.
+The simulated version of the same floor is higher still: a perfectly transitive grader recorded on
+this exact design (``nulls.transitive_baseline``, 200 draws, flip rate 0) scores curl
+0.1805 with a 95% interval of [0.1722, 0.1906].
+
+What survives is the science. The measured corpus is at intransitive mass **0.2570** (curl 0.2463,
+harmonic 0.0107), which is **0.2210 above its own no-skew control** and above every one of the 200
+transitive draws (p = 0.005, the smallest value 200 draws can return). The corpus genuinely carries
+cyclic structure, the decomposition genuinely finds it, and the only thing wrong is that the
+registered number was too small to be a test. The frozen spec cannot be edited after the fact, which
+is the point of freezing it; what is owed is this paragraph and the transitive baseline reported
+beside every mass, which ``read`` below does.
 """
 
 from __future__ import annotations
@@ -45,10 +65,14 @@ import numpy as np
 
 from reward_lens.core.evidence import make_evidence
 from reward_lens.core.provenance import Provenance
-from reward_lens.core.types import GaugeStatus, SubjectRef
+from reward_lens.core.reading import Reading
+from reward_lens.core.types import Access, Component, GaugeStatus, SubjectRef
 from reward_lens.data.lineage import make_lineage
 from reward_lens.data.schema import EdgeObs, Response, Tournament, response_content
+from reward_lens.measure.composition.hodge import PairCount, edge_flow, split_flow
+from reward_lens.measure.composition.nulls import ProfileBaseline, transitive_baseline
 from reward_lens.organisms import intransitivity_organism
+from reward_lens.record.schema import Run
 from reward_lens.studies.spec import (
     Hypothesis,
     KillCriterion,
@@ -57,6 +81,7 @@ from reward_lens.studies.spec import (
     StudySpec,
     SubjectQuery,
 )
+from studies._retype import MetricSpec, ScienceRetype
 from studies.s06_topology.hodge import HodgeDecomposition, decompose_corpus
 
 _VERSION = "1.0"
@@ -316,4 +341,254 @@ def analyze(run) -> StudyResult:
     )
 
 
-__all__ = ["build_spec", "analyze"]
+# ---------------------------------------------------------------------------
+# The retype: S6 on the kernel
+# ---------------------------------------------------------------------------
+
+#: Both frozen metrics compute the same unregistered thing, so they carry the same request.
+_INTRANSITIVE_MASS_GAP = (
+    "curl mass plus harmonic mass, the fraction of an edge flow's energy outside im(grad). Unit: 1, "
+    "dimension 1, support [0, 1]. Invariance: `reward.affine` and `group.permutation`, invariant "
+    "under both, and **not** invariant under a change of the comparison design, which has to be "
+    "reported beside it. Both parts are registered, `grader.curl_mass` and `grader.harmonic_mass`, "
+    "and their sum is not, which reads as deliberate: B1's own result type says the sum is "
+    "'reported only beside its two parts, never instead of them', because the two have different "
+    "remedies. Curl is the judge being locally cyclic and harmonic is the comparison design having "
+    "holes, and a reader handed the sum cannot tell which they have. Two ways to close this and the "
+    "second is better. Register `grader.intransitive_mass` with a condition that a reading carrying "
+    "it must carry both parts and the transitive baseline; or amend this frozen spec at 3.1 to "
+    "predict on the two parts separately, which is what the science actually claims. The spec "
+    "freeze is the only reason the second is not done here."
+)
+
+RETYPE = ScienceRetype(
+    science="s06_topology",
+    spec=build_spec(),
+    headline="grader.curl_mass",
+    destination=(
+        "B1 in measure/composition/. The decomposition this study calls its own is now B1's: "
+        "`hodge.py` builds its flow with `edge_flow` and splits it with `split_flow`, and the local "
+        "solver is kept beside it as the independent check that certifies both. What the retype "
+        "adds above the repoint is the transitive baseline, which is mandatory on every reading of "
+        "a curl mass and which this study did not report."
+    ),
+    needs={Component.GRADER: Access.RECORD, Component.RECORD: Access.RECORD},
+    metrics=(
+        MetricSpec(
+            metric="calib_intransitive_mass",
+            arc="calibrate-channels",
+            source="organism",
+            gap=_INTRANSITIVE_MASS_GAP,
+        ),
+        MetricSpec(
+            metric="synthetic_intransitive_mass",
+            arc="measure-corpus",
+            source="organism",
+            gap=_INTRANSITIVE_MASS_GAP,
+        ),
+    ),
+    arc_requires={"measure-corpus": ("calibrate-channels",)},
+    waiting_on=(
+        "no quantity id for curl-plus-harmonic. Both parts ship with instruments (B1) and the sum "
+        "the two frozen predictions are written on does not exist in the registry."
+    ),
+)
+
+#: At least three items in a group, or there is no triangle and no cycle to find. At least two
+#: leaves, or there is one voter and one voter is transitive by construction.
+_MIN_ITEMS = 3
+_MIN_VOTERS = 2
+
+#: Groups read before the flow is built. A record with thousands of groups would otherwise spend
+#: minutes in the 200-draw baseline for a number that has converged long before.
+_MAX_GROUPS = 200
+
+
+def _leaf_votes(run: Run) -> tuple[list[PairCount], int, dict[str, int]]:
+    """The record as a tournament corpus, with the grader's own criteria as the voters.
+
+    A GRPO group is a set of rollouts on one prompt and a multi-leaf score tree is several criteria
+    scoring each of them, so a group is a small tournament in which every leaf votes on every pair.
+    That is the same object the synthetic judge corpus models, with the criteria of one grader in
+    place of a panel of judges, and it is the only tournament a training record contains.
+
+    What it measures is worth stating exactly, because it is not the same claim the study registers
+    on a judge corpus: it is whether this grader's criteria, aggregated by pairwise majority rather
+    than by the weighted sum the trainer actually used, would be intransitive. Reading the total
+    instead answers nothing either way, and the two ways of reading it fail differently. A flow built
+    from the total's margins is the difference of a potential, so its curl mass is exactly zero:
+    6.9e-32 on a 60-tournament draw of margins made linear in a planted quality. A flow built from
+    the total's signs is a total order recorded as signs, so its curl mass is exactly the encoding
+    floor `(n-2)/(3n)`: 0.16666666666666680 measured on 50 groups of four against a closed form of
+    0.16666666666666666. Neither number is about the grader.
+
+    Returns the accumulated pairs, the item count of the disjoint union, and the per-leaf vote
+    counts so a reading can say who voted.
+    """
+    pairs: list[PairCount] = []
+    voters: dict[str, int] = {}
+    offset = 0
+    groups = 0
+    for step in run.steps:
+        for group in step.groups:
+            trajectories = list(group.trajectories)
+            per_leaf: list[dict[str, float]] = []
+            for traj in trajectories:
+                leaves = dict(_score_leaves(traj.scores))
+                per_leaf.append(leaves)
+            names = sorted(set.intersection(*(set(d) for d in per_leaf))) if per_leaf else []
+            if len(trajectories) < _MIN_ITEMS or len(names) < _MIN_VOTERS:
+                for name in names:
+                    voters[name] = voters.get(name, 0)
+                continue
+            for a in range(len(trajectories)):
+                for b in range(a + 1, len(trajectories)):
+                    wins_a = wins_b = 0.0
+                    for name in names:
+                        va, vb = per_leaf[a][name], per_leaf[b][name]
+                        if va > vb:
+                            wins_a += 1.0
+                        elif vb > va:
+                            wins_b += 1.0
+                        voters[name] = voters.get(name, 0) + 1
+                    if wins_a + wins_b > 0:
+                        pairs.append(PairCount(offset + a, offset + b, wins_a, wins_b))
+            offset += len(trajectories)
+            groups += 1
+            if groups >= _MAX_GROUPS:
+                return pairs, offset, voters
+    return pairs, offset, voters
+
+
+def _score_leaves(node: object) -> "list[tuple[str, float]]":
+    """Every scalar leaf of one trajectory's score tree, as (name, value)."""
+    children = getattr(node, "children", None)
+    if children:
+        out: list[tuple[str, float]] = []
+        for child in children:
+            out.extend(_score_leaves(child))
+        return out
+    name, value = getattr(node, "name", None), getattr(node, "value", None)
+    if name is None or value is None:
+        return []
+    return [(str(name), float(value))]
+
+
+def _voter_census(run: Run) -> dict[str, int]:
+    """Leaf names and how many trajectories carry each, for the refusal that names them."""
+    census: dict[str, int] = {}
+    for step in run.steps:
+        for group in step.groups:
+            for traj in group.trajectories:
+                for name, _ in _score_leaves(traj.scores):
+                    census[name] = census.get(name, 0) + 1
+    return census
+
+
+def read(run: Run) -> Reading:
+    """S6 against a training record: the grader's criteria as voters, or a refusal that says why not.
+
+    The record path is the leaf-vote tournament described in `_leaf_votes`, decomposed by B1 and
+    reported with the transitive baseline beside it, which E32 makes mandatory: a comparison
+    recorded as a win is a sign rather than a margin, and a perfectly transitive grader already
+    carries curl mass `(n-2)/(3n)` on the complete graph. A curl mass without that floor beside it
+    is uninterpretable, and this study's own registered threshold is an instance of the problem
+    rather than an exception to it, which the module docstring above sets out with the numbers.
+
+    Scope limit, three lines in: one grader leaf is one voter, and a single voter's votes are the
+    signs of a total order, so the curl mass of a one-leaf record is not zero, it is exactly the
+    encoding floor. Measured on 50 groups of four: 0.16666666666666680 against a closed form of
+    1/6. Reporting that as intransitivity is E32 happening again, so a one-leaf record is refused.
+    Both shipped GRPO fixtures are that case: one `length_reward` leaf on every trajectory.
+    """
+    if (refusal := RETYPE.access_refusal(run, remedy=_ACCESS_REMEDY)) is not None:
+        return refusal
+
+    pairs, n_items, voters = _leaf_votes(run)
+    if not pairs:
+        census = _voter_census(run)
+        return RETYPE.incomplete(
+            field=(
+                f"score tree with at least {_MIN_VOTERS} leaves on a group of at least "
+                f"{_MIN_ITEMS} rollouts, so it holds no tournament"
+            ),
+            subject=(
+                f"run {run.id}, whose grader leaves are "
+                f"{', '.join(f'{k} on {v} trajectories' for k, v in sorted(census.items())) or 'none'},"
+            ),
+            remedy=(
+                "score with a grader whose criteria are recorded as separate leaves, through the "
+                "tap's score tree, and the criteria become the voters. Or point this at a judge "
+                "corpus with recorded pairwise comparisons, which is the subject the study's own "
+                "claim is about: Nectar, UltraFeedback, HelpSteer, PRISM. One leaf is one voter, "
+                "its votes are the signs of a total order, and such a flow carries curl mass "
+                "exactly (n-2)/(3n) with no intransitivity in it at all, so the number this would "
+                "return is a property of the encoding rather than of the grader."
+            ),
+            leaves=sorted(census),
+            n_leaves=len(census),
+        )
+
+    flow = edge_flow(pairs, n_items)
+    split = split_flow(flow)
+    baseline = transitive_baseline(flow, flip_rate=0.0, n_draws=200, seed=0)
+    floor: dict[str, float] = {}
+    if isinstance(baseline, ProfileBaseline):
+        floor = {
+            "baseline.transitive_curl": baseline.curl_null_mean,
+            "baseline.transitive_harmonic": baseline.harmonic_null_mean,
+        }
+
+    excess = (
+        split.curl_mass - baseline.curl_null_mean
+        if isinstance(baseline, ProfileBaseline)
+        else float("nan")
+    )
+    return RETYPE.evidence(
+        run,
+        {},
+        measured={
+            "curl_mass": (split.curl_mass, "grader.curl_mass"),
+            "harmonic_mass": (split.harmonic_mass, "grader.harmonic_mass"),
+        },
+        quantity="grader.curl_mass",
+        baselines=floor or None,
+        refusals=dict(_STANDING_REFUSALS),
+        summary=(
+            f"{len(voters)} grader leaves voting over {n_items} rollouts and {split.n_edges} "
+            f"compared pairs: curl mass {split.curl_mass:.4g}, harmonic {split.harmonic_mass:.4g}, "
+            f"against a transitive-grader floor of "
+            f"{floor.get('baseline.transitive_curl', float('nan')):.4g} on this exact design, an "
+            f"excess of {excess:.4g}. Both frozen metrics are refused: they are the sum of these "
+            f"two masses and the registry has no id for the sum."
+        ),
+        gauge=GaugeStatus.INVARIANT,
+        voters=sorted(voters),
+        betti1=int(split.betti1),
+        n_triangles=int(split.n_triangles),
+        curl_excess_over_transitive=excess,
+        solver=split.solver,
+    )
+
+
+#: Both frozen metrics are the same unregistered sum, and each names a different corpus.
+_STANDING_REFUSALS = {
+    "calib_intransitive_mass": (
+        "the calibration is against a planted three-cycle corpus, and a record contains no plant. "
+        "Run analyze(), which plants both channels and recovers them. The sum this metric names has "
+        "no registered quantity id either, so it would not be reportable from a record that had one."
+    ),
+    "synthetic_intransitive_mass": (
+        "this is the mass of the study's own synthetic judge corpus, which is built rather than "
+        "recorded, and the sum it names has no registered quantity id. The record's own curl and "
+        "harmonic masses are reported above under the two ids that do exist."
+    ),
+}
+
+_ACCESS_REMEDY = (
+    "open a run written by the recorder whose per-leaf grader scores were captured. S6 needs no "
+    "activations: the decomposition is linear algebra on recorded comparisons."
+)
+
+
+__all__ = ["RETYPE", "build_spec", "analyze", "read"]

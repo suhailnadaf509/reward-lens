@@ -28,8 +28,10 @@ import numpy as np
 
 from reward_lens.core.evidence import make_evidence
 from reward_lens.core.provenance import Provenance
-from reward_lens.core.types import GaugeStatus, SubjectRef
+from reward_lens.core.reading import Reading
+from reward_lens.core.types import Access, Component, GaugeStatus, SubjectRef
 from reward_lens.geometry import PreferenceRankTest, effective_angle, fit_frame
+from reward_lens.record.schema import Run
 from reward_lens.studies.spec import (
     Hypothesis,
     KillCriterion,
@@ -38,6 +40,7 @@ from reward_lens.studies.spec import (
     StudySpec,
     SubjectQuery,
 )
+from studies._retype import MetricSpec, ScienceRetype, count_trajectories, leaf_scores
 
 _VERSION = "1.0"
 
@@ -221,4 +224,112 @@ def analyze(run) -> StudyResult:
     )
 
 
-__all__ = ["build_spec", "analyze"]
+# ---------------------------------------------------------------------------
+# The retype: S2 on the kernel
+# ---------------------------------------------------------------------------
+
+RETYPE = ScienceRetype(
+    science="s02_gauge",
+    spec=build_spec(),
+    headline="grader.objective_geometry",
+    destination=(
+        "the invariance machinery in core/invariance.py, where `repr.basis` is the group this "
+        "science is an argument for, and `grader.objective_geometry` in the registry, which is the "
+        "cosine between two readout vectors that the canonicalisation is applied to. The gauge "
+        "transform this study plants is a member of `repr.basis` by construction: a rotation "
+        "confined to the estimated null subspace plus a positive scale, which is why the raw cosine "
+        "moves and the canonical one does not. The cyclic arm lands nowhere yet."
+    ),
+    # GRADER:FORWARD, because both cosines are between readout vectors and the frame they are read
+    # in is fitted on the grader's own activations. A record carries neither.
+    needs={Component.GRADER: Access.FORWARD},
+    metrics=(
+        MetricSpec(
+            metric="canonical_cos",
+            quantity="grader.objective_geometry",
+            arc="canonicalise",
+            frame="canonical",
+            source="organism",
+            note=(
+                "the cosine between two reward directions read in the frame fitted on the "
+                "on-distribution activations. `grader.objective_geometry` is the pairwise cosine of "
+                "a head's readout vectors and this is that cosine for the pair (w, gauge(w)); the "
+                "frame is what makes it canonical, which is why the frame is on the subject rather "
+                "than folded into the metric name."
+            ),
+        ),
+        MetricSpec(
+            metric="canonical_minus_raw",
+            quantity="grader.objective_geometry",
+            arc="canonicalise",
+            frame="canonical-minus-raw",
+            source="organism",
+            note=(
+                "the same pair of directions read in two frames and subtracted, so it carries the "
+                "same unit as each term. It is a contrast rather than a third quantity: the "
+                "prediction H1 registers is that the frame changes the cosine, and a contrast "
+                "between two frames of one quantity is how that is stated."
+            ),
+        ),
+        MetricSpec(
+            metric="cyclic_recovery",
+            arc="preference-rank",
+            source="organism",
+            gap=(
+                "held-out pairwise accuracy of a rank-k skew operator minus the best transitive "
+                "(scalar) model's on the same held-out pairs. Unit: accuracy difference, dimension "
+                "1, per null, support [-1, 1]. Invariance: `group.permutation`, invariant, because "
+                "relabelling the items permutes both models' predictions together; also invariant "
+                "under `reward.affine`, since a monotone rescaling of the scalar score changes no "
+                "ordering. Nothing registered fits. `baseline.margin` is the closest and is a "
+                "different comparison: it is M3's margin over the six dumb baselines from the "
+                "controls bank, measured on discrimination, and the baseline here is the scalar "
+                "head itself, which is the object under test rather than a control. Recommend "
+                "registering `grader.intransitivity_recoverable` with the definition above."
+            ),
+        ),
+    ),
+)
+
+
+def read(run: Run) -> Reading:
+    """S2 against a record, which cannot answer it, and the refusal is the useful part.
+
+    Both experiments need something a `record/` object does not contain. Experiment A needs two
+    readout vectors and the activations to fit a frame in; a record carries the scores a grader
+    produced and not the grader. Experiment B needs pairwise preferences over the same items, and a
+    training record scores each rollout once with no comparison in it.
+
+    Scope limit, three lines in: even at GRADER:FORWARD this returns a refusal, because forward
+    access buys activations and a callable head, and the canonical cosine additionally needs the
+    readout vector itself. That is a `Capability.LINEAR_READOUT` question rather than an access
+    rung, and the remedy says so.
+    """
+    if (refusal := RETYPE.access_refusal(run, remedy=_ACCESS_REMEDY)) is not None:
+        return refusal
+    leaves = leaf_scores(run, limit=256)
+    return RETYPE.incomplete(
+        field="readout vector, and no activations to fit a frame in",
+        subject=(
+            f"run {run.id}, which carries {count_trajectories(run)} scored trajectories under "
+            f"{len(leaves)} grader leaf/leaves and no weights,"
+        ),
+        remedy=(
+            "load the reward model and read its score head, then run this through analyze() or "
+            "through geometry.effective_angle directly on the two directions you are comparing. A "
+            "record is the output of a grader and the gauge question is about the grader's "
+            "coordinates, so no amount of recording answers it."
+        ),
+        trajectories=count_trajectories(run),
+        grader_leaves=len(leaves),
+    )
+
+
+_ACCESS_REMEDY = (
+    "supply GRADER:FORWARD on a model whose score head is readable, or run analyze(), which plants "
+    "the gauge transform it then sees through. The canonical cosine is a cosine between two readout "
+    "vectors measured in a frame fitted on activations, and a RECORD-access run has neither."
+)
+
+
+__all__ = ["RETYPE", "build_spec", "analyze", "read"]

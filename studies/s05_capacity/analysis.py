@@ -7,7 +7,7 @@ Three consequences follow, and each is checkable on a construction where the ans
 
 The first is a floor. For any K unit criterion directions living in d dimensions, the largest
 off-diagonal coherence ``mu_jk = v_j . v_k`` obeys the Welch bound
-``max_{j!=k} |mu_jk| >= sqrt((K - d) / (d(K - 1)))`` once ``K > d`` (Appendix A9, faithful_to Welch
+``max_{j!=k} |mu_jk| >= sqrt((K - d) / (d(K - 1)))`` once ``K > d`` (A9, faithful_to Welch
 1974). Below that dimension there is room for orthogonality and the bound is vacuous; above it the
 criteria must start to overlap, and an equiangular tight frame meets the floor with equality. So a
 share of every over-packed grader's cross-criterion interference is obligatory before any data is
@@ -15,11 +15,11 @@ seen.
 
 The second is that the interference is causal, not cosmetic. Steering criterion j's direction and
 reading the change in criterion k's contribution defines the contamination ``C_jk``, and to first
-order under a linear head this is exactly the coherence ``mu_jk`` (Appendix A9). So contamination
+order under a linear head this is exactly the coherence ``mu_jk`` (A9). So contamination
 scales with coherence pair by pair, and on a planted rubric where both are known the relationship is
 the linear identity ``C_jk = c * mu_jk``.
 
-The third is that the surplus leaks. The dark reward (Appendix A10) is the fraction of ``Var(r)`` no
+The third is that the surplus leaks. The dark reward (A10) is the fraction of ``Var(r)`` no
 named criterion mediates, and capacity theory predicts it grows with ``K/d_eff`` as the reward tries
 to carry more criteria than its effective dimension supports. The interference cross-terms are where
 it hides, and a best-of-n policy that selects on the true reward mines exactly those terms: its gain
@@ -27,7 +27,7 @@ concentrates in the dark channel, invisible to an audit that reads only the per-
 
 This study proves all three on planted geometries where the coherence, the effective dimension, and
 the reward are exact by construction, in the corpus's discipline of calibrating the instrument before
-turning it on a model (DESIGN 2.10, gate 1). It consumes the primitives already on disk:
+turning it on a model (gate 1). It consumes the primitives already on disk:
 ``measure/indices/coherence`` (the Gram matrix, the Welch bound, ``d_eff``), ``geometry`` (the
 participation ratio that reads ``d_eff``), ``measure/indices/dark_reward`` (the unmediated variance
 fraction), and the organism foundry's planted-rubric generator (``rubric_organism`` at controlled
@@ -57,7 +57,8 @@ import numpy as np
 
 from reward_lens.core.evidence import Uncertainty, make_evidence
 from reward_lens.core.provenance import Provenance
-from reward_lens.core.types import GaugeStatus, Site, SubjectRef
+from reward_lens.core.reading import Reading
+from reward_lens.core.types import Access, Component, GaugeStatus, Site, SubjectRef
 from reward_lens.geometry import participation_ratio
 from reward_lens.measure.indices.coherence import (
     coherence_matrix,
@@ -67,6 +68,7 @@ from reward_lens.measure.indices.coherence import (
 )
 from reward_lens.measure.indices.dark_reward import dark_reward
 from reward_lens.organisms import make_rubric_directions, rubric_organism
+from reward_lens.record.schema import Run
 from reward_lens.stats import spearman_with_ci
 from reward_lens.studies.spec import (
     Hypothesis,
@@ -76,6 +78,7 @@ from reward_lens.studies.spec import (
     StudySpec,
     SubjectQuery,
 )
+from studies._retype import MetricSpec, ScienceRetype, count_trajectories
 
 _VERSION = "1.0"
 
@@ -868,4 +871,228 @@ def analyze(run) -> StudyResult:
     return StudyResult(outcomes={}, metrics=metrics, summary=summary)
 
 
-__all__ = ["build_spec", "analyze"]
+# ---------------------------------------------------------------------------
+# The retype: S5 on the kernel
+# ---------------------------------------------------------------------------
+
+RETYPE = ScienceRetype(
+    science="s05_capacity",
+    spec=build_spec(),
+    headline="grader.criterion_coherence",
+    destination=(
+        "the Welch floor and the coherence matrix, feeding measure/decision/'s N8. "
+        "grader.criterion_coherence names the Welch floor for (K, d) in its own definition, which "
+        "is why four of the five metrics resolve to it and none needed a new id."
+    ),
+    needs={Component.GRADER: Access.RECORD, Component.RECORD: Access.RECORD},
+    metrics=(
+        MetricSpec(
+            metric="welch_floor_min_slack",
+            quantity="grader.criterion_coherence",
+            arc="welch-floor",
+            frame="random-frames",
+            source="organism",
+            note=(
+                "the smallest margin by which a measured maximum coherence clears the Welch bound "
+                "over the frame sweep. The bound is part of grader.criterion_coherence's stated "
+                "definition, so this is a feature of that quantity rather than a separate one. It "
+                "sweeps (K, d) configurations, which is a construction and not a record."
+            ),
+        ),
+        MetricSpec(
+            metric="etf_equality_gap_max",
+            quantity="grader.criterion_coherence",
+            arc="welch-floor",
+            frame="equiangular-tight-frames",
+            source="organism",
+            note="the same quantity on the tight frames that meet the floor with equality.",
+        ),
+        MetricSpec(
+            metric="contamination_coherence_corr",
+            quantity="grader.criterion_coherence",
+            arc="contamination",
+            arm="readout-contamination",
+            source="organism",
+            note=(
+                "how strongly cross-criterion contamination tracks measured coherence. Needs the "
+                "criterion directions, so it is a repr.basis reading and a record at RECORD access "
+                "carries scores rather than directions."
+            ),
+        ),
+        MetricSpec(
+            metric="dark_reward_kdeff_spearman",
+            quantity="grader.dark_fraction",
+            arc="dark-sweep",
+            arm="k-over-deff",
+            source="organism",
+            note=(
+                "the rank agreement between the dark fraction and K/d_eff across the sweep. The "
+                "dark fraction itself is exactly computable from a record, and read reports it; "
+                "the trend across configurations needs the sweep."
+            ),
+        ),
+        MetricSpec(
+            metric="interference_dark_share",
+            quantity="grader.dark_fraction",
+            arc="interference",
+            arm="best-of-n-mining",
+            source="organism",
+            note=(
+                "the share of a best-of-n policy's gain that arrives through the interference "
+                "channel rather than the audited linear one. Needs the counterfactual decomposition "
+                "of a gain into two channels, which a record does not carry."
+            ),
+        ),
+    ),
+    arc_requires={
+        "contamination": ("welch-floor",),
+        "dark-sweep": ("welch-floor",),
+        "interference": ("dark-sweep",),
+    },
+)
+
+
+def read(run: Run) -> Reading:
+    """S5 against a real record: the dark fraction, computed from the score tree's named channels.
+
+    One of S5's two quantities transfers to a record exactly and the other does not.
+    ``grader.dark_fraction`` is one minus the R-squared of the reward regressed on the named-channel
+    contributions, and a ``ScoreTree`` is precisely a set of named channels with a total, so the
+    definition maps onto the record with nothing left over. ``grader.criterion_coherence`` is a Gram
+    matrix of criterion *directions*, and directions live in the representation: at RECORD access
+    there are scores and no vectors, and the correlation of two score columns is not the cosine of
+    two readout vectors.
+
+    Scope limit, three lines in: with one named channel the dark fraction is identically zero,
+    because a single channel regressed on itself explains everything. That is a fact about the
+    record and not about the grader, so it is refused rather than reported.
+    """
+    if (refusal := RETYPE.access_refusal(run, remedy=_ACCESS_REMEDY)) is not None:
+        return refusal
+
+    names, contributions, totals = _named_channels(run)
+    n_traj = count_trajectories(run)
+    if len(names) < 2:
+        return RETYPE.incomplete(
+            field=(
+                f"second named score channel (the tree has {len(names)}: "
+                f"{', '.join(names) or 'no leaves at all'})"
+            ),
+            subject=f"run {run.id}",
+            remedy=(
+                "score with a composed grader and record each component as its own leaf. With one "
+                "channel the dark fraction is zero by construction and the coherence matrix is the "
+                "scalar 1, so neither number means anything. A rubric of K criteria recorded as K "
+                "leaves is what makes this run answerable."
+            ),
+            trajectories=n_traj,
+            channels=list(names),
+        )
+
+    reward = np.asarray(totals, dtype=np.float64)
+    named = np.asarray(contributions, dtype=np.float64)
+    dark = float(dark_reward(reward, named))
+
+    measured = {"dark_fraction": (dark, "grader.dark_fraction")}
+    refusals = {
+        m.metric: _ORGANISM_REFUSAL[m.metric]
+        for m in RETYPE.metrics
+        if m.metric in _ORGANISM_REFUSAL
+    }
+
+    summary = (
+        f"{n_traj} trajectories over {run.n_steps} steps with {len(names)} named channels "
+        f"({', '.join(names)}): the dark fraction is {dark:.4g}, the share of reward variance no "
+        f"named channel explains. The coherence half of S5 is not answerable at RECORD access, "
+        f"because it is a Gram matrix of criterion directions and this record carries scores."
+    )
+    return RETYPE.evidence(
+        run,
+        {},
+        measured=measured,
+        quantity="grader.dark_fraction",
+        refusals=refusals,
+        summary=summary,
+        gauge=GaugeStatus.INVARIANT,
+        channels=list(names),
+        n_trajectories=n_traj,
+    )
+
+
+#: Every frozen S5 metric needs a sweep, a construction or a counterfactual. None is a record read.
+_ORGANISM_REFUSAL = {
+    "welch_floor_min_slack": (
+        "the floor is checked over a sweep of (K, d) frame configurations built to order. A record "
+        "is one configuration and carries no directions to measure coherence on. Run the sweep "
+        "through analyze()."
+    ),
+    "etf_equality_gap_max": (
+        "the equality case needs equiangular tight frames constructed at each K, which is a "
+        "construction rather than an observation. Run it through analyze()."
+    ),
+    "contamination_coherence_corr": (
+        "contamination is measured between criterion readout vectors, so it needs LINEAR_READOUT on "
+        "the grader. Raise the access to the readout and supply the K criterion directions, or read "
+        "this from the planted rubric organism through analyze()."
+    ),
+    "dark_reward_kdeff_spearman": (
+        "the trend is across a sweep of (K, d) configurations and a record is one of them. The dark "
+        "fraction of this configuration is reported as `dark_fraction`; the rank agreement needs "
+        "the others."
+    ),
+    "interference_dark_share": (
+        "this splits a best-of-n policy's gain into an audited linear channel and a dark "
+        "interference channel, which needs both channels evaluated counterfactually on the same "
+        "draws. A record carries the realised gain and not its decomposition."
+    ),
+}
+
+_ACCESS_REMEDY = (
+    "open a run written by the recorder whose per-component grader scores were captured. S5's dark "
+    "fraction needs the named channels of the score tree and nothing deeper."
+)
+
+
+def _named_channels(run: Run) -> tuple[list[str], list[list[float]], list[float]]:
+    """The score tree's leaves as an aligned matrix, with the composed total beside them.
+
+    Trajectories missing any leaf are dropped rather than zero-filled. A zero-filled channel enters
+    the regression as a constant, which inflates the explained share and pushes the dark fraction
+    down: the direction that makes a grader look better audited than it is.
+    """
+    names: list[str] = []
+    for step in run.steps:
+        for group in step.groups:
+            for traj in group.trajectories:
+                for name, _ in _leaves_of(traj.scores):
+                    if name not in names:
+                        names.append(name)
+        if names:
+            break
+    rows: list[list[float]] = []
+    totals: list[float] = []
+    for step in run.steps:
+        for group in step.groups:
+            for traj in group.trajectories:
+                leaves = dict(_leaves_of(traj.scores))
+                if any(n not in leaves for n in names):
+                    continue
+                rows.append([leaves[n] for n in names])
+                totals.append(float(sum(leaves[n] for n in names)))
+    return names, rows, totals
+
+
+def _leaves_of(node: object) -> list[tuple[str, float]]:
+    children = getattr(node, "children", None)
+    if children:
+        out: list[tuple[str, float]] = []
+        for child in children:
+            out.extend(_leaves_of(child))
+        return out
+    name, value = getattr(node, "name", None), getattr(node, "value", None)
+    if name is None or value is None:
+        return []
+    return [(str(name), float(value))]
+
+
+__all__ = ["RETYPE", "build_spec", "analyze", "read"]

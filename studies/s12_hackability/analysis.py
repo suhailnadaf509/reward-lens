@@ -10,7 +10,7 @@ which is the strongest single breakthrough candidate in the design.
 
 This study runs the calibration first, on a planted-hack draw where the exploited dimension is known
 by construction, so the forecaster and the surgery are validated before they are turned on a
-production model (DESIGN 2.10, gate 1). The construction is a base-policy activation cloud in feature
+production model (gate 1). The construction is a base-policy activation cloud in feature
 space with a planted reward head. One feature is the planted hack: the proxy reward loves it (its
 susceptibility chi is the largest, so it is the dimension optimization inflates first) while the gold
 objective does not price it and is quadratically hurt by its excess (so inflating it turns the gold
@@ -24,7 +24,7 @@ text pairs to activations needs a trained trunk, so that step is the GPU-gated f
 Five registered arms run on this vehicle across the four theorem rows S12 wires.
 
 - T4 (H1, forecast): the susceptibility chi = Cov_0(f_i, r) rank-recovers the realized best-of-n
-  first-hacked ordering. The best-of-n ladder is the reference arm (DESIGN 2.13): it previews the
+  first-hacked ordering. The best-of-n ladder is the reference arm: it previews the
   optimization endpoint with no gradient step, and the realized per-feature drift is read from the
   same plug-in order-statistic identity loops.bon uses. Under the fluctuation-dissipation identity
   the drift is proportional to chi by construction, so the recovery is near perfect. The same arm
@@ -75,12 +75,14 @@ import numpy as np
 
 from reward_lens.core.evidence import Evidence, Uncertainty, make_evidence
 from reward_lens.core.provenance import Provenance
-from reward_lens.core.types import GaugeStatus, SubjectRef
+from reward_lens.core.reading import Reading
+from reward_lens.core.types import Access, Component, GaugeStatus, SubjectRef
 from reward_lens.loops.bon import bon_kl, bon_ladder, expected_bon_reward
 from reward_lens.measure.indices.chi import predicted_hack_modes, susceptibility
 from reward_lens.measure.indices.distortion import distortion_per_dimension, linear_sensitivity
 from reward_lens.measure.indices.tail import tail_estimate
 from reward_lens.measure.indices.teacher_compatibility import teacher_compatibility
+from reward_lens.record.schema import Run
 from reward_lens.stats import spearman_with_ci
 from reward_lens.studies.spec import (
     Hypothesis,
@@ -89,6 +91,12 @@ from reward_lens.studies.spec import (
     StudyResult,
     StudySpec,
     SubjectQuery,
+)
+from studies._retype import (
+    MetricSpec,
+    ScienceRetype,
+    count_trajectories,
+    trajectory_features,
 )
 
 _VERSION = "1.0"
@@ -1014,4 +1022,270 @@ def _run_certified_arm(
     }
 
 
-__all__ = ["build_spec", "analyze"]
+# ---------------------------------------------------------------------------
+# The retype: S12 on the kernel (record inputs, Reading outputs, registered ids)
+# ---------------------------------------------------------------------------
+
+RETYPE = ScienceRetype(
+    science="s12_hackability",
+    spec=build_spec(),
+    headline="selection.differential_S",
+    destination=(
+        "D5 and D6 in verifier/, I1 and I2 in measure/threshold/, and forecast/. The arms already "
+        "consume four shipped indices directly (chi, distortion, tail, teacher_compatibility), so "
+        "the wiring is at the index level and what the retype adds above it is the binding and the "
+        "record path."
+    ),
+    needs={Component.GRADER: Access.RECORD, Component.RECORD: Access.RECORD},
+    metrics=(
+        MetricSpec(
+            metric="chi_forecast_spearman",
+            quantity="selection.differential_S",
+            arc="chi-forecast",
+            arm="best-of-n",
+            note=(
+                "the rank agreement between the susceptibility spectrum and the realised "
+                "first-hacked ordering. The arc that produces it is the one that measures chi; on a "
+                "training record the realised ordering is the per-feature drift between the base "
+                "window and the last window rather than a best-of-n ladder."
+            ),
+        ),
+        MetricSpec(
+            metric="forecast_margin",
+            quantity="forecast.decision_value",
+            arc="forecast-vs-accuracy",
+            source="organism",
+            note=(
+                "the margin of the internal forecast over the benchmark-accuracy control, which is "
+                "forecast.decision_value's definition almost word for word: the loss saved per "
+                "event by acting on the forecast rather than on the best mandatory baseline. It "
+                "needs the control arm, and one training record carries one grader and no control."
+            ),
+        ),
+        MetricSpec(
+            metric="teacher_speed_spearman",
+            quantity="grader.induced_variance",
+            arc="teacher-variance",
+            source="organism",
+            note=(
+                "Razin's w_r' Sigma_pi w_r against optimisation speed, across a family of graders. "
+                "A record holds one grader, so the family is not in it; the induced variance itself "
+                "is, as Var(r) over the realised rewards, and read reports that."
+            ),
+        ),
+        MetricSpec(
+            metric="heavy_tail_excess",
+            arc="heavy-tail",
+            source="organism",
+            gap=(
+                "the difference in expected best-of-n reward between a heavy-tailed and a "
+                "light-tailed grader at matched n and matched reward variance. Unit: reward. "
+                "Invariance: reward.affine, covariant at power 1 under a rescaling of the reward. "
+                "Nothing registered fits. frontier.gold_vs_kl has the right unit and the wrong "
+                "channel, because this is the proxy reward and that is the gold; substituting one "
+                "channel for the other is the silent swap that produces a wrong conclusion rather "
+                "than a noisy one. Recommend registering frontier.bon_reward_excess."
+            ),
+        ),
+        MetricSpec(
+            metric="hack_drift_reduction",
+            quantity="intervention.rescue_fraction",
+            arc="prevention",
+            arm="project-out-flagged-direction",
+            source="organism",
+            note=(
+                "one minus the ratio of the exploited feature's displacement after the head edit to "
+                "its displacement before, which is a rescue fraction in the registry's sense and "
+                "dimensionless as that id is. It needs the counterfactual re-run against an edited "
+                "head, and a record carries what happened rather than what would have."
+            ),
+        ),
+        MetricSpec(
+            metric="gold_overopt_drop_before",
+            quantity="frontier.gold_vs_kl",
+            arc="overopt-hump",
+            note=(
+                "peak minus final gold along the gold-versus-KL frontier, in reward units, which is "
+                "a feature of that curve rather than a separate quantity. A record can answer it "
+                "when it carries a gold probe channel; the GRPO fixture carries no probes at all."
+            ),
+        ),
+    ),
+    arc_requires={
+        "forecast-vs-accuracy": ("chi-forecast",),
+        "prevention": ("chi-forecast",),
+        "overopt-hump": ("chi-forecast",),
+    },
+)
+
+
+def read(run: Run) -> Reading:
+    """S12 against a real training record: what the record can forecast, and what it cannot.
+
+    The four arms that need a counterfactual (an edited head, a matched control grader, a family of
+    graders, a second tail shape) are not answerable from a record at all, because a record holds
+    what happened and those need what would have happened instead. They are refused by name rather
+    than approximated.
+
+    What is left is real and it is the core of the science: the susceptibility spectrum
+    ``chi_i = Cov_0(f_i, r)`` over the base-policy window, the realised per-feature drift to the end
+    of the run, and their rank agreement, which is the fluctuation-dissipation claim S12 registers.
+    The induced reward variance comes out of the same pass as ``Var(r)``, which is what
+    ``w_r' Sigma_pi w_r`` equals when ``r`` is a linear readout, measured on the output side instead
+    of reconstructed from weights the record does not carry.
+
+    Scope limit, three lines in: this reads drift against training step, not against KL. The two
+    coincide only while the update is small and the composition is fixed, and the record's declared
+    regime is what says whether that held.
+    """
+    if (refusal := RETYPE.access_refusal(run, remedy=_ACCESS_REMEDY)) is not None:
+        return refusal
+
+    names, rows, rewards = trajectory_features(run)
+    n_traj = count_trajectories(run)
+    if not rewards:
+        return RETYPE.incomplete(
+            field="scored trajectories",
+            subject=f"run {run.id}",
+            remedy=(
+                "record the grader's per-trajectory scores. Without a reward column there is no "
+                "covariance to take and no tail to fit, so no arm of S12 has an input."
+            ),
+            trajectories=n_traj,
+        )
+
+    reward = np.asarray(rewards, dtype=np.float64)
+    induced_variance = float(reward.var(ddof=0))
+    tail = tail_estimate(reward)
+
+    measured: dict[str, tuple[float, str]] = {
+        "induced_variance": (induced_variance, "grader.induced_variance"),
+        "reward_tail_index": (float(tail["shape_xi"]), "grader.tail_index"),
+    }
+    refusals = dict(_STANDING_REFUSALS)
+
+    metrics: dict[str, float] = {}
+    chi_note = "no rank agreement computed"
+    if len(names) < 2:
+        refusals["chi_forecast_spearman"] = (
+            f"the record carries {len(names)} feature ({', '.join(names) or 'none'}) and a rank "
+            f"agreement over one feature is not defined. Record a feature bank of at least two "
+            f"independent features on each trajectory, or supply one through the tap's feature hook."
+        )
+        chi_note = "the rank agreement needs a feature bank of at least two"
+    else:
+        chi = susceptibility(np.asarray(rows, dtype=np.float64), reward)
+        drift = _record_feature_drift(run, names)
+        if drift is None:
+            refusals["chi_forecast_spearman"] = (
+                "the run is too short to separate a base window from an end window. Restrict to a "
+                "run of at least four recorded steps, or compare two runs at different lengths."
+            )
+        else:
+            metrics["chi_forecast_spearman"] = float(
+                spearman_with_ci(chi, drift, n_resamples=2000, seed=0).value
+            )
+            chi_note = f"chi over {len(names)} features against realised drift"
+
+    if "gold_overopt_drop_before" not in metrics:
+        refusals["gold_overopt_drop_before"] = _gold_refusal(run)
+
+    total = len(RETYPE.metrics)
+    summary = (
+        f"{n_traj} trajectories over {run.n_steps} steps: induced reward variance "
+        f"{induced_variance:.4g}, reward tail shape {float(tail['shape_xi']):.4g} "
+        f"({tail['regime']} regime). {chi_note}. {len(refusals)} of the {total} registered "
+        f"metrics are not answerable from this record, and the reasons differ."
+    )
+    return RETYPE.evidence(
+        run,
+        metrics,
+        measured=measured,
+        # The headline is the susceptibility, and this record did not support it. Stamping the
+        # reading with the quantity it actually carries is the difference between a reading and a
+        # claim about a reading.
+        quantity=("selection.differential_S" if metrics else "grader.induced_variance"),
+        refusals=refusals,
+        summary=summary,
+        gauge=GaugeStatus.COVARIANT,
+        features=list(names),
+        n_trajectories=n_traj,
+        tail_regime=str(tail["regime"]),
+    )
+
+
+#: The four arms a record cannot answer whatever it contains, because each needs a counterfactual.
+_STANDING_REFUSALS = {
+    "forecast_margin": (
+        "the margin is against a benchmark-accuracy control measured on the same graders. A record "
+        "carries one grader and no control arm. Run the control on a second grader and compare, or "
+        "read this from the planted calibration organism through analyze()."
+    ),
+    "teacher_speed_spearman": (
+        "the rank agreement is across a family of graders at matched KL, and this record has one. "
+        "Record a family of runs differing only in grader, or read it from analyze(). The induced "
+        "variance of the one grader present is reported as `induced_variance`."
+    ),
+    "heavy_tail_excess": (
+        "this compares two graders with the same reward variance and different tail shapes, and a "
+        "record contains one of them. It also has no registered quantity id yet, so it would not be "
+        "reportable even with the second arm present."
+    ),
+    "hack_drift_reduction": (
+        "the reduction is measured against a re-run with the flagged direction projected out of the "
+        "reward head. Editing the head needs SOURCE access to the grader, and re-running needs the "
+        "policy. Supply both and run the prevention arm, or read it from analyze()."
+    ),
+}
+
+_ACCESS_REMEDY = (
+    "open a run written by the recorder, or point this at a record whose grader and score columns "
+    "were captured. S12 needs no activations at this rung: the susceptibility is a covariance "
+    "between recorded features and recorded rewards."
+)
+
+
+def _gold_refusal(run: Run) -> str:
+    probes = sum(len(step.probes) for step in run.steps)
+    return (
+        f"the overoptimization hump is peak-minus-final gold along the gold-versus-KL frontier, and "
+        f"this record carries {probes} probe results and no gold channel among them. Record a gold "
+        f"probe with channel='gold' at each step, or score the saved rollouts against a gold grader "
+        f"offline and attach the result as a probe."
+    )
+
+
+def _record_feature_drift(run: Run, names: list[str]) -> np.ndarray | None:
+    """Per-feature displacement from the first quarter of the run to the last quarter.
+
+    Quarters rather than single steps because a single step of four rollouts is too few to place a
+    mean, and quarters rather than a fitted slope because the claim S12 registers is about which
+    feature moved, not about how the movement was shaped.
+    """
+    indices = sorted(run.steps.indices)
+    if len(indices) < 4:
+        return None
+    cut = max(1, len(indices) // 4)
+    early, late = set(indices[:cut]), set(indices[-cut:])
+    sums: dict[bool, list[float]] = {True: [0.0] * len(names), False: [0.0] * len(names)}
+    counts = {True: 0, False: 0}
+    for step in run.steps:
+        which = step.index in early
+        if not which and step.index not in late:
+            continue
+        for group in step.groups:
+            for traj in group.trajectories:
+                feats = traj.features or {}
+                if any(n not in feats for n in names):
+                    continue
+                for j, n in enumerate(names):
+                    sums[which][j] += float(feats[n])
+                counts[which] += 1
+    if not counts[True] or not counts[False]:
+        return None
+    early_mean = np.array(sums[True]) / counts[True]
+    late_mean = np.array(sums[False]) / counts[False]
+    return late_mean - early_mean
+
+
+__all__ = ["RETYPE", "build_spec", "analyze", "read"]

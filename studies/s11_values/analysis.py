@@ -25,7 +25,7 @@ position via the per-token verdict curve, compare to the final verdict) is exerc
 prove the plumbing. But a random tiny judge has no meaningful verdict (its judgment-position detection
 confidence is near chance, recorded honestly), so the scientific claim is inconclusive-because-gated:
 the >= 90% test needs a real instruct/reasoning judge on adequate hardware. No metric is emitted for
-it, so it adjudicates as inconclusive rather than failed.
+it, so it voids rather than adjudicating as a failure.
 
 The headline if it lands: scalar reward models know when annotators would disagree, and reading it out
 gives ensemble-grade uncertainty from one model.
@@ -39,7 +39,9 @@ import numpy as np
 
 from reward_lens.core.evidence import Uncertainty, make_evidence
 from reward_lens.core.provenance import Provenance
-from reward_lens.core.types import GaugeStatus, SubjectRef
+from reward_lens.core.reading import Reading
+from reward_lens.core.types import Access, Component, GaugeStatus, SubjectRef
+from reward_lens.record.schema import Run
 from reward_lens.studies.spec import (
     Hypothesis,
     KillCriterion,
@@ -48,6 +50,7 @@ from reward_lens.studies.spec import (
     StudySpec,
     SubjectQuery,
 )
+from studies._retype import MetricSpec, ScienceRetype, count_trajectories
 
 _VERSION = "1.0"
 
@@ -397,7 +400,7 @@ def analyze(run) -> StudyResult:
         "contested_reward_cos_abs": contested_reward_cos_abs,
         "planted_contested_reward_cos_abs": planted_cos_abs,
     }
-    # H3 is gated: no verdict_prefix_match_rate metric is emitted, so it adjudicates as inconclusive.
+    # H3 is gated: no verdict_prefix_match_rate metric is emitted, so the runner voids it.
 
     verdict_line = (
         "the verdict-before-critique mechanism ran on a tiny judge but its scientific claim is "
@@ -415,4 +418,130 @@ def analyze(run) -> StudyResult:
     return StudyResult(outcomes={}, metrics=metrics, summary=summary)
 
 
-__all__ = ["build_spec", "analyze"]
+# ---------------------------------------------------------------------------
+# The retype: S11 on the kernel
+# ---------------------------------------------------------------------------
+
+RETYPE = ScienceRetype(
+    science="s11_values",
+    spec=build_spec(),
+    headline="grader.contested_axis",
+    destination=(
+        "grader.contested_axis, which ships as measure/indices/contested.py, for the disagreement "
+        "probe; C8 in measure/selection/verdict.py for the verdict arm. Worth knowing before "
+        "reading the third binding: C8 ships declaring judge.commitment_position, and "
+        "judge.verdict_direction is registered against the same catalogue letter with nothing "
+        "declaring it, so there is one instrument behind the two judge rows."
+    ),
+    needs={Component.GRADER: Access.FORWARD, Component.RECORD: Access.RECORD},
+    metrics=(
+        MetricSpec(
+            metric="contested_probe_bal_acc",
+            quantity="grader.contested_axis",
+            arc="contested-probe",
+            frame="held-out-difference-of-means",
+            source="organism",
+            note=(
+                "the held-out balanced accuracy of a difference-of-means probe decoding the "
+                "contested label off per-pair activations. The arc that produces it is the arc that "
+                "recovers the contested axis; the registered row summarises that axis as the "
+                "correlation between the disagreement signal and its projection, and this arm "
+                "summarises it as a decoding accuracy. Two summaries of one fit, so the binding is "
+                "for closure and the accuracy is never stamped on a reading."
+            ),
+        ),
+        MetricSpec(
+            metric="contested_reward_cos_abs",
+            quantity="grader.contested_axis",
+            arc="contested-probe",
+            frame="cosine-to-reward-direction",
+            source="organism",
+            note=(
+                "the absolute cosine between the recovered contested direction and the reward "
+                "direction w_r, which is the orthogonality half of the headline: if disagreement "
+                "sits off-axis from reward, reading it out costs no reward accuracy. It is a "
+                "property of the same axis rather than a second quantity, so it binds to the same "
+                "id under its own frame. A cosine between a named pair of directions is "
+                "`correlation/pair` in this registry and grader.contested_axis is bare "
+                "`correlation`; the difference is a denominator, and which of the two this row "
+                "should carry is in the report rather than decided here."
+            ),
+        ),
+        MetricSpec(
+            metric="verdict_prefix_match_rate",
+            quantity="judge.commitment_position",
+            arc="verdict-before-critique",
+            frame="pre-critique-prefix",
+            source="gated",
+            note=(
+                "the fraction of judged items whose verdict at the pre-critique position already "
+                "matches the final verdict. C8 reads the same per-token margin curve and reports "
+                "where it settles; this arm reports how often the early reading is already right, "
+                "so it is the same arc under a different summary. The units differ and it matters: "
+                "a commitment position is a fraction of one sequence and this is a rate over items, "
+                "which is why the binding is source='gated' and the number is never emitted. This "
+                "row's unit was found fighting its invariance group and was settled in favour of "
+                "the fraction, so the row now holds the tokenization invariance it claims; the "
+                "mismatch left here is a different one and it is in the report."
+            ),
+        ),
+    ),
+    arc_requires={"verdict-before-critique": ("contested-probe",)},
+)
+
+
+def read(run: Run) -> Reading:
+    """S11 against a real training record: both arms read the inside of a model, and a record is a file.
+
+    The contested probe is a linear decode of annotator disagreement from per-pair activations, and
+    the verdict arm reads a per-token margin off a judge's residual stream. Neither survives the drop
+    to RECORD access, where there are the numbers a grader returned and none of the vectors it
+    returned them from. This is the commonest refusal in the retype and it is an honest one: the
+    science was written against a model that could be probed.
+
+    Scope limit, three lines in: activations alone do not make a record answerable here. H1 also
+    needs a disagreement signal per pair, an annotator spread or any per-item rater variance, and a
+    reader who grants FORWARD and stops has bought half of what the probe wants.
+    """
+    if (refusal := RETYPE.access_refusal(run, remedy=_ACCESS_REMEDY)) is not None:
+        return refusal
+
+    labelled, total = 0, 0
+    keys: set[str] = set()
+    for step in run.steps:
+        for group in step.groups:
+            for traj in group.trajectories:
+                total += 1
+                names = set(traj.labels or {})
+                if names:
+                    labelled += 1
+                    keys |= names
+
+    return RETYPE.incomplete(
+        field="per-item annotator disagreement signal",
+        subject=f"{labelled} of {total} labelled trajectories in run {run.id}",
+        remedy=(
+            f"attach the disagreement column the probe is trained against: a rater spread, a "
+            f"variance over repeat annotations, or any per-item score the annotators did not agree "
+            f"on. HelpSteer's rater spread is the source S11 preregistered and it is registry-only "
+            f"in this checkout, so it is not loaded here. The activations are now readable and the "
+            f"label is what is missing, which is a change to whatever wrote the record rather than "
+            f"to your access to it. Labels present on this run: "
+            f"{', '.join(sorted(keys)) or 'none at all'}."
+        ),
+        trajectories=count_trajectories(run),
+        labelled=labelled,
+        label_keys=sorted(keys),
+    )
+
+
+_ACCESS_REMEDY = (
+    "grant FORWARD on the grader and re-run the scored pairs through it so the per-pair "
+    "chosen-minus-rejected activations are captured, or point this at a record whose capture step "
+    "already stored them. A disagreement column has to arrive with them: a probe with activations "
+    "and no label to decode has nothing to fit, and the verdict arm needs a generative judge whose "
+    "per-token margins can be read rather than a scalar reward model."
+)
+
+
+__all__ = ["RETYPE", "build_spec", "analyze", "read"]

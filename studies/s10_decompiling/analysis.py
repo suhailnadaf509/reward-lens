@@ -30,8 +30,10 @@ import numpy as np
 
 from reward_lens.core.evidence import make_evidence
 from reward_lens.core.provenance import Provenance
-from reward_lens.core.types import GaugeStatus, SubjectRef
+from reward_lens.core.reading import Reading
+from reward_lens.core.types import Access, Component, GaugeStatus, SubjectRef
 from reward_lens.measure.indices import legibility_frontier
+from reward_lens.record.schema import Run
 from reward_lens.studies.spec import (
     Hypothesis,
     KillCriterion,
@@ -39,6 +41,13 @@ from reward_lens.studies.spec import (
     StudyResult,
     StudySpec,
     SubjectQuery,
+)
+from studies._retype import (
+    MetricSpec,
+    ScienceRetype,
+    count_trajectories,
+    leaf_scores,
+    trajectory_features,
 )
 
 _VERSION = "1.0"
@@ -232,4 +241,131 @@ def analyze(run) -> StudyResult:
     )
 
 
-__all__ = ["build_spec", "analyze"]
+# ---------------------------------------------------------------------------
+# The retype: S10 on the kernel
+# ---------------------------------------------------------------------------
+
+RETYPE = ScienceRetype(
+    science="s10_decompiling",
+    spec=build_spec(),
+    headline="grader.legibility_frontier",
+    destination=(
+        "grader.legibility_frontier, which ships as measure/indices/legibility.py. The calibration "
+        "arm already calls that instrument's pure function, so the retype adds the binding and the "
+        "record path and no second frontier. The tacit residual binds to grader.dark_fraction "
+        "instead of to the frontier, which is the one judgement in this table worth reading: the "
+        "residual is a variance fraction and the frontier row's unit token is its value axis."
+    ),
+    needs={Component.GRADER: Access.RECORD, Component.RECORD: Access.RECORD},
+    metrics=(
+        MetricSpec(
+            metric="knee_abs_error",
+            quantity="grader.legibility_frontier",
+            arc="legibility-frontier",
+            frame="unit-cost-predicate-library",
+            source="organism",
+            note=(
+                "how far the recovered knee sits from the planted rubric size. The knee is named "
+                "inside grader.legibility_frontier's own definition, so the arc that traces the "
+                "frontier is the arc that produces it. The number is a description length in "
+                "predicates while the row's unit token is the fidelity axis, which is why it is "
+                "source='organism' and never stamped on a reading; whether the knee wants a unit "
+                "of its own is the maintainer's call and it is in the report."
+            ),
+        ),
+        MetricSpec(
+            metric="tacit_fraction",
+            quantity="grader.dark_fraction",
+            arc="tacit-residual",
+            frame="knee-budget",
+            source="organism",
+            note=(
+                "the share of reward variance the best K*-predicate program leaves unexplained. "
+                "grader.dark_fraction is one minus the R-squared of the reward regressed on the "
+                "named-channel contributions with a constant term, and legibility_frontier fits "
+                "exactly that regression with the selected predicates as the channels, so the two "
+                "are the same statistic over a different channel bank. It needs the bank, and the "
+                "bank is fitted rather than recorded."
+            ),
+        ),
+        MetricSpec(
+            metric="tacit_fraction_error",
+            quantity="grader.dark_fraction",
+            arc="tacit-residual",
+            frame="planted-recovery",
+            source="organism",
+            note=(
+                "the same quantity read against a planted answer: how far the recovered tacit "
+                "fraction sits from the fraction of the reward's variance the construction put "
+                "there. Its own frame rather than its own arc, because one pass over the frontier "
+                "produces both it and the fraction it is scored against."
+            ),
+        ),
+        MetricSpec(
+            metric="real_tacit_fraction",
+            quantity="grader.dark_fraction",
+            arc="production-legibility",
+            dataset="production-grader",
+            source="gated",
+            note=(
+                "the same fraction on a production reward model's scores over real responses. The "
+                "instrument is identical and what is missing is the population: a score head to "
+                "query and a predicate library fitted to it. source='gated' rather than "
+                "'organism' because the planted arm does not produce this one either."
+            ),
+        ),
+    ),
+    arc_requires={
+        "tacit-residual": ("legibility-frontier",),
+        "production-legibility": ("legibility-frontier",),
+    },
+)
+
+
+def read(run: Run) -> Reading:
+    """S10 against a real training record: a frontier needs a predicate library and a record has none.
+
+    fidelity(K) is traced over a description-length budget, and the budget is spent on predicates.
+    A record carries the scores a grader returned and, if the recorder was asked for them, a few
+    per-trajectory features. It does not carry a library of predicates with a description length
+    attached to each, and without one there is no budget axis to trace anything along.
+
+    Scope limit, three lines in: the tempting substitute is to treat whatever the record does carry
+    as a one-predicate library. On the GRPO fixtures that predicate is `trl_realised_reward`, which
+    is the score itself, so the least-squares fit is exact, the fidelity is 1.0 and the tacit
+    fraction is 0.0. Those three numbers are a fact about the substitution and not about the grader,
+    which is why this refuses instead of reporting them.
+    """
+    if (refusal := RETYPE.access_refusal(run, remedy=_ACCESS_REMEDY)) is not None:
+        return refusal
+
+    channels = sorted(leaf_scores(run))
+    features, _rows, _rewards = trajectory_features(run)
+    n_traj = count_trajectories(run)
+    return RETYPE.incomplete(
+        field="predicate library with a description length for each predicate",
+        subject=f"all {n_traj} trajectories of run {run.id}",
+        remedy=(
+            f"supply the library the frontier is traced over. The concept layer's difference "
+            f"dictionary produces one, and any bank of binary predicates with a cost each will do "
+            f"so long as it is fitted to the same responses these scores were computed on; "
+            f"`measure.indices.legibility.legibility_frontier` then takes it unchanged. This run "
+            f"carries {len(channels)} score channel "
+            f"({', '.join(channels) or 'none'}) and {len(features)} recorded feature "
+            f"({', '.join(features) or 'none'}), and a library built out of either is the reward "
+            f"under predicate names: it fits itself, so the knee lands at one predicate and the "
+            f"tacit fraction at zero whatever the grader is doing."
+        ),
+        trajectories=n_traj,
+        score_channels=channels,
+        recorded_features=list(features),
+    )
+
+
+_ACCESS_REMEDY = (
+    "open a run written by the recorder with the grader's scores captured. S10 needs no activations: "
+    "the frontier is a least-squares fit of predicates to scores, and both live at RECORD access."
+)
+
+
+__all__ = ["RETYPE", "build_spec", "analyze", "read"]

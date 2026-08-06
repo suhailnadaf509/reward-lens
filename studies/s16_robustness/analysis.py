@@ -32,8 +32,10 @@ import numpy as np
 
 from reward_lens.core.evidence import make_evidence
 from reward_lens.core.provenance import Provenance
-from reward_lens.core.types import GaugeStatus, SubjectRef
+from reward_lens.core.reading import Reading
+from reward_lens.core.types import Access, Component, GaugeStatus, SubjectRef
 from reward_lens.measure.indices import eval_awareness_probe
+from reward_lens.record.schema import Run
 from reward_lens.stats import roc_pr
 from reward_lens.studies.spec import (
     Hypothesis,
@@ -43,6 +45,7 @@ from reward_lens.studies.spec import (
     StudySpec,
     SubjectQuery,
 )
+from studies._retype import MetricSpec, ScienceRetype, count_trajectories
 
 _VERSION = "1.0"
 
@@ -276,4 +279,132 @@ def analyze(run) -> StudyResult:
     )
 
 
-__all__ = ["build_spec", "analyze"]
+# ---------------------------------------------------------------------------
+# The retype: S16 on the kernel
+# ---------------------------------------------------------------------------
+
+RETYPE = ScienceRetype(
+    science="s16_robustness",
+    spec=build_spec(),
+    headline="grader.eval_awareness",
+    destination=(
+        "grader.eval_awareness, which ships as measure/indices/eval_awareness.py and whose "
+        "registered definition is this study's H1 word for word, and grader.concept_dose_slope for "
+        "the causal half. grader.robustness_snr is the other half of this row and no frozen metric "
+        "reaches it: it is a paraphrase-cluster variance ratio and this study has no paraphrase "
+        "arm. This plan does not close, and the metric it stops on is certified_radius."
+    ),
+    needs={Component.GRADER: Access.FORWARD, Component.RECORD: Access.RECORD},
+    metrics=(
+        MetricSpec(
+            metric="probe_balanced_acc",
+            quantity="grader.eval_awareness",
+            arc="eval-awareness-probe",
+            frame="held-out-mean-difference",
+            source="organism",
+            note=(
+                "the held-out balanced accuracy of a mean-difference probe telling benchmark items "
+                "from organic ones on the grader's activations. The registered definition is that "
+                "sentence, so the binding needs no argument. It runs against a planted separability "
+                "here so the recovery can be checked against the Bayes rate; the probe itself never "
+                "sees the plant."
+            ),
+        ),
+        MetricSpec(
+            metric="delta_r_per_steer",
+            quantity="grader.concept_dose_slope",
+            arc="recognition-inflation",
+            arm="steer-along-eval-axis",
+            source="organism",
+            note=(
+                "the reward change per unit of steering along the recovered eval-awareness "
+                "direction, which is grader.concept_dose_slope's unit exactly: reward per unit "
+                "steer, raw. Presence of the information and use of it are different claims and "
+                "this is the second one, which is why it is a separate id from the probe accuracy "
+                "rather than a second frame on it. It needs a direction to push along and a model "
+                "to push, so a record answers neither half."
+            ),
+        ),
+        MetricSpec(
+            metric="certified_radius",
+            arc="certified-radius",
+            source="gated",
+            gap=(
+                "the largest perturbation a response can absorb before its reward ranking is no "
+                "longer guaranteed to hold. Unit: a norm in the grader's activation space, so "
+                "`effect` on the substrate's own scale rather than a reward unit. Invariance: "
+                "repr.basis, invariant, because a shared orthogonal map leaves an L2 radius alone. "
+                "Nothing registered fits. substrate.lod and substrate.loq are the nearest in "
+                "dimension and they are detection limits on an effect axis, the smallest change "
+                "that can be seen, where this is the largest change that can be tolerated: same "
+                "units, opposite question, and binding across them would license reading a "
+                "detection floor as a robustness guarantee. intervention.erasure_cost is in "
+                "percentage points of a downstream metric. Recommend registering "
+                "grader.certified_radius. The arm is gated on the interventions certify path in any "
+                "case, so the id is what is owed and not the arithmetic."
+            ),
+        ),
+        MetricSpec(
+            metric="real_probe_balanced_acc",
+            quantity="grader.eval_awareness",
+            arc="production-probe",
+            dataset="production-grader",
+            source="gated",
+            note=(
+                "the same probe on a production reward model over real benchmark and organic "
+                "corpora. The instrument is unchanged and what is missing is the population, which "
+                "is why this is a dataset on the same id rather than a second one."
+            ),
+        ),
+    ),
+    arc_requires={
+        "recognition-inflation": ("eval-awareness-probe",),
+        "production-probe": ("eval-awareness-probe",),
+    },
+)
+
+
+def read(run: Run) -> Reading:
+    """S16 against a real training record: both halves probe the grader, not the numbers it returned.
+
+    Eval-awareness is the held-out accuracy of a linear probe on the grader's activations, and the
+    inflation half steers along the direction that probe recovers and reads the reward back. At
+    RECORD access there are the scores the grader produced and none of the vectors it produced them
+    from, so neither half has an input. Granting FORWARD is what makes this run answerable, and the
+    remedy says so rather than sending the reader upstream.
+
+    Scope limit, three lines in: the record's own group structure is not a stand-in for the
+    paraphrase clusters grader.robustness_snr is defined over. Inside a GRPO group the prompt is
+    identical and the completions differ, so the within-group reward variance is the signal the
+    optimiser trains on, not the noise a robustness SNR divides by. The same arithmetic on the two
+    reads high where it should read low, which is why the number is refused rather than reported
+    with a caveat.
+    """
+    if (refusal := RETYPE.access_refusal(run, remedy=_ACCESS_REMEDY)) is not None:
+        return refusal
+
+    n_traj = count_trajectories(run)
+    return RETYPE.incomplete(
+        field="benchmark-versus-organic label on the scored items",
+        subject=f"all {n_traj} trajectories of run {run.id}",
+        remedy=(
+            "the activations are readable now and the label is what is missing. Mark each scored "
+            "item as benchmark-shaped or organic and attach it as a trajectory label, or score two "
+            "corpora you already know apart and record which is which; "
+            "`measure.indices.eval_awareness_probe` takes the activations and that label and needs "
+            "nothing further. A probe trained on a label the record does not carry is a clustering, "
+            "and a clustering has no held-out accuracy to report."
+        ),
+        trajectories=n_traj,
+    )
+
+
+_ACCESS_REMEDY = (
+    "grant FORWARD on the grader and re-run the scored items through it so the activations are "
+    "captured, then supply a benchmark-versus-organic label for them. The steering half also needs "
+    "MUTATE, because the dose slope is read by pushing the residual along the recovered direction "
+    "and scoring again; without it the probe accuracy is reportable and the inflation is not."
+)
+
+
+__all__ = ["RETYPE", "build_spec", "analyze", "read"]

@@ -29,7 +29,7 @@ Two arms are gated on subsystems that do not exist on CPU and are recorded as
 inconclusive-because-gated with the exact requirement:
 
 - the kinship arm (the policy-grader kinship coefficient ``kappa``) needs the controlled sibling base
-  population (``organisms.kinship_organism`` is a marked stub for the GPU build of DESIGN section 4.5)
+  population (``organisms.kinship_organism`` is a marked stub for the GPU build)
   and a ``reward_lens.loops.kinship`` module that is not yet built.
 - the weak-to-strong arm (the generalization coefficients ``alpha`` and ``gamma``) needs the same
   base population and a real RL loop, so it is GPU-gated.
@@ -44,7 +44,12 @@ import numpy as np
 
 from reward_lens.core.evidence import Evidence, Uncertainty, make_evidence
 from reward_lens.core.provenance import Provenance
-from reward_lens.core.types import GaugeStatus, SubjectRef
+from reward_lens.core.reading import Reading, Refusal
+from reward_lens.core.types import Access, Component, GaugeStatus, SubjectRef
+from reward_lens.measure.base import Context
+from reward_lens.monitor._base import channels_of
+from reward_lens.monitor.cusum import DetectionDelay
+from reward_lens.record.schema import Run
 from reward_lens.studies.spec import (
     Hypothesis,
     KillCriterion,
@@ -53,6 +58,7 @@ from reward_lens.studies.spec import (
     StudySpec,
     SubjectQuery,
 )
+from studies._retype import MetricSpec, ScienceRetype
 
 _VERSION = "1.0"
 
@@ -259,7 +265,7 @@ def analyze(run) -> StudyResult:
 
     try:
         from reward_lens.loops.recorder import (
-            FeatureBank,
+            DirectionBank,
             RolloutRecorder,
             cusum_changepoint,
             synthetic_hack_rollout,
@@ -318,7 +324,7 @@ def analyze(run) -> StudyResult:
     # -- Experiment B: obfuscation resistance of the w_r-anchored monitor. --
     unpressured, obfuscated, w_r, tell, probe, baseline, mu0 = _obfuscation_rollouts(seed=0)
     if have_recorder:
-        bank = FeatureBank(names=["reward", "tell"], directions=np.stack([w_r, tell]))
+        bank = DirectionBank(names=["reward", "tell"], directions=np.stack([w_r, tell]))
         obf_rec = RolloutRecorder(bank, w_r, baseline)
         for step in obfuscated:
             obf_rec.observe(step, proxy_reward=float(step.mean(axis=0) @ w_r))
@@ -375,7 +381,7 @@ def analyze(run) -> StudyResult:
             subject,
             arm="kinship-kappa",
             needs="the controlled sibling base population (organisms.kinship_organism is a stub for "
-            "the GPU build of DESIGN 4.5) and a reward_lens.loops.kinship module (not built); GPU",
+            "the GPU build) and a reward_lens.loops.kinship module (not built); GPU",
             produces="the policy-grader kinship coefficient kappa and its effect on shared-blind-spot "
             "hacking across kinship-controlled sibling pairs",
         )
@@ -410,4 +416,187 @@ def analyze(run) -> StudyResult:
     return StudyResult(outcomes={}, metrics=metrics, summary=summary)
 
 
-__all__ = ["build_spec", "analyze"]
+# ---------------------------------------------------------------------------
+# The retype: S13 on the kernel
+# ---------------------------------------------------------------------------
+
+RETYPE = ScienceRetype(
+    science="s13_coupling",
+    spec=build_spec(),
+    headline="monitor.detection_delay",
+    destination=(
+        "loops/recorder.py, which is the monitor this study runs, and the monitor series in "
+        "monitor/. The lead time is J2's `monitor.detection_delay` under the opposite sign "
+        "convention, which monitor/cusum.py's `TransitionWindow` already carries both forms of. The "
+        "obfuscation arm is I4's shape (a monitor's signal degrading under pressure against one not "
+        "being optimised against) and I4's two quantities are a curve and a half-life, neither of "
+        "which is a retention contrast, so that metric has no id."
+    ),
+    needs={Component.RECORD: Access.RECORD, Component.GRADER: Access.RECORD},
+    metrics=(
+        MetricSpec(
+            metric="named_lead_time",
+            quantity="monitor.detection_delay",
+            arc="recorder-naming",
+            arm="planted-hack-rollout",
+            source="organism",
+            note=(
+                "the gap between the feature-space onset and the later gold divergence, gated on "
+                "the monitor having named the planted direction. It is J2's detection delay with "
+                "the sign flipped and the origin moved: J2 measures from the transition's 10% "
+                "point and is positive when the alarm is late, this measures back from the gold "
+                "divergence and is positive when the alarm is early, and `TransitionWindow` carries "
+                "both forms on every reading for exactly this reason. **Unit note:** the registered "
+                "quantity is a fraction of the fitted transition window and analyze() reports raw "
+                "steps, because the planted rollout has a known onset and no fitted width. Dividing "
+                "by a width nobody fitted is what the registered unit exists to stop, so the two "
+                "differ by that divisor and the record path below reports the fraction."
+            ),
+        ),
+        MetricSpec(
+            metric="obfuscation_gap",
+            arc="obfuscation",
+            source="organism",
+            gap=(
+                "the retained changepoint magnitude of a monitor anchored in the reward subspace "
+                "minus that of a free-floating probe, both measured as obfuscated-over-unpressured "
+                "on the same rollout under one manipulated variable. Unit: 1, a difference of two "
+                "ratios, support [-1, 1] in practice and unbounded above in principle. Invariance: "
+                "`repr.basis`, invariant, because a change of basis rotates both monitors together "
+                "and a ratio of two CUSUM magnitudes on one channel is unchanged; also invariant "
+                "under `reward.affine`. Nothing registered fits. I4 is the right instrument and its "
+                "two quantities are `monitor.degradation_curve` (AUC per step) and "
+                "`monitor.half_life` (steps); this is neither, it is the contrast between two "
+                "monitors on that curve, which is precisely I4's own declared baseline ('a monitor "
+                "not being optimised against, run in parallel') and has no id. Recommend "
+                "registering `monitor.evasion_resistance` with the definition above, as a third I4 "
+                "quantity. `monitor.half_life` itself is registered with no instrument, so binding "
+                "to it would name an estimator that does not exist."
+            ),
+        ),
+    ),
+    waiting_on=(
+        "I4 (`monitor.degradation_curve`, `monitor.half_life`): registered, no instrument. The "
+        "obfuscation arm is I4's experiment run once rather than as a curve, and the retention "
+        "contrast it reports has no registered quantity of its own."
+    ),
+)
+
+
+def read(run: Run) -> Reading:
+    """S13 against a training record: what the shipped alarm does on it, and why no lead follows.
+
+    Both arms of S13 watch a monitor from inside reward-feature space, and that needs the per-step
+    activations the monitor projects and a gold channel to be early relative to. A finished record
+    carries neither, and no rung of access recovers them after the fact, so the remedy is upstream:
+    attach `loops.recorder` at the tap next time.
+
+    What the record does support is the alarm half, and it is run rather than described. J2's
+    designed CUSUM goes over the recorded reward with the gradient-norm peak beside it as the M3
+    baseline, and J2 refuses to divide by a transition width it could not fit. That refusal is the
+    honest reading of a run with no transition in it, and it is passed through with its numbers.
+
+    Scope limit, three lines in: this reads the reward channel, not a monitor's score. A monitor
+    that was never in the loop cannot be measured degrading under pressure from it, so the
+    obfuscation arm is refused on every record rather than approximated from the reward alone.
+    """
+    if (refusal := RETYPE.access_refusal(run, remedy=_ACCESS_REMEDY)) is not None:
+        return refusal
+
+    channels = channels_of(run, instrument="s13_coupling.read")
+    watched = next((name for name in _WATCHED if name in channels), None)
+    if watched is None:
+        absent = channels.absent.get("reward")
+        return RETYPE.incomplete(
+            field="per-step reward channel to run the alarm over",
+            subject=f"run {run.id} ({channels.n_steps} steps, channels: {channels.names()})",
+            remedy=(
+                "record the per-group reward on every step through the tap, then re-run. Without a "
+                "series there is no changepoint, and with no changepoint there is no delay to "
+                "measure however the monitor is anchored."
+            ),
+            channels=channels.names(),
+            reward_absent=None if absent is None else absent.reason.name,
+        )
+
+    delay = DetectionDelay(channels[watched], gradnorm=channels.present.get("grad_norm")).estimate(
+        Context()
+    )
+    if isinstance(delay, Refusal):
+        return Refusal(
+            instrument="s13_coupling.read",
+            reason=delay.reason,
+            detail=(
+                f"neither arm is answerable from a finished record: the naming arm needs the "
+                f"per-step activations the monitor projects and a gold channel to be early "
+                f"relative to, and the obfuscation arm needs a second run under evasion pressure. "
+                f"The alarm half was run on what the record does carry, and J2 refused it: "
+                f"{delay.detail}"
+            ),
+            remedy=(
+                "attach loops.recorder at the tap so the feature-space projections and a gold probe "
+                "are written next time, which is the only way this record could have answered the "
+                "naming arm. For the alarm alone, supply a TransitionWindow from H4 if you have a "
+                "fitted width for this run, or read the alarm index and the false-alarm rate as "
+                "what they are."
+            ),
+            statistics={
+                "named_lead_time": "refused: no activations and no gold channel in the record",
+                "obfuscation_gap": "refused: one arm recorded, and the contrast needs two",
+                "channels": channels.names(),
+                **delay.statistics,
+            },
+        )
+
+    payload = delay.value
+    delay_windows = float(payload["delay_windows"])
+    return RETYPE.evidence(
+        run,
+        {},
+        measured={"detection_delay": (delay_windows, "monitor.detection_delay")},
+        quantity="monitor.detection_delay",
+        refusals=dict(_STANDING_REFUSALS),
+        summary=(
+            f"J2's designed chart on {watched!r} gives a detection delay of {delay_windows:.4g} "
+            f"transition windows, alarming at index {payload['alarm_index']} against a fitted "
+            f"width of {float(payload['transition_width_steps']):.4g} steps "
+            f"({payload['transition_source']}). Both frozen metrics are refused: this is the "
+            f"alarm's delay against a fitted transition, not a feature-space monitor's lead over "
+            f"gold, and the record carries no second arm to contrast against."
+        ),
+        gauge=GaugeStatus.INVARIANT,
+        channels=channels.names(),
+        watched=watched,
+        n_steps=int(channels.n_steps),
+    )
+
+
+#: The channel the alarm is run over, in the order it is looked for. `reward` is the framework's own
+#: logged mean and `group_mean` is the same quantity aggregated from the recorded groups, which is
+#: what a record written without the framework's log carries.
+_WATCHED = ("reward", "group_mean")
+
+#: Both arms need something no finished record contains, and the two are missing different things.
+_STANDING_REFUSALS = {
+    "named_lead_time": (
+        "the lead is measured from a feature-space onset to a gold divergence. A record carries no "
+        "per-step activation projections and no gold channel, so there is no first onset and no "
+        "second one. Attach loops.recorder at the tap and record a gold probe, or read the lead "
+        "from analyze() on the planted rollout."
+    ),
+    "obfuscation_gap": (
+        "the gap is a contrast between two runs that differ only in evasion pressure, and a record "
+        "is one run. Record the pressured arm as well and compare, or read it from analyze(), where "
+        "the two rollouts share their noise draws so obfuscation is the single manipulated variable."
+    ),
+}
+
+_ACCESS_REMEDY = (
+    "open a run written by the recorder whose per-step reward was captured. S13's record path needs "
+    "no activations at this rung: it runs the designed alarm over a recorded series. The arms that "
+    "do need activations are refused by name whatever the access, because a finished record cannot "
+    "grow them."
+)
+
+
+__all__ = ["RETYPE", "build_spec", "analyze", "read"]

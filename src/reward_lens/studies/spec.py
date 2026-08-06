@@ -1,11 +1,11 @@
-"""Study specifications: the unit of confirmatory work (section 2.14, gate 3, R12).
+"""Study specifications: the unit of confirmatory work.
 
-A Study is data (a spec) plus a thin analysis function, never a subsystem (R9). The spec states
-the hypotheses, each with a registered prediction whose sign and effect predate the run; the
-subjects; the analysis plan; and the kill criteria as schema fields, not prose, so the scoreboard
-can render them and a reviewer can check them (R12). Freezing the spec (section 2.14, ``freeze``)
-hashes it and records the git sha, after which Evidence produced under it is REGISTERED (gate 3),
-and any edit creates a new visible version.
+A Study is data (a spec) plus a thin analysis function, never a subsystem. The spec states the
+hypotheses, each with a registered prediction whose sign and effect predate the run; the subjects;
+the analysis plan; and the kill criteria as schema fields, not prose, so the scoreboard can render
+them and a reviewer can check them. Freezing the spec (``freeze``) hashes it and records the git
+sha, after which Evidence produced under it is REGISTERED, and any edit creates a new visible
+version.
 
 Everything here is a plain, serializable dataclass so the spec can be hashed and stored. The
 analysis is named by a dotted path, not held as a callable, so the frozen content is stable.
@@ -17,13 +17,14 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from reward_lens.core.provenance import Cost
+from reward_lens.studies.void import StudyOutcome, Void
 
 Comparator = Literal[">", "<", ">=", "<=", "==", "!=", "abs>", "abs<"]
 
 
 @dataclass(frozen=True)
 class Prediction:
-    """A registered, checkable prediction (R12).
+    """A registered, checkable prediction.
 
     ``metric`` names the quantity the analysis will compute; ``comparator`` and ``threshold`` state
     the predicted relationship (for example ``metric="spearman_chi_vs_drift", comparator=">",
@@ -66,7 +67,7 @@ class Hypothesis:
 
 @dataclass(frozen=True)
 class KillCriterion:
-    """A schema-fielded kill criterion (R12, section 2.14).
+    """A schema-fielded kill criterion.
 
     If ``metric`` stands in ``comparator`` relation to ``threshold`` after the run, the criterion
     fires and the study produces a first-class negative-result report rather than a hidden failure.
@@ -99,7 +100,7 @@ class SubjectQuery:
 
 @dataclass(frozen=True)
 class StudySpec:
-    """The full specification of a confirmatory study (section 2.14)."""
+    """The full specification of a confirmatory study."""
 
     id: str
     title: str
@@ -154,13 +155,21 @@ class StudySpec:
 
 @dataclass
 class StudyResult:
-    """The outcome of a study run (section 2.14).
+    """The outcome of a study run.
 
-    ``outcomes`` maps each hypothesis id to "confirmed" / "refuted" / "inconclusive"; ``metrics``
-    holds the computed values the predictions and kill criteria were checked against; ``evidence``
-    lists the Evidence ids the study produced (its adjudicating evidence); ``killed`` is True if any
-    kill criterion fired. A study that fired a kill criterion is not a failure; it is a
-    publishable negative result, and this object carries it as first-class data.
+    ``outcomes`` maps each hypothesis id to "confirmed" / "refuted" / "void"; ``metrics`` holds the
+    computed values the predictions and kill criteria were checked against; ``evidence`` lists the
+    Evidence ids the study produced (its adjudicating evidence); ``killed`` is True if any kill
+    criterion fired. A study that fired a kill criterion is not a failure; it is a publishable
+    negative result, and this object carries it as first-class data.
+
+    Three fields exist because a missing metric must not be able to masquerade as a reading.
+    ``voids`` maps a hypothesis or kill-criterion id to the named, remediable reason it could not
+    be adjudicated. ``kill_outcomes`` records "fired" / "passed" / "void" per criterion, so a
+    criterion that could not be evaluated is distinguishable from one that was evaluated and
+    passed; the old runner could not tell those apart and that was the most damaging thing about
+    it. ``outcome`` is the study-level verdict: a study with any void is ``VOID``, and a void study
+    is a work item rather than a result.
     """
 
     outcomes: dict[str, str]
@@ -169,9 +178,12 @@ class StudyResult:
     killed: bool = False
     killed_by: list[str] = field(default_factory=list)
     summary: str = ""
+    voids: dict[str, Void] = field(default_factory=dict)
+    kill_outcomes: dict[str, str] = field(default_factory=dict)
+    outcome: StudyOutcome = StudyOutcome.RESULT
 
 
-Outcome = Literal["confirmed", "refuted", "inconclusive"]
+Outcome = Literal["confirmed", "refuted", "void"]
 
 
 __all__ = [
@@ -182,5 +194,7 @@ __all__ = [
     "SubjectQuery",
     "StudySpec",
     "StudyResult",
+    "StudyOutcome",
     "Outcome",
+    "Void",
 ]

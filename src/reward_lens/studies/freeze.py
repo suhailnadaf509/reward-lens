@@ -1,10 +1,10 @@
-"""Freezing a study: gate 3 made mechanical (section 2.14).
+"""Freezing a study: preregistration made mechanical.
 
 Freezing hashes the spec (hypotheses, predictions, analysis plan, kill criteria) and records the
 git commit that was current when it happened. The resulting StudyID, ``study:name@vN#hash``, is
 what stamps every Evidence the study produces as REGISTERED. The point is temporal: a prediction
 that is hashed before the run cannot be edited after seeing the data without producing a new,
-visibly different study version (I4). This is the corpus's preregistration discipline turned into
+visibly different study version. This is the corpus's preregistration discipline turned into
 a content hash.
 """
 
@@ -20,7 +20,7 @@ from reward_lens.studies.spec import StudySpec
 
 @dataclass(frozen=True)
 class FrozenStudy:
-    """A study spec frozen at a point in time (section 2.14).
+    """A study spec frozen at a point in time.
 
     Carries the spec, the derived StudyID, the git sha of the code that froze it, the freeze
     timestamp, and the spec hash. A dirty working tree is visible in ``git_sha`` (it carries a
@@ -43,7 +43,7 @@ class FrozenStudy:
 def freeze(
     spec: StudySpec, repo_dir: str | None = None, frozen_at: str | None = None
 ) -> FrozenStudy:
-    """Freeze a study spec, computing its StudyID and recording the git sha (gate 3).
+    """Freeze a study spec, computing its StudyID and recording the git sha.
 
     The StudyID is ``study:{spec.id}@v{spec.version}#{hash8}`` where the hash is the first 8 hex
     characters of the spec's content hash. Two specs that differ in any registered field (a
