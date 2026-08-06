@@ -57,13 +57,6 @@ jobs:
           pip install -r docs/requirements-docs.txt
           pip install -e ".[verifier]"
 
-      - name: Check the README against the code that generates it
-        # The front page quotes a runnable example and the catalogue counts. Both are generated
-        # from the registry and from an actual run of the example, so this fails if the page and
-        # the code have come apart. It runs here rather than in tests.yml because it needs the
-        # `[verifier]` extra that the step above already installed.
-        run: python scripts/gen_readme.py --check
-
       - name: Build site with MkDocs
         # --strict is intentional: the site builds with zero warnings under
         # --strict (verified locally), so broken internal links or missing nav

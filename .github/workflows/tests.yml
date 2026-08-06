@@ -153,9 +153,18 @@ jobs:
           python-version: "3.12"
           cache: "pip"
       - name: Install package
+        # `[verifier]` is pure Python and adds no compiled dependency. It is here because the
+        # README check below runs the card-plan example for real, and that example imports
+        # `reward_lens.verifier`.
         run: |
           python -m pip install --upgrade pip
-          pip install -e .
+          pip install -e ".[verifier]"
+      # The front page quotes a runnable example and the catalogue counts, both generated from
+      # the registry and from an actual run of that example. This fails if the page and the code
+      # have come apart. `docs.yml` would be the natural home, but that workflow is disabled, so a
+      # check placed there would never run.
+      - name: Check the README against the code that generates it
+        run: python scripts/gen_readme.py --check
       # A number in a published page is either traceable to an evidence id or
       # labelled illustrative in the same sentence. The five excluded pages are
       # the ones that teach the claim syntax: their example tags are
