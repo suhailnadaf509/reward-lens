@@ -1,4 +1,4 @@
-"""``MultiObjectiveGeometry`` (E18): the geometry of a multi-objective reward head (section 2.8).
+"""``MultiObjectiveGeometry`` (E18): the geometry of a multi-objective reward head.
 
 A multi-objective reward model such as ArmoRM carries one reward direction per objective (nineteen
 for ArmoRM). The geometry of those directions, the pairwise cosines between objectives, is what tells
@@ -20,9 +20,19 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from reward_lens.core.envelope import EnvelopeSpec, RegimeCondition
 from reward_lens.core.errors import CapabilityError
-from reward_lens.core.types import Capability, GaugeStatus
+from reward_lens.core.invariance import INVARIANT
+from reward_lens.core.types import (
+    Access,
+    AccessMatrix,
+    Capability,
+    Component,
+    GaugeStatus,
+    Substrate,
+)
 from reward_lens.measure.base import BaseObservable, Context
+from reward_lens.measure.battery._common import GRADER_STUDY_PHASES, MEASURED_BY
 
 if TYPE_CHECKING:
     from reward_lens.core.evidence import Evidence
@@ -59,16 +69,53 @@ class MultiObjectiveGeometry(BaseObservable):
     Requires a linear readout with more than one objective row. Marked RAW_ONLY because the cosines
     are in raw residual-stream coordinates; they are a single-model internal geometry and are not
     cross-model comparable without a frame.
+
+    What it cannot do. This is the geometry of the head's weights and nothing else. Two objectives
+    whose directions are nearly orthogonal can still be perfectly correlated in practice if the
+    activations the model produces occupy a subspace where both load the same way, and this
+    instrument never looks at an activation, so it cannot see that. The conflict threshold of -0.3
+    is a reporting convention and the count beside it inherits that.
     """
 
     name = "MultiObjectiveGeometry"
     version = "1.0"
-    requires = Capability.LINEAR_READOUT
+    capabilities = Capability.LINEAR_READOUT
     gauge_status = GaugeStatus.RAW_ONLY
     faithful_to = "E18 ArmoRM 19x19 objective geometry"
     deviations = (
         "reads the per-objective (criterion) readouts directly and never the row-mean composite; "
         "cosines are raw-coordinate (RAW_ONLY), meaningful within one model only",
+    )
+
+    # -- the declarations --------------------------------------------------
+    quantity = "grader.objective_geometry"
+    requires: AccessMatrix = {Component.GRADER: Access.FORWARD}
+    #: NEURAL_SCALAR only. A multi-objective head is a matrix of criterion rows; a GenRM has a
+    #: verdict direction and no per-criterion weights, and a PROCEDURAL rubric ensemble has criteria
+    #: but no vectors at all, so neither has an objective geometry to read.
+    substrates = frozenset({Substrate.NEURAL_SCALAR})
+    phases = GRADER_STUDY_PHASES
+    envelope = EnvelopeSpec(
+        requires=frozenset({RegimeCondition.STATIONARY_GRADER}),
+        measured_by=MEASURED_BY,
+        on_violation="refuse",
+    )
+    #: A cosine between two readouts is unchanged when the same orthogonal map acts on both.
+    #: ``GaugeStatus.RAW_ONLY`` above is the separate and still-true claim that two different
+    #: models' bases have no correspondence, which gate 2 enforces with a frame.
+    invariance = "repr.basis"
+    invariance_relation = INVARIANT
+    baselines = ("baseline.random_direction_pair", "baseline.row_mean_composite")
+    rung = 0
+    #: An `IncrementalValidity` is required on every white-box reading and this
+    #: instrument cannot produce one. The id is checkable and the prose is the argument.
+    incremental_exemption = (
+        "NO_PER_ITEM_VERDICT",
+        "the reading is the cosine matrix of the head's own objective rows. It never looks at an "
+        "activation and never looks at an item, so there is nothing per-item to score and no "
+        "black-box rival to a statement about weight geometry. This instrument declares "
+        "LINEAR_READOUT only, so the shipped WHITE_BOX mask does not currently reach it; the "
+        "exemption is declared anyway so that widening the mask does not silently open a hole.",
     )
 
     def measure(self, ctx: Context) -> "Evidence":

@@ -1,4 +1,4 @@
-"""``PatchGrid`` (E15): causal patch effects across components and heads (section 2.8, 2.6).
+"""``PatchGrid`` (E15): causal patch effects across components and heads.
 
 Attribution is observational: a component can carry a large contribution yet not be causally necessary
 because other components compensate. Activation patching answers the causal question by splicing a
@@ -23,10 +23,18 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
-from reward_lens.core.types import Capability, GaugeStatus, Site
+from reward_lens.core.envelope import EnvelopeSpec, RegimeCondition
+from reward_lens.core.invariance import INVARIANT
+from reward_lens.core.types import Access, AccessMatrix, Capability, Component, GaugeStatus, Site
 from reward_lens.interventions.patch import ComponentPatch, HeadPatch, run_patched_scores
 from reward_lens.measure.base import BaseObservable, Context
-from reward_lens.measure.battery._common import capture_sites, pair_sides
+from reward_lens.measure.battery._common import (
+    GRADER_STUDY_PHASES,
+    MEASURED_BY,
+    NEURAL_SUBSTRATES,
+    capture_sites,
+    pair_sides,
+)
 
 if TYPE_CHECKING:
     from reward_lens.core.evidence import Evidence
@@ -38,16 +46,56 @@ class PatchGrid(BaseObservable):
     ``granularity`` is ``"component"`` (attention and MLP sublayers, the default) or ``"head"`` (every
     attention head). Requires activation capture and a linear readout. Patch effects are in reward
     units and are gauge-invariant within a signal.
+
+    What it cannot do. A patch tests necessity and says nothing about sufficiency, and there is no
+    rescue arm here: nothing puts the activation back and checks the differential returns, so an
+    off-manifold artifact and a real causal effect look identical in this payload. The patched
+    activation comes from the rejected side of the same pair, which makes the source distribution
+    close but not matched, so a large effect at a component the two sides differ on for unrelated
+    reasons is a confound this instrument cannot separate. The envelope requires ``ABOVE_LOD``
+    because every cell of the grid is a difference of two rewards and the grid is large: at 32
+    components the largest of 32 noise draws looks like a finding.
     """
 
     name = "PatchGrid"
     version = "1.0"
-    requires = Capability.ACTIVATIONS | Capability.LINEAR_READOUT
+    capabilities = Capability.ACTIVATIONS | Capability.LINEAR_READOUT
     gauge_status = GaugeStatus.INVARIANT
     faithful_to = "E15 head path patching / activation patching"
     deviations = (
         "noising convention (patch the rejected activation into the chosen forward); patched reward "
         "is the fp32 head projection, which matches the native head to head-in-fp32 tolerance",
+    )
+
+    # -- the declarations --------------------------------------------------
+    quantity = "grader.component_patch_effect"
+    requires: AccessMatrix = {Component.GRADER: Access.FORWARD | Access.MUTATE}
+    substrates = NEURAL_SUBSTRATES
+    phases = GRADER_STUDY_PHASES
+    envelope = EnvelopeSpec(
+        requires=frozenset({RegimeCondition.STATIONARY_GRADER, RegimeCondition.ABOVE_LOD}),
+        measured_by=MEASURED_BY,
+        on_violation="refuse",
+    )
+    #: The effect is a difference of two reward projections, both inner products against the same
+    #: readout, so a shared orthogonal change of basis leaves every cell of the grid unchanged.
+    invariance = "repr.basis"
+    invariance_relation = INVARIANT
+    baselines = ("baseline.self_patch", "baseline.random_component_patch")
+    rung = 0
+    #: An `IncrementalValidity` is required on every white-box reading and this
+    #: instrument cannot produce one. The id is checkable and the prose is the argument.
+    incremental_exemption = (
+        "NO_SUBJECT_WITH_SIGNAL",
+        "each cell is a per-pair causal effect, so per-item numbers exist, but a patch effect is a "
+        "statement about necessity rather than a verdict about which side wins, and the shared task "
+        "would have to be the preference decision the effects are computed against. That task has no "
+        "subject here: the only offline grader in this build is `signals.from_tiny`, a randomly "
+        "initialised two-layer LlamaForSequenceClassification. Measured on the 84-pair diagnostic set "
+        "unfolded to 168 items, it scores AUROC 0.5568 against 0.6892 for the TF-IDF baseline, so the "
+        "white-box side of the comparison has no signal to contribute and the four numbers would "
+        "describe the fixture rather than the instrument. The grid also costs one forward per "
+        "component per pair, so a record on a real grader is a GPU decision rather than a free one.",
     )
 
     def __init__(self, granularity: str = "component") -> None:

@@ -1,4 +1,4 @@
-"""``DirectLinearAttribution`` (E03/E04): per-component reward decomposition (section 2.8.2).
+"""``DirectLinearAttribution`` (E03/E04): per-component reward decomposition.
 
 Because the residual stream is a sum of component outputs and the reward is a linear read of the final
 residual, the reward differential of a preference pair decomposes exactly into signed per-component
@@ -21,9 +21,14 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 from reward_lens.attribution.dla import component_reward_contributions
-from reward_lens.core.types import Capability, GaugeStatus, Site
+from reward_lens.core.envelope import EnvelopeSpec, RegimeCondition
+from reward_lens.core.invariance import INVARIANT
+from reward_lens.core.types import Access, AccessMatrix, Capability, Component, GaugeStatus, Site
 from reward_lens.measure.base import BaseObservable, Context
 from reward_lens.measure.battery._common import (
+    GRADER_STUDY_PHASES,
+    MEASURED_BY,
+    NEURAL_SUBSTRATES,
     capture_sites,
     component_sites,
     pair_sides,
@@ -56,16 +61,54 @@ class DirectLinearAttribution(BaseObservable):
     to the reward differential; the invariant scientific summary is their ranking, which E04 compares
     to the patching ranking. Marked INVARIANT because the reward is gauge-fixed by the head and the
     faithfulness statistic is rank based.
+
+    What it cannot do. This is observational. A component can carry a large contribution and not be
+    causally necessary, because the components that would compensate for it are still running; that
+    is the distinction ``PatchGrid`` exists to measure and the reason E04 correlates the two
+    rankings rather than treating either as the answer. The envelope requires ``ABOVE_LOD`` because
+    the decomposition is exact by construction: it will always sum to the differential, including
+    when that differential is entirely the grader disagreeing with itself.
     """
 
     name = "DirectLinearAttribution"
     version = "1.0"
-    requires = Capability.ACTIVATIONS | Capability.LINEAR_READOUT
+    capabilities = Capability.ACTIVATIONS | Capability.LINEAR_READOUT
     gauge_status = GaugeStatus.INVARIANT
     faithful_to = "E03/E04 direct linear attribution"
     deviations = (
         "raw contributions are in reward units (reward-scale dependent); the invariant summary is "
         "the component ranking, which is what E04's Spearman faithfulness uses",
+    )
+
+    # -- the declarations --------------------------------------------------
+    quantity = "grader.component_attribution"
+    requires: AccessMatrix = {Component.GRADER: Access.FORWARD}
+    substrates = NEURAL_SUBSTRATES
+    phases = GRADER_STUDY_PHASES
+    envelope = EnvelopeSpec(
+        requires=frozenset({RegimeCondition.STATIONARY_GRADER, RegimeCondition.ABOVE_LOD}),
+        measured_by=MEASURED_BY,
+        on_violation="refuse",
+    )
+    #: Each contribution is an inner product of a residual component with the readout, so a shared
+    #: orthogonal change of basis leaves every one of them unchanged, and the ranking with them.
+    invariance = "repr.basis"
+    invariance_relation = INVARIANT
+    baselines = ("baseline.random_direction", "baseline.uniform_attribution")
+    rung = 0
+    #: An `IncrementalValidity` is required on every white-box reading and this
+    #: instrument cannot produce one. The id is checkable and the prose is the argument.
+    incremental_exemption = (
+        "NO_SUBJECT_WITH_SIGNAL",
+        "the per-component differential is a genuine per-pair quantity and the chosen/rejected label "
+        "is real and not produced here, so this instrument can carry a record. What it cannot get is "
+        "a subject: the only offline grader in this build is `signals.from_tiny`, a randomly "
+        "initialised two-layer LlamaForSequenceClassification. Measured on the 84-pair diagnostic set "
+        "unfolded to 168 items, it scores AUROC 0.5568 against 0.6892 for the TF-IDF baseline, so the "
+        "white-box side of the comparison has no signal to contribute and the four numbers would "
+        "describe the fixture rather than the instrument. This needs a trained reward model on a "
+        "preference set whose lineages are declared, at which point the shared task is the unfolded "
+        "preference decision and the baselines read the completion text.",
     )
 
     def measure(self, ctx: Context) -> "Evidence":

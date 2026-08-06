@@ -1,4 +1,4 @@
-"""``CircuitJaccard`` (E05): how much two models' reward circuits overlap (section 2.8).
+"""``CircuitJaccard`` (E05): how much two models' reward circuits overlap.
 
 If two reward models attend to the same components to form a preference, their circuits overlap; if
 they route the preference through different components, they do not, even when they agree on the
@@ -20,9 +20,16 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from reward_lens.core.envelope import EnvelopeSpec, RegimeCondition
 from reward_lens.core.errors import CapabilityError
-from reward_lens.core.types import Capability, GaugeStatus
+from reward_lens.core.invariance import INVARIANT
+from reward_lens.core.types import Access, AccessMatrix, Capability, Component, GaugeStatus
 from reward_lens.measure.base import BaseObservable, Context, run
+from reward_lens.measure.battery._common import (
+    GRADER_STUDY_PHASES,
+    MEASURED_BY,
+    NEURAL_SUBSTRATES,
+)
 from reward_lens.measure.battery.dla import DirectLinearAttribution
 
 if TYPE_CHECKING:
@@ -43,16 +50,51 @@ class CircuitJaccard(BaseObservable):
     the same view. ``top_k`` (from ``ctx.regime['top_k']``, default 5) sets the circuit size. Requires
     activation capture and a linear readout. INVARIANT: the overlap is a set membership over named
     components, not a covariant geometric quantity.
+
+    What it cannot do. Components are matched by name, so the two models must share an architecture
+    and a layer count; nothing here checks that, and a mismatch produces a small Jaccard that reads
+    as a scientific result rather than as a comparison that should not have been made. The overlap
+    is a hard top-k cut, so two models whose contributions agree closely but straddle the cut at
+    rank k report disagreement, and the payload carries no sensitivity to k. The declaration of
+    ``LINEAR_READOUT`` is kept because this instrument runs ``DirectLinearAttribution`` twice and
+    that reaches the readout vector; the requirement is transitive, not decorative.
     """
 
     name = "CircuitJaccard"
     version = "1.0"
-    requires = Capability.ACTIVATIONS | Capability.LINEAR_READOUT
+    capabilities = Capability.ACTIVATIONS | Capability.LINEAR_READOUT
     gauge_status = GaugeStatus.INVARIANT
     faithful_to = "E05 circuit overlap"
     deviations = (
         "overlap is the Jaccard of the top-k components by mean absolute DLA contribution; a v1 "
         "circuit-Jaccard did not exist, so this is a new construction on the same attribution",
+    )
+
+    # -- the declarations --------------------------------------------------
+    quantity = "grader.circuit_overlap"
+    requires: AccessMatrix = {Component.GRADER: Access.FORWARD}
+    substrates = NEURAL_SUBSTRATES
+    phases = GRADER_STUDY_PHASES
+    envelope = EnvelopeSpec(
+        requires=frozenset({RegimeCondition.STATIONARY_GRADER, RegimeCondition.ABOVE_LOD}),
+        measured_by=MEASURED_BY,
+        on_violation="refuse",
+    )
+    #: The reading is a set overlap over component *names*, so no change of representation basis
+    #: touches it; the attribution it ranks on is itself basis-invariant.
+    invariance = "repr.basis"
+    invariance_relation = INVARIANT
+    baselines = ("baseline.random_top_k", "baseline.same_model_split_half")
+    rung = 0
+    #: An `IncrementalValidity` is required on every white-box reading and this
+    #: instrument cannot produce one. The id is checkable and the prose is the argument.
+    incremental_exemption = (
+        "NO_PER_ITEM_VERDICT",
+        "the reading is one Jaccard index over two models' top-k component sets. There is a single "
+        "number per model pair and no per-item verdict in it, so there is no error vector to "
+        "correlate: an error needs an item the instrument can be right or wrong about, and nothing in "
+        "the data says which components two circuits ought to have shared. No black-box method "
+        "produces a rival circuit overlap either, so there is no competitor to be incremental over.",
     )
 
     def measure(self, ctx: Context) -> "Evidence":

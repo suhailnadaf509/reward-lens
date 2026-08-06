@@ -1,4 +1,4 @@
-"""``PromptSNR`` (E16): the reward's discriminative signal against its noise floor (section 2.8).
+"""``PromptSNR`` (E16): the reward's discriminative signal against its noise floor.
 
 A reward model is only useful where its preference signal rises above the noise in its own scores. E16
 frames this as a signal-to-noise ratio: the signal is how strongly the reward separates chosen from
@@ -21,8 +21,15 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from reward_lens.core.types import Capability, GaugeStatus
+from reward_lens.core.envelope import EnvelopeSpec, RegimeCondition
+from reward_lens.core.invariance import INVARIANT
+from reward_lens.core.types import Access, AccessMatrix, Capability, Component, GaugeStatus
 from reward_lens.measure.base import BaseObservable, Context
+from reward_lens.measure.battery._common import (
+    ANY_SUBSTRATE,
+    GRADER_STUDY_PHASES,
+    MEASURED_BY,
+)
 
 if TYPE_CHECKING:
     from reward_lens.core.evidence import Evidence
@@ -48,17 +55,44 @@ class PromptSNR(BaseObservable):
 
     Requires only scores. The view is grouped by each pair's ``axis``. INVARIANT (a dimensionless
     power ratio).
+
+    What it cannot do. The noise term is the spread of the reward delta across the stimuli of one
+    axis, which is not the same object E16's ratio is about: E16 drives noise with meaning-preserving
+    paraphrases of a single stimulus, so its denominator is the grader disagreeing with itself,
+    while this denominator also contains real variation between stimuli. That makes this SNR a lower
+    bound on the robustness SNR, not an estimate of it, and the two must not be compared. An axis
+    with no spread returns 0.0 rather than infinity, so a zero here means "degenerate", not "no
+    signal".
     """
 
     name = "PromptSNR"
     version = "1.0"
-    requires = Capability.SCORES
+    capabilities = Capability.SCORES
     gauge_status = GaugeStatus.INVARIANT
     faithful_to = "E16 prompt robustness SNR"
     deviations = (
         "signal is mean(delta)^2, noise is var(delta) across the axis's stimuli; the full E16 drives "
         "noise with data.corruptions robustness-SNR paraphrases, deferred here to a working port",
     )
+
+    # -- the declarations --------------------------------------------------
+    quantity = "grader.prompt_snr"
+    requires: AccessMatrix = {Component.GRADER: Access.QUERY}
+    substrates = ANY_SUBSTRATE
+    phases = GRADER_STUDY_PHASES
+    envelope = EnvelopeSpec(
+        requires=frozenset(
+            {RegimeCondition.STATIONARY_GRADER, RegimeCondition.GROUP_NONDEGENERATE}
+        ),
+        measured_by=MEASURED_BY,
+        on_violation="refuse",
+    )
+    #: Numerator and denominator are both quadratic in the same deltas, so an affine rescaling of
+    #: the reward cancels and the ratio does not move.
+    invariance = "reward.affine"
+    invariance_relation = INVARIANT
+    baselines = ("baseline.shuffled_axis_labels", "baseline.length")
+    rung = 0
 
     def measure(self, ctx: Context) -> "Evidence":
         signal = ctx.signal

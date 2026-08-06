@@ -1,4 +1,4 @@
-"""Shared helpers for the measurement battery (section 2.8).
+"""Shared helpers for the measurement battery.
 
 The battery Observables read a reward signal's internals on preference pairs, so they all need the
 same few operations: split a view of pairs into a chosen side and a rejected side, capture activations
@@ -14,9 +14,11 @@ port-faithfulness checkable.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from types import MappingProxyType
+from typing import TYPE_CHECKING, Any, Mapping
 
-from reward_lens.core.types import Site
+from reward_lens.core.envelope import RegimeCondition
+from reward_lens.core.types import Phase, Site, Substrate
 from reward_lens.runtime.backend import CaptureSpec
 from reward_lens.signals.base import PositionSpec
 
@@ -24,6 +26,51 @@ if TYPE_CHECKING:
     import torch
 
     from reward_lens.signals.classifier import ClassifierRM
+
+
+# ---------------------------------------------------------------------------
+# The declarations the battery shares
+# ---------------------------------------------------------------------------
+
+#: How each regime condition this battery depends on is measured, named by quantity id. Every
+#: condition an instrument puts in ``requires`` has to appear here or `EnvelopeSpec` refuses to be
+#: constructed, so this table is what decides whether a precondition is checkable at all rather
+#: than decorative.
+#:
+#: ``STATIONARY_GRADER`` is measured by the check standard (catalogue J5): a fixed probe set
+#: re-scored across the measurement window, whose drift is direct evidence that the grader moved
+#: while it was being measured. ``GROUP_NONDEGENERATE`` is measured by the degenerate-group
+#: fraction (E2), which counts the groups with no score spread to read a contrast from.
+#: ``ABOVE_LOD`` is measured by the substrate limit of detection (M1), the grader's disagreement
+#: with itself, which is the floor a patch effect or a reward delta has to clear before it is a
+#: measurement rather than noise. ``LINEAR_RESPONSE`` is measured by the selection-explained
+#: fraction Lambda (F2), which is the quantity named for that condition.
+#:
+#: The same table appears in ``measure/indices/_support.py``. It is duplicated rather than shared
+#: because ``measure.battery`` requires the white-box extra at import and the index library is
+#: torch-free by contract, so an import from battery into indices would install a dependency the
+#: index library exists without.
+MEASURED_BY: Mapping[RegimeCondition, str] = MappingProxyType(
+    {
+        RegimeCondition.STATIONARY_GRADER: "monitor.check_standard_drift",
+        RegimeCondition.GROUP_NONDEGENERATE: "estimator.degenerate_fraction",
+        RegimeCondition.ABOVE_LOD: "substrate.lod",
+        RegimeCondition.LINEAR_RESPONSE: "selection.explained_fraction",
+    }
+)
+
+#: The substrates with weights to read. An instrument that captures a residual stream or projects
+#: onto a readout vector applies to these two and to nothing else: a PROGRAM grader has source code
+#: where these have activations, and asking it for a layer is a category error, not a hard case.
+NEURAL_SUBSTRATES = frozenset({Substrate.NEURAL_SCALAR, Substrate.NEURAL_GEN})
+
+#: Every substrate. What an instrument that reads only scores applies to.
+ANY_SUBSTRATE = frozenset(Substrate)
+
+#: When a grader study can be read. These instruments need full forward passes over a diagnostic
+#: view, so they run before optimisation starts or after it finishes. They are not on the hot path,
+#: and against a DEPLOYED artifact the grader is no longer reachable at all.
+GRADER_STUDY_PHASES = frozenset({Phase.PRE_RUN, Phase.POST_RUN})
 
 
 def resid_sites(n_layers: int) -> tuple[Site, ...]:
@@ -111,6 +158,10 @@ def reward_direction(signal: "ClassifierRM", readout: str) -> "torch.Tensor":
 
 
 __all__ = [
+    "ANY_SUBSTRATE",
+    "GRADER_STUDY_PHASES",
+    "MEASURED_BY",
+    "NEURAL_SUBSTRATES",
     "resid_sites",
     "component_sites",
     "head_sites",

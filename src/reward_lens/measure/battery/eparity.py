@@ -1,4 +1,4 @@
-"""E-parity recompute wiring from v1 activation caches (section 4.3.2).
+"""E-parity recompute wiring from v1 activation caches.
 
 The trust anchor for v3 is that it reproduces v1's verified-clean headline numbers from the cached
 activations before it is trusted to produce new ones. The v1 campaign left its final-token activations

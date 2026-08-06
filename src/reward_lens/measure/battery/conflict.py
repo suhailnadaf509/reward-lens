@@ -1,4 +1,4 @@
-"""``ConflictMatrix`` (E09): the geometry of competing reward terms (section 2.8).
+"""``ConflictMatrix`` (E09): the geometry of competing reward terms.
 
 Different quality axes (helpfulness, verbosity, formatting, ...) each define a direction in activation
 space, estimated as the mean chosen-minus-rejected difference for that axis. Their pairwise cosines
@@ -19,10 +19,17 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from reward_lens.core.envelope import EnvelopeSpec, RegimeCondition
 from reward_lens.core.errors import CapabilityError
-from reward_lens.core.types import Capability, GaugeStatus, Site
+from reward_lens.core.invariance import INVARIANT
+from reward_lens.core.types import Access, AccessMatrix, Capability, Component, GaugeStatus, Site
 from reward_lens.measure.base import BaseObservable, Context
-from reward_lens.measure.battery._common import capture_sites
+from reward_lens.measure.battery._common import (
+    GRADER_STUDY_PHASES,
+    MEASURED_BY,
+    NEURAL_SUBSTRATES,
+    capture_sites,
+)
 from reward_lens.measure.battery.geometry import cosine_matrix
 
 if TYPE_CHECKING:
@@ -32,18 +39,58 @@ if TYPE_CHECKING:
 class ConflictMatrix(BaseObservable):
     """Inter-axis reward-term conflict geometry (E09).
 
-    Requires activation capture and a linear readout. The view must span at least two axes. Marked
-    RAW_ONLY because the term cosines are in raw residual-stream coordinates.
+    Requires activation capture. The view must span at least two axes. Marked RAW_ONLY because the
+    term cosines are in raw residual-stream coordinates.
+
+    What it cannot do. A term direction here is the mean activation difference on an axis, which is
+    a correlational summary of the diagnostic set and not the direction the grader prices: two axes
+    whose stimuli happen to co-vary in the data produce an aligned pair of directions whether or not
+    the reward treats them as one term. The conflict threshold of -0.3 is a reporting convention,
+    not a measurement, and the count beside it inherits that. Nothing here is causal; steering along
+    one direction and reading the other axis is what would make it so.
+
+    This instrument does not declare ``LINEAR_READOUT``. It never reaches a readout vector: the
+    directions come from activation differences at a hardcoded final residual site, and the cosines
+    are computed between those differences. The declaration was dropped after an audit of all
+    fourteen sites in ``measure/``.
     """
 
     name = "ConflictMatrix"
     version = "1.0"
-    requires = Capability.ACTIVATIONS | Capability.LINEAR_READOUT
+    capabilities = Capability.ACTIVATIONS
     gauge_status = GaugeStatus.RAW_ONLY
     faithful_to = "E09 reward-term conflict geometry"
     deviations = (
         "term directions are the mean chosen-minus-rejected difference per axis (unnormalized, as "
         "v1 learned them); cosines are RAW_ONLY (basis-dependent), meaningful within one model",
+    )
+
+    # -- the declarations --------------------------------------------------
+    quantity = "grader.term_conflict"
+    requires: AccessMatrix = {Component.GRADER: Access.FORWARD}
+    substrates = NEURAL_SUBSTRATES
+    phases = GRADER_STUDY_PHASES
+    envelope = EnvelopeSpec(
+        requires=frozenset({RegimeCondition.STATIONARY_GRADER}),
+        measured_by=MEASURED_BY,
+        on_violation="refuse",
+    )
+    #: A cosine between two vectors is unchanged when the same orthogonal map acts on both, and
+    #: `repr.basis` is exactly that map. ``GaugeStatus.RAW_ONLY`` above is a different claim and it
+    #: stands: it says two *different* models' bases have no correspondence, which is a frame
+    #: question gate 2 enforces, not a statement about one model under a change of coordinates.
+    invariance = "repr.basis"
+    invariance_relation = INVARIANT
+    baselines = ("baseline.random_direction_pair", "baseline.shuffled_axis_labels")
+    rung = 0
+    #: An `IncrementalValidity` is required on every white-box reading and this
+    #: instrument cannot produce one. The id is checkable and the prose is the argument.
+    incremental_exemption = (
+        "NO_PER_ITEM_VERDICT",
+        "the reading is a cosine matrix over axes: one number per ordered pair of axes, each computed "
+        "from a mean activation difference over all the pairs on that axis. The per-item structure is "
+        "consumed by the averaging, and no label says which axes ought to conflict, so neither side "
+        "of the comparison has an error vector.",
     )
 
     def measure(self, ctx: Context) -> "Evidence":

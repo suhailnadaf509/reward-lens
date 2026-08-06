@@ -1,4 +1,4 @@
-"""``BiasBattery`` (E06): standardized reward biases with an honest sample size (section 2.8, 2.4.2).
+"""``BiasBattery`` (E06): standardized reward biases with an honest sample size.
 
 A reward bias is a reward difference the grader assigns to a surface change that should not matter:
 more length, more confidence, more markdown. The battery measures, per axis, the standardized effect
@@ -20,8 +20,15 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from reward_lens.core.types import Capability, GaugeStatus
+from reward_lens.core.envelope import EnvelopeSpec, RegimeCondition
+from reward_lens.core.invariance import INVARIANT
+from reward_lens.core.types import Access, AccessMatrix, Capability, Component, GaugeStatus
 from reward_lens.measure.base import BaseObservable, Context
+from reward_lens.measure.battery._common import (
+    ANY_SUBSTRATE,
+    GRADER_STUDY_PHASES,
+    MEASURED_BY,
+)
 from reward_lens.stats.ess import effective_sample_size
 
 if TYPE_CHECKING:
@@ -49,17 +56,47 @@ class BiasBattery(BaseObservable):
 
     Requires only scores. The view is grouped by each pair's ``axis``; each axis reports its reward
     delta effect size and the honest ESS of its seeds. INVARIANT (Cohen's d is standardized).
+
+    What it cannot do. A bias here is a reward difference on an axis the diagnostic set defines, so
+    the reading is only as good as the claim that the two sides of a pair differ on that axis and on
+    nothing else. Nothing in this instrument checks that: a "verbosity" axis whose long side is also
+    better written reports the sum of both effects under one name. Cohen's d has no null attached
+    either, so an axis with four seeds and a d of 0.8 renders identically to one with four hundred;
+    the effective sample size beside it is what a reader has to use, and it is why it is there.
     """
 
     name = "BiasBattery"
     version = "1.0"
-    requires = Capability.SCORES
+    capabilities = Capability.SCORES
     gauge_status = GaugeStatus.INVARIANT
     faithful_to = "E06 reward bias battery"
     deviations = (
         "effect size is one-sample Cohen's d of the chosen-minus-rejected reward delta; the reported "
         "sample size is the lineage-honest ESS (stats.ess), not the raw pair count",
     )
+
+    # -- the declarations --------------------------------------------------
+    quantity = "grader.surface_bias_d"
+    requires: AccessMatrix = {Component.GRADER: Access.QUERY}
+    substrates = ANY_SUBSTRATE
+    phases = GRADER_STUDY_PHASES
+    envelope = EnvelopeSpec(
+        requires=frozenset(
+            {
+                RegimeCondition.STATIONARY_GRADER,
+                RegimeCondition.GROUP_NONDEGENERATE,
+                RegimeCondition.ABOVE_LOD,
+            }
+        ),
+        measured_by=MEASURED_BY,
+        on_violation="refuse",
+    )
+    #: Cohen's d is a mean over a standard deviation of the same deltas, so an affine rescaling of
+    #: the reward cancels exactly and the effect size does not move.
+    invariance = "reward.affine"
+    invariance_relation = INVARIANT
+    baselines = ("baseline.length", "baseline.shuffled_axis_labels")
+    rung = 0
 
     def measure(self, ctx: Context) -> "Evidence":
         signal = ctx.signal

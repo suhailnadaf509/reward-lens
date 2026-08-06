@@ -1,8 +1,8 @@
-"""``reward_lens.measure.battery`` — the measurement battery (section 2.8).
+"""``reward_lens.measure.battery`` — the measurement battery.
 
 The battery is v1's primitive corpus, ported behind the frozen ``Observable`` protocol so every
 instrument declares what it requires (R3), how its value transforms under the gauge group, which
-Appendix A / E-report object it instantiates (``faithful_to``), and where it departs from that
+theory object or E-report object it instantiates (``faithful_to``), and where it departs from that
 (``deviations``). Every Observable here runs on any ``RewardSignal`` that declares the required
 capability, returns gated Evidence, and is checked for faithful reproduction of the v1 primitive it
 ports (the E-parity suite) or, where it is a working port of a science the v1 corpus only sketched,
@@ -17,6 +17,10 @@ as Interventions, so a measurement and an intervention never diverge in how they
 """
 
 from __future__ import annotations
+
+from reward_lens.core.extras import require_extra
+
+require_extra("white-box", subsystem="reward_lens.measure.battery")
 
 from reward_lens.measure.battery.bias import BiasBattery
 from reward_lens.measure.battery.circuit import CircuitJaccard
