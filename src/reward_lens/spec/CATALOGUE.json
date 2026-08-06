@@ -1,0 +1,3843 @@
+{
+  "instruments": [
+    {
+      "id": "A1",
+      "name": "Effective group size",
+      "headline": "How many independent gradient-relevant observations a group of K rollouts actually gives you.",
+      "quantities": [
+        "grader.effective_group_size",
+        "run.group_shape_factor"
+      ],
+      "says": "\"Your effective group size is 4.2, not 16. You are paying H100-hours for 12 rollouts of grader noise.\"",
+      "access_min": "GRADER:RECORD (r0), REPLICATE (r2+)",
+      "substrates": [
+        "NEURAL_SCALAR",
+        "NEURAL_GEN",
+        "PROGRAM",
+        "PROCEDURAL",
+        "HUMAN",
+        "COMPOSITE"
+      ],
+      "phases": [
+        "PRE_RUN",
+        "POST_RUN"
+      ],
+      "envelope_requires": [
+        "GROUP_NONDEGENERATE"
+      ],
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "Kish ESS on observed score spread",
+          "access": "`GRADER: RECORD`",
+          "bias": "Upward. Ignores correlated grader error entirely.",
+          "cost": "Free"
+        },
+        {
+          "rung": 1,
+          "estimator": "Test-retest on repeated calls, same input",
+          "access": "`GRADER: REPLICATE`",
+          "bias": "Upward. Captures occasion but not rater or rubric.",
+          "cost": "R calls per item"
+        },
+        {
+          "rung": 2,
+          "estimator": "Crossed G-study, item × rater × occasion",
+          "access": "`GRADER: REPLICATE` with facet control",
+          "bias": "Approximately unbiased if the design is fully crossed",
+          "cost": "n·r·o calls"
+        },
+        {
+          "rung": 3,
+          "estimator": "Rung 2 plus the item-by-rater interaction `σ²(p×r)`",
+          "access": "as rung 2, with ≥2 raters",
+          "bias": "Unbiased; this is the term that governs co-directional gradients",
+          "cost": "n·r·o calls, r ≥ 2"
+        }
+      ],
+      "invariance_group": "`reward.affine`, `group.permutation`",
+      "baselines": [
+        "group size K itself",
+        "a single-rater design"
+      ],
+      "prior_art": "G-theory has reached ML once (ICML 2026 poster on tabular FM rankings, `σ²(model×task)` reaching 81.2% of variance, only 2 of 14 datasets at Eρ²>0.80) but never a reward loop. Multi-facet Rasch on LLM raters is occupied (2505.18486); frame ours as a new facet design, not first psychometric treatment.",
+      "kill_condition": "if r0 and r3 agree within their intervals on five graders, the ladder is decoration and only r0 ships.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "A2",
+      "name": "Variance components and gauge R&R",
+      "headline": "Facet decomposition of `Var(r)`.",
+      "quantities": [
+        "grader.variance_components",
+        "grader.grr_percent",
+        "grader.ndc",
+        "grader.design_balance"
+      ],
+      "says": "\"44% of your score variance is which judge you drew. %GRR = 61%, ndc = 2. This gauge cannot resolve two adjacent models.\"",
+      "access_min": "GRADER:REPLICATE with facet control",
+      "substrates": [
+        "NEURAL_SCALAR",
+        "NEURAL_GEN",
+        "PROGRAM",
+        "PROCEDURAL",
+        "HUMAN",
+        "COMPOSITE"
+      ],
+      "phases": [
+        "PRE_RUN"
+      ],
+      "envelope_requires": [
+        "DESIGN_CROSSED",
+        "MASK_STABLE"
+      ],
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "two-facet nested",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "fully crossed item × rater × occasion",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "plus rubric facet",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 3,
+          "estimator": "plus finite-universe correction `(1 − n_i/N_i)` for fixed facets",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`reward.affine` (covariant: components scale with the square of the affine parameter), `group.permutation`",
+      "baselines": [
+        "a single-draw point estimate, to show what it hides"
+      ],
+      "prior_art": "`%GRR = 100·σ_GRR/σ_total`, `ndc = 1.41·(σ_part/σ_GRR)`, thresholds `%GRR ≤ 30%` and `ndc ≥ 5` are automotive standards. **No LLM benchmark reports a %GRR.** The closest published number is a generalizability coefficient G = 0.000, CI [0.000, 0.752], which is the psychometric twin of %GRR ≈ 100%.",
+      "kill_condition": "if `ndc ≥ 5` on every grader tested, the gauge is adequate and the instrument is a formality.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "A3",
+      "name": "Attenuation factor",
+      "headline": "How much grader error shrinks the selection signal.",
+      "quantities": [
+        "grader.attenuation"
+      ],
+      "says": "\"Your measured selection gradient is 0.71 of the true one. Correcting for it moves feature 3 from rank 7 to rank 2.\"",
+      "access_min": "GRADER:REPLICATE",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [
+        "GROUP_NONDEGENERATE"
+      ],
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "`√(σ²_true/(σ²_true+σ²_err))` from A2",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "the errors-in-variables correction `β_corr = (C_obs − C_err)⁻¹S` with `C_err` from within-prompt rollout variance",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`reward.affine`, `group.permutation`",
+      "baselines": [
+        "uncorrected `β`"
+      ],
+      "prior_art": "Spearman 1904, unapplied here for 120 years. Distinct from the noise-correction papers (2510.00915, 2510.18924, 1810.01032), which target *bias* via an independent binary channel and cannot represent correlated error.",
+      "kill_condition": "if the correction never changes a feature ranking, report it once and stop.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "A4",
+      "name": "Blackwell order and deficiency",
+      "headline": "Rank graders by informativeness rather than accuracy.",
+      "quantities": [
+        "grader.blackwell_order"
+      ],
+      "says": "\"Grader B is a garbling of grader A. B is dominated: no downstream use can prefer it.\"",
+      "access_min": "GRADER:QUERY on a shared labelled slice",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [],
+      "envelope_unconditional_justification": "`SCALAR_REPRESENTABLE` is explicitly not required here. The Blackwell order is over channels rather than scores, so a grader with curl mass above the bound is still orderable and this instrument is the one that says so.",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "pairwise accuracy (the wrong thing, shown for contrast)",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "garbling LP",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "Le Cam deficiency",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 3,
+          "estimator": "group-ranking regret at the real K",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`reward.affine` (invariant by construction: the order is over channels rather than scores), `group.permutation`",
+      "baselines": [
+        "RewardBench-style accuracy"
+      ],
+      "prior_art": "accuracy correlates 0.22–0.38 with downstream RLHF performance against 0.92–0.96 for a rationale-based score. Store agreement patterns, not vote counts: prevalence is completely unidentified under arbitrarily dependent errors, and what identifies it is which models agree across prompts.",
+      "kill_condition": "if the Blackwell order and accuracy rank identically on ten graders.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "A5",
+      "name": "Decision study: optimal allocation",
+      "headline": "Where the next dollar goes.",
+      "quantities": [
+        "grader.allocation"
+      ],
+      "says": "\"At your budget, move 30% from rollouts to grader replications; expected `σ²(δ)` falls 22%.\"",
+      "access_min": "A2 output",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "equal split",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "closed-form `σ²(δ; n,K,m,s)` minimisation",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`units`",
+      "baselines": [
+        "current allocation"
+      ],
+      "prior_art": "decision studies are standard in G-theory and absent here. Brennan's 1992 fixed-facet result comes free: declaring an item set fixed moves the person-by-item interaction from error into universe-score variance, raising reliability from .74 to .88 while destroying generalisation to new items. **That is the mathematics of benchmark overfitting, published 34 years ago.**",
+      "kill_condition": "if the optimum is always the current practice.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "A6",
+      "name": "Grader stochasticity profile",
+      "headline": "The grader as a distribution, not a number.",
+      "quantities": [
+        "grader.score_distribution",
+        "grader.score_sigma",
+        "grader.flip_rate"
+      ],
+      "says": "\"At fixed input this grader has σ = 0.18 and flips its pairwise verdict 13.6% of the time. Eleven repeats are needed for a majority vote to match a 50-trial reference at 95%.\"",
+      "access_min": "GRADER:REPLICATE",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [],
+      "envelope_unconditional_justification": "No regime condition applies: a stochasticity profile of a grader holds in any regime.",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "repeat variance",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "per-facet attribution",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "flip-rate at the pair level",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`group.permutation`",
+      "baselines": [
+        "assume determinism, and show the error that induces"
+      ],
+      "prior_art": "measured for judges (13.6% flip, one question at 56%; test-retest >0.95 coexisting with position bias >0.10 in two production judges) and never for a reward model in a loop.",
+      "kill_condition": "if σ ≈ 0 for the grader class in question, which is true for a deterministic scalar head and is the honest scope limit.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "A7",
+      "name": "Environment flakiness",
+      "headline": "Score variance attributable to the environment, not the model.",
+      "quantities": [
+        "env.flakiness"
+      ],
+      "says": "\"The same policy on the same task scores 57.9% to 76.8% across 23 identical runs. Your 3-point improvement is inside the environment's own spread.\"",
+      "access_min": "TASK:QUERY, replay capability",
+      "substrates": [
+        "PROGRAM"
+      ],
+      "phases": [
+        "PRE_RUN"
+      ],
+      "envelope_requires": [],
+      "envelope_unconditional_justification": "The determinism claim is under test here rather than assumed; the claim is the reading rather than a precondition.",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "N replays, report the range",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "occasion facet in the A2 design",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "attribute to sandbox, network, timeout, ordering",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`group.permutation`",
+      "baselines": [
+        "the single-run number that would otherwise be reported"
+      ],
+      "prior_art": "the 18.9-point LiveMCPBench spread is the existence proof and nobody reports flakiness as a property of an environment. Nearly free, immediately damaging, and it belongs on every grader card.",
+      "kill_condition": "if flakiness is under 1 point on ten environments.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "B1",
+      "name": "Curl mass and the harmonic split",
+      "headline": "How much preference structure no scalar can carry, and how much of that is fixable.",
+      "quantities": [
+        "grader.curl_mass",
+        "grader.harmonic_mass"
+      ],
+      "says": "\"21.4% of this grader's preference structure is not expressible by any scalar. Of that, 6 points are curl (the judge is locally cyclic) and 15 are harmonic (your comparison design has holes and could be fixed by comparing different pairs).\"",
+      "access_min": "GRADER:QUERY, k-wise comparisons",
+      "substrates": [
+        "NEURAL_GEN",
+        "PROCEDURAL"
+      ],
+      "phases": [
+        "PRE_RUN"
+      ],
+      "envelope_requires": [],
+      "envelope_unconditional_justification": "At least 11 replications per pair are needed for the nulls, which is a sample-size requirement and therefore a refusal with a stated n rather than a regime condition. E23 settles that distinction for N3 and it holds here.",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "curl mass from a single pass",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "with Null C split-half",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "with Nulls A, D, E",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`reward.affine`, `group.permutation` (not invariant under a change of the comparison design, which must be reported)",
+      "baselines": [
+        "the transitive baseline, MANDATORY and reported on every reading. A comparison recorded as a bare win is a sign and not a margin, so a transitive ±1 tournament on `K_n` already carries curl mass exactly `(n-2)/(3n)`, which is 5/21 at seven items. A curl mass without this floor beside it is uninterpretable, and the campaign's 0.214 sits on the floor to fifteen significant figures with zero cyclic triples in the corpus.",
+        "a Bradley-Terry fit's residual",
+        "the random-profile null, by simulation through the identical pipeline. The `(5/6)|E|` constant given in the source description is unsourced and could not be derived or reproduced, so it is not used and not quoted.",
+        "a transitive-plus-measured-flip-rate simulation"
+      ],
+      "prior_art": "HodgeRank (Jiang, Lim, Yao, Ye 2011) is the method and it is 15 years old; the *application to a reward loop* is empty. The opposing \"cycles are noise\" paper assumes rather than shows it and concedes the genuine-intransitivity case. **Bradley-Terry fitting is Hodge gradient projection**, so a fitted reward provably discards `‖curl‖² + ‖harm‖²`.",
+      "kill_condition": "if Null C shows the curl component does not replicate across split halves, in which case 0.214 is measurement error and the instrument reports a noise level instead.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "B2",
+      "name": "Afriat efficiency index",
+      "headline": "Rationalizability, from revealed-preference theory.",
+      "quantities": [
+        "grader.afriat_index",
+        "grader.houtman_maks_index",
+        "grader.money_pump_index"
+      ],
+      "says": "\"This grader's comparisons are rationalizable by a scalar utility at efficiency e = 0.87. Thirteen percent of its choices cannot be reconciled with any single objective.\"",
+      "access_min": "GRADER:RECORD, comparison data",
+      "substrates": [
+        "NEURAL_GEN",
+        "PROCEDURAL"
+      ],
+      "phases": "OPEN",
+      "envelope_requires": [],
+      "envelope_unconditional_justification": "No regime condition applies to this reading.",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "GARP violation count",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "Afriat index by bisection",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "Houtman-Maks (largest rationalizable subset)",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 3,
+          "estimator": "money-pump index",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`reward.affine`",
+      "baselines": [
+        "the curl mass, as a different measure of the same failure"
+      ],
+      "prior_art": "GARP and CCEI have been run on **LLM agents making budget-set choices** (2501.18190) and never on a grader's comparison data; Houtman-Maks and money-pump return nothing in this literature. Bounded, exact, economically meaningful, and complementary to B1: curl mass is an energy share, Afriat is a rationalizability fraction.",
+      "kill_condition": "if Afriat and curl mass are monotonically related across twenty graders, in which case report one.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "B3",
+      "name": "Composition tree and counterfactual composition",
+      "headline": "What the reward is actually made of, and what it would be without a piece.",
+      "quantities": [
+        "grader.composition",
+        "grader.counterfactual_score",
+        "grader.null_reach"
+      ],
+      "says": "\"Removing the length override changes 8% of advantages by more than one standard deviation, and reverses the sign for 31 of 512 rollouts.\"",
+      "access_min": "GRADER:RECORD with per-leaf scores, and ESTIMATOR:RECORD. The second is easy to miss. The reading is a counterfactual *advantage* rather than a counterfactual score, which is the only reading consistent with the declared `reward.null` group, and replaying an advantage needs the recorded estimator spec: `record/scores.py:1473` calls `replay_advantages(before, g.estimator)` and refuses without it.",
+      "substrates": [
+        "COMPOSITE"
+      ],
+      "phases": [
+        "POST_RUN"
+      ],
+      "envelope_requires": [],
+      "envelope_unconditional_justification": "\"Leaves recorded, not just the total\" is a record-completeness requirement rather than a regime condition.",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "re-evaluate the tree with a node disabled on recorded leaves (free)",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "re-score with a modified tree (needs QUERY)",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`reward.null`",
+      "baselines": [
+        "the deployed composition"
+      ],
+      "prior_art": "nobody publishes a sensitivity analysis for any of the frontier's composition constants; a weighted-sum data model cannot even express the gates.",
+      "kill_condition": "if per-leaf scores are unavailable everywhere, which reduces this to a request rather than an instrument.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "B4",
+      "name": "Silent-zero and abstention rate",
+      "headline": "How often the grader failed and returned a real number anyway.",
+      "quantities": [
+        "grader.silent_zero_rate"
+      ],
+      "says": "\"1.8% of your rollouts were scored 0.0 because the grader raised an exception. Those zeros entered the group mean and the standard deviation.\"",
+      "access_min": "GRADER:RECORD with exception logging, or source",
+      "substrates": [
+        "NEURAL_SCALAR",
+        "NEURAL_GEN",
+        "PROGRAM",
+        "PROCEDURAL",
+        "HUMAN",
+        "COMPOSITE"
+      ],
+      "phases": "OPEN",
+      "envelope_requires": [],
+      "envelope_unconditional_justification": "No regime condition applies: it is a defect census and holds in any regime.",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "count exceptions if logged",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "instrument the wrapper and count directly",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "none",
+      "baselines": [
+        "assume zero and show the difference"
+      ],
+      "prior_art": "verified in source this session: `verifiers`' `rubrics/rubric.py:204-217` catches any exception and sets `ans = 0.0`. TRL maps `None` to NaN and excludes it, which is the correct behaviour. Four of fifteen grader interfaces in Appendix C have no abstention channel at all. Found independently five times across five codebases.",
+      "kill_condition": "nothing kills this; it is a defect census, and the right outcome is that it goes to zero because people fix it.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "B5",
+      "name": "Scalar-representability bound",
+      "headline": "The worst-case number that carries the convergence theorem.",
+      "quantities": [
+        "grader.sep_distance"
+      ],
+      "says": "\"`‖U‖_⊕ = 0.31`, so the comparison kernel converges with contraction factor `c = 0.31` rather than in one step.\"",
+      "access_min": "GRADER:QUERY",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [],
+      "envelope_unconditional_justification": "`SCALAR_REPRESENTABLE` is under test here rather than required. B5 measures the distance from scalar representability, so the condition is this instrument's output rather than its precondition.",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "the `O(n²)` column-mean sandwich",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "the `O(n³)` triple scan; **do not** solve the LP",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`reward.affine`",
+      "baselines": [
+        "B1's curl mass, always reported beside it"
+      ],
+      "prior_art": "the `L^∞` twin of curl mass, statistically worse (upward biased with bias growing like `√(log n)`, Gumbel fluctuations, more comparisons make it worse, and the logit transform diverges on unanimous pairs which at R=11 and p=0.9 happens 31% of the time). Report it for the theorem, never as the primary estimate.",
+      "kill_condition": "if the sandwich is too loose to be informative at K = 4 to 16.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "B6",
+      "name": "Tournament solution and comparison-graph connectivity",
+      "headline": "OPEN",
+      "quantities": [
+        "grader.smith_set_size",
+        "grader.graph_lambda2",
+        "grader.condorcet_rate"
+      ],
+      "says": "\"On 12% of prompts there is no Condorcet winner, and the Smith set has size 3. Your tournament reward is choosing arbitrarily on those.\"",
+      "access_min": "GRADER:RECORD",
+      "substrates": [
+        "PROCEDURAL"
+      ],
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "Condorcet check and Copeland (polynomial)",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "Smith set",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "Copeland-versus-Slater disagreement rate",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`group.permutation`",
+      "baselines": [
+        "assume a total order exists"
+      ],
+      "prior_art": "Kimi K3's tournament reward *is* a tournament solution concept, chosen implicitly, and which one it implements determines what the policy optimises. Also `‖v̂ − v‖₂ ≲ √(n log n / (L λ₂(Δ₀)))`: preference-dataset efficiency is governed by the comparison graph's algebraic connectivity, which is a directly actionable annotation-budget design quantity and is unused.",
+      "kill_condition": "if Condorcet cycles are under 1% at real group sizes.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "C1",
+      "name": "The susceptibility triple",
+      "headline": "`S`, `β`, and `Gβ`, always together.",
+      "quantities": [
+        "selection.differential_S",
+        "selection.gradient_beta",
+        "selection.response_Gbeta",
+        "selection.G_conditioning"
+      ],
+      "says": "\"Feature 'cites a source' has S = +0.22 and β = −0.05. It covaries with reward because it rides on verbosity; selection is pushing against it.\"",
+      "access_min": "GRADER:RECORD for S; plus POLICY:BACKWARD for `G`",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [
+        "LINEAR_RESPONSE",
+        "GROUP_NONDEGENERATE"
+      ],
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "`S` alone",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "`β = C⁻¹S` with the conditioning `n_D`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "realised heritability from a step window",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 3,
+          "estimator": "`G = JF⁻¹Jᵀ` and the full `Δz = ηGβ`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`reward.affine`, `repr.basis`",
+      "baselines": [
+        "the raw `χ` the shipped library reports",
+        "a random feature",
+        "a coherent irrelevant semantic feature"
+      ],
+      "prior_art": "Lande and Arnold 1983; the Haufe pattern-versus-filter programme argues the opposite direction and must be pre-empted, not discovered in review.",
+      "kill_condition": "if `β` never reorders features against `S` on stored data, the transplant is elegant and inert. This test is free and should run in week one.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "C2",
+      "name": "Heritability and autonomy",
+      "headline": "Which features can move at all, and what moves with them.",
+      "quantities": [
+        "selection.heritability_h2",
+        "selection.autonomy",
+        "selection.evolvability",
+        "selection.G_conditioning"
+      ],
+      "says": "\"Feature 'hedging' has h² = 0.03: it varies across rollouts and no gradient step can move it. Your index ranked it 4th most susceptible.\" And \"a(β) = 0.31: 69% of the response to this pressure is collateral.\"",
+      "access_min": "POLICY:BACKWARD (r3) or POLICY:RECORD over a step window (r0)",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [
+        "LINEAR_RESPONSE"
+      ],
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "realised `ĥ²` by regression across steps",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "`G` diagonal only",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "full `G`, `e(β)`, `c(β)`, `a(β)`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`policy.reparam` (Fisher-metric quantities are invariant; `‖Δθ‖` is not)",
+      "baselines": [
+        "`S` ranking without the filter"
+      ],
+      "prior_art": "Hansen and Houle 2008 for the indices; De Carlo and Eiben (2110.11187) for heritability as a diagnostic on evolved robot encodings, which must be cited and distinguished; and Hansen and Pélabon's *\"Heritability is not Evolvability\"* for the terminological trap.",
+      "kill_condition": "if `h²` is above 0.8 for every feature anyone cares about, in which case `N` is negligible and `C` was fine all along.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "C3",
+      "name": "Instrument recovery AUC",
+      "headline": "The head-to-head nobody publishes.",
+      "quantities": [
+        "instrument.recovery_auc"
+      ],
+      "says": "\"Against the same planted key: DiffMean 0.81, SAE 0.62, logit lens 0.55, scaffolded black-box prompting 0.84. Our method is third.\"",
+      "access_min": "ORGANISM:MUTATE, a certified reference",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [],
+      "envelope_unconditional_justification": "\"`REFERENCE_UNCERTIFIED` must not fire\" names a RefusalReason rather than a RegimeCondition. The instrument refuses on an uncertified reference and has no regime precondition.",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "one method",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "a panel including at least one black-box method and one dumb baseline",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`repr.basis`",
+      "baselines": [
+        "string match",
+        "length",
+        "scaffolded black-box prompting",
+        "a coherent irrelevant semantic direction"
+      ],
+      "prior_art": "three published head-to-heads put white-box last. Publishing our own with the losses visible is the differentiator, not the wins.",
+      "kill_condition": "nothing; a bad number here is the point.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "C4",
+      "name": "Erasure, with the head-to-head that is now mandatory",
+      "headline": "OPEN",
+      "quantities": [
+        "intervention.erasure_cost",
+        "intervention.ec50",
+        "intervention.emax",
+        "intervention.hill_n",
+        "intervention.therapeutic_index"
+      ],
+      "says": "\"LEACE removes the exploit direction at 0.886 and costs 0.399 of RewardBench-2 accuracy. The published alternative on the same fleet costs 0.008 and is certified non-inferior.\"",
+      "access_min": "GRADER:MUTATE",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [
+        "ABOVE_LOD"
+      ],
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "single dose",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "dose sweep with `EC50`, `E_max`, `n` and a therapeutic index `TI = TD50/ED50`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`repr.basis`",
+      "baselines": [
+        "\"One Bias After Another\" (2603.03291) on the same Skywork-Reward-V2 fleet with the same DiffMean-plus-null-space method, reporting −0.8pp certified non-inferior against our −0.399",
+        "a coherent irrelevant semantic direction",
+        "a clamp rather than an erasure"
+      ],
+      "prior_art": "the clamp alternative is capability-preserving in a way erasure is not, derives its direction from behavioural contrast rather than weights (so it works on any model), and ships code.",
+      "kill_condition": "the head-to-head, if we lose it, retires the erasure claim and keeps the dose-response measurement.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "C5",
+      "name": "Acute versus chronic intervention",
+      "headline": "Ablate and keep training.",
+      "quantities": [
+        "intervention.acute_effect",
+        "intervention.chronic_effect"
+      ],
+      "says": "\"Ablating this direction drops the behaviour 40% immediately and 3% after 200 further steps. The capability was not localised there; it was currently implemented there.\"",
+      "access_min": "POLICY:MUTATE + CONTROL",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [
+        "STATIONARY_GRADER"
+      ],
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "acute only (what everyone does)",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "acute plus chronic",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`repr.basis`",
+      "baselines": [
+        "no-ablation arm",
+        "a matched irrelevant ablation"
+      ],
+      "prior_art": "the songbird result (acute optogenetic inactivation disrupts song; chronic lesion of the same nucleus does not) is the canonical demonstration, and almost nobody in interpretability runs the chronic version.",
+      "kill_condition": "if acute and chronic agree everywhere, the distinction is not operative here.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "C6",
+      "name": "Rescue",
+      "headline": "Put it back and check the behaviour returns.",
+      "quantities": [
+        "intervention.rescue_fraction"
+      ],
+      "says": "\"Re-injecting the ablated component restores 91% of the behaviour, so the effect is not an off-manifold artifact.\"",
+      "access_min": "POLICY:MUTATE",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "re-inject the exact removed activation",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`repr.basis`",
+      "baselines": [
+        "a norm-matched random re-injection"
+      ],
+      "prior_art": "**interpretability's most common causal claim is a knockout with no rescue.** One extra forward pass, and it closes the most obvious hole in a patching result. Cheapest methodological upgrade in the whole catalogue.",
+      "kill_condition": "nothing; it is a control, not a finding.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "C7",
+      "name": "Double dissociation",
+      "headline": "Necessity is not sufficiency.",
+      "quantities": [
+        "intervention.dissociation"
+      ],
+      "says": "\"Ablating A impairs behaviour 1 and not 2; ablating B impairs 2 and not 1. The functions are distinct.\"",
+      "access_min": "POLICY:MUTATE, at least two behaviours and two components",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": [
+        "a single dissociation, which is compatible with one graded resource plus a difficulty difference"
+      ],
+      "prior_art": "Shallice's critique from neuropsychology. Ablation tests necessity, steering tests sufficiency, and papers routinely report one and claim the other.",
+      "kill_condition": "n/a.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "C8",
+      "name": "Jacobian-corrected verdict direction",
+      "headline": "OPEN",
+      "quantities": [
+        "judge.verdict_direction",
+        "judge.commitment_position"
+      ],
+      "says": "\"The judge's verdict direction saturates at token 12 of a 340-token rubric. The rubric is written after the decision.\"",
+      "access_min": "GRADER:FORWARD, a fitted J-lens",
+      "substrates": [
+        "NEURAL_GEN"
+      ],
+      "phases": [
+        "PRE_RUN"
+      ],
+      "envelope_requires": [
+        "ABOVE_LOD"
+      ],
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "naive `W_U[Yes] − W_U[No]` (what the shipped library used)",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "`(W_U J_ℓ)[Yes] − (W_U J_ℓ)[No]`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`repr.basis`, `tokenization`",
+      "baselines": [
+        "the naive form, always reported beside r1",
+        "the vanilla logit lens, which the vendored code gives free via `apply(..., use_jacobian=False)`",
+        "a length baseline",
+        "the four controls report 04 specifies"
+      ],
+      "prior_art": "the searches are clean (`all:\"logit difference\" AND all:\"LLM-as-a-judge\"` returns 0), the corrected form appears in nobody's paper, and it is derivable today from Apache-2.0 code. **But the shipped result is 1.0 and 1.0 is saturated**: if CoT collapses the spread of the judgment distribution, a fixed mode with a moving mean makes 1.0 an argmax artifact. Do the controls before publishing, and note the priority risk from a blog post stating the thesis verbatim with zero measurement.",
+      "kill_condition": "if the four controls show the mean moves while the mode is fixed.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "D1",
+      "name": "Decision coverage",
+      "headline": "What fraction of the verifier's logic any rollout has ever exercised.",
+      "quantities": [
+        "verifier.decision_coverage"
+      ],
+      "says": "\"Across 25,664 rollouts your verifier has never taken 31% of its branches. Those are behaviours it cannot distinguish.\"",
+      "access_min": "GRADER source + RECORD",
+      "substrates": [
+        "PROGRAM"
+      ],
+      "phases": [
+        "PRE_RUN",
+        "POST_RUN"
+      ],
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "statement coverage",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "branch/decision coverage",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "path coverage on the hot subset",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "none",
+      "baselines": [
+        "coverage of a random rollout sample of the same size"
+      ],
+      "prior_art": "`coverage.py` gives arc data programmatically. Test-suite adequacy is a solved SE problem and has never been pointed at a reward function.",
+      "kill_condition": "if coverage is above 95% on every real verifier.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "D2",
+      "name": "Surviving mutants",
+      "headline": "Would the verifier notice if it were wrong?",
+      "quantities": [
+        "verifier.surviving_mutants",
+        "verifier.mutation_score"
+      ],
+      "says": "\"Of 412 mutants of your verifier, 89 survive: 89 ways it could be wrong that no rollout in your corpus would reveal.\"",
+      "access_min": "GRADER source + MUTATE + a rollout corpus",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "operator-level mutation on the scoring function",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "whole-module",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "mutants ranked by how many rollouts change score",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "OPEN",
+      "baselines": [
+        "a random source edit that should be caught"
+      ],
+      "prior_art": "`mutmut` and `cosmic-ray` are mature. Mutation testing crossed with reward or verifier returns nothing. Each surviving mutant is a concrete, reproducible blind spot, which makes this the most actionable output in the series.",
+      "kill_condition": "if mutation score is above 95% on real verifiers.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "D3",
+      "name": "Metamorphic violations",
+      "headline": "Relations the grader should respect and does not.",
+      "quantities": [
+        "verifier.metamorphic_violations"
+      ],
+      "says": "\"Renaming a variable changes the score on 4.1% of accepted solutions. Here are 210 reproducers.\"",
+      "access_min": "GRADER:QUERY + a transformation set",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "a fixed relation set (whitespace, variable renaming, comment insertion, statement reordering where semantics-preserving)",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "domain-specific relations",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "learned relations",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "OPEN",
+      "baselines": [
+        "identity transformation"
+      ],
+      "prior_art": "`hypothesis` supplies the generation and shrinking machinery. Metamorphic testing is standard in SE and unused on graders.",
+      "kill_condition": "if violations are under 0.1% everywhere.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "D4",
+      "name": "Sensitivity indices",
+      "headline": "Which inputs actually move the score.",
+      "quantities": [
+        "verifier.sobol_ST"
+      ],
+      "says": "\"78% of this rubric's score variance is driven by one criterion out of nine. The other eight are decoration.\"",
+      "access_min": "GRADER:QUERY, factorial sampling",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "one-at-a-time (biased, shown for contrast)",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "Sobol first-order `S1`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "total-effect `S_Ti` with bootstrap CIs",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`reward.affine`",
+      "baselines": [
+        "equal weighting"
+      ],
+      "prior_art": "`SALib` 1.5.2, MIT, `N·(2D+2)` samples with second order. Directly connects to the contract layer: `S_Ti` is a measurement of `μ'_i`, the sensitivity the equal-compensation check needs.",
+      "kill_condition": "n/a.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "D5",
+      "name": "False-positive fuzzing",
+      "headline": "Where the verifier accepts a wrong answer.",
+      "quantities": [
+        "verifier.false_positive_rate",
+        "verifier.fp_catalogue"
+      ],
+      "says": "\"Property-based search found 1,340 inputs your verifier accepts that a strict reference rejects. FPR 0.83 on partial-answer math.\"",
+      "access_min": "GRADER:QUERY + a stricter reference",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "replay known exploit families",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "`hypothesis`-driven search",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "coverage-guided fuzzing with `atheris`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 3,
+          "estimator": "symbolic execution where tractable",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "OPEN",
+      "baselines": [
+        "a random-mutation baseline"
+      ],
+      "prior_art": "measured FPRs of 0.832 math, 0.869 JSON tool calls, 0.557 code unit tests against 0.000 for strict references; `math-verify` at FPR 1.000 on partial answers. Dual-use: outputs are marked sensitive by default.",
+      "kill_condition": "if the fuzzer finds nothing on a verifier already known to be leaky, which would mean the search is too weak.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "D6",
+      "name": "Exploit-family coverage",
+      "headline": "How much of the exploit space you have found.",
+      "quantities": [
+        "verifier.unseen_exploit_mass",
+        "verifier.reliability_growth_beta"
+      ],
+      "says": "\"You have found 23 exploit families. Good-Turing bounds the unseen mass at 8%, and the probability the next find is novel is 0.06. Crow-AMSAA β = 0.74, so the blacklist is converging.\"",
+      "access_min": "an exploit log",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "`f₁/n` and `f₁²/(2f₂)`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "plus Crow-AMSAA `β`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "plus Chao1",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "OPEN",
+      "baselines": [
+        "the raw count of families found"
+      ],
+      "prior_art": "Kimi K3's blacklist is \"continuously extended as new hacking strategies are observed\" and **no lab publishes this number.** One line of code on logs they already keep. Best effort-to-impact ratio in the catalogue.",
+      "kill_condition": "nothing; it is arithmetic on a log.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "D7",
+      "name": "The grader card",
+      "headline": "The composite artifact and the wedge product.",
+      "quantities": [
+        "grader.card"
+      ],
+      "says": "one page: coverage, surviving mutants, metamorphic violations with reproducers, sensitivity profile, false-positive catalogue, silent-zero rate, flakiness spread, exploit-family accounting, variance components, effective group size, curl mass, Afriat index, and the abstention channel.",
+      "access_min": "GRADER:QUERY+REPLICATE and source where available",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "nothing like it exists. This is what a marketplace buyer gets before spending money, and it is Profile A's entire deliverable.",
+      "kill_condition": "if nobody reads one.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "D8",
+      "name": "Attack surface",
+      "headline": "What the harness exposes.",
+      "quantities": [
+        "env.attack_surface",
+        "env.attack_cheapness"
+      ],
+      "says": "\"The scoring script reads a file the agent can write. Attacking the grader is 11x cheaper than solving the task.\"",
+      "access_min": "environment source and configuration",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "a static inventory (what can the harness read and write, which credentials are reachable, what does the scoring code trust)",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "a formal task-boundary definition",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "a measured cost ratio",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "OPEN",
+      "baselines": [
+        "the assumption that the sandbox holds"
+      ],
+      "prior_art": "UK AISI publishes per-model cheat rates (7.8% and 12.6% for two named frontier models) and reports that the modal cheat for two GPT-5.x variants was \"attacked a system other than the target.\" Measured after the fact by a monitor; nobody predicts it from the environment. Dual-use, sensitive by default.",
+      "kill_condition": "if attack cheapness does not predict realised cheat rate across twenty environments.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "D9",
+      "name": "Static structure",
+      "headline": "The verifier's shape, extracted.",
+      "quantities": [
+        "verifier.cfg",
+        "verifier.trusted_inputs"
+      ],
+      "says": "\"The scoring function has 14 branches, 3 of them reachable only when a timeout fires, and it trusts 2 fields of untrusted input without validation.\"",
+      "access_min": "source",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "`ast` walk",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "control-flow graph",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "taint/dataflow",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "`scalpel`, `libcst` and the standard library. Feeds D1 and D2.",
+      "kill_condition": "n/a.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "D10",
+      "name": "Determinism and replay fidelity",
+      "headline": "OPEN",
+      "quantities": [
+        "env.replay_fidelity"
+      ],
+      "says": "\"Replaying the recorded trajectory reproduces the score on 87% of tasks. The other 13% are not auditable.\"",
+      "access_min": "TASK:QUERY + a record",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "if a record cannot be replayed to the same score, no post-hoc analysis of that task means anything, and nobody checks. Feeds `RecomputeRef`.",
+      "kill_condition": "if replay fidelity is 100% everywhere.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "E1",
+      "name": "Estimator specification, recorded",
+      "headline": "What transform actually ran.",
+      "quantities": [
+        "estimator.spec"
+      ],
+      "says": "\"Group z-score with ε = 1e-4, token-level aggregation, clip 0.2, environment tokens masked, no length normalisation.\"",
+      "access_min": "RECORD",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "everyone assumes they know this and the details differ per framework and per version. Everything downstream is conditioned on it.",
+      "kill_condition": "n/a.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "E2",
+      "name": "Degenerate and all-fail group fraction",
+      "headline": "OPEN",
+      "quantities": [
+        "estimator.degenerate_fraction",
+        "estimator.allfail_fraction"
+      ],
+      "says": "\"34% of your groups had zero reward spread. They contributed noise, not signal. A further 12% were all-fail, where the z-score amplified whatever was left by two orders of magnitude.\"",
+      "access_min": "RECORD",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "count",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "attribute to task difficulty and grader saturation",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`reward.affine`",
+      "baselines": [
+        "the nominal group size K"
+      ],
+      "prior_art": "advantage collapse when all trajectories score the same is a named motivation for at least one 2026 method and nobody reports the rate.",
+      "kill_condition": "n/a.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "E3",
+      "name": "Signal-versus-noise share of the gradient, and its attribution",
+      "headline": "OPEN",
+      "quantities": [
+        "estimator.noise_share",
+        "estimator.noise_attribution"
+      ],
+      "says": "\"37% of this step's gradient power is noise. Of that, 22 points are grader replication variance, 9 are sampling, and 6 are the clip.\"",
+      "access_min": "RECORD with `sum_pi_squared` enabled; A2 for the attribution",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [
+        "GROUP_NONDEGENERATE"
+      ],
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "read veRL's `variance_proxy/proxy3_pure_noise`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "attribute the share using A2's variance components",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "carry correlated grader error into an effective group size",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "OPEN",
+      "baselines": [
+        "the raw fraction with no attribution"
+      ],
+      "prior_art": "**veRL already ships the fraction.** `compute_variance_proxy_metrics` at `metric_utils.py:691` emits `proxy1_signal_strength`, `proxy2_total_power`, `proxy3_pure_noise = (1/(N−1))(proxy2 − proxy1)`, `expected_a_squared`, `expected_w`, built on `W(τ) = Σ_t[1 − 2π_t + Σπ²]`. Two gates: `actor.calculate_sum_pi_squared` **defaults to `false`**, and even with it on, if `actor/grad_norm` is absent then proxy1 and proxy3 log as `0.0`. Also `proxy3` is floored at zero, so it is censored and upward-biased near zero, and `proxy1` inherits gradient clipping. **Pitch the attribution, not the fraction.**",
+      "kill_condition": "if the attribution never separates grader from sampling on real data.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "E4",
+      "name": "Amplifier safety",
+      "headline": "Is this reward component safe to add?",
+      "quantities": [
+        "estimator.amplifier_safety"
+      ],
+      "says": "\"Your new format reward has AmplifierSafety = 3.1. Its variance persists during all-fail groups, so the z-score will amplify it by two orders of magnitude exactly when the task signal vanishes. Expect collapse around step 40.\"",
+      "access_min": "RECORD with per-leaf scores",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [
+        "GROUP_NONDEGENERATE"
+      ],
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "the variance ratio between all-fail and mixed groups",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "the variance trajectory over training",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "a predicted collapse step",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`reward.affine` (and note the point: the *normalised* advantage is invariant to rescaling, which is why magnitude is the wrong diagnostic)",
+      "baselines": [
+        "the component's absolute magnitude, which is what people currently look at and which is uninformative"
+      ],
+      "prior_art": "the ALFWorld collapse study supplies the mechanism, the 50-to-700x amplification measurement, and the intervention ladder (dense z-scored 0%; remove std normalisation 51.6%; auxiliary CE channel 69.3%; **shuffled-gold placebo 76.0%**). **This is the single most actionable instrument in the catalogue** and it answers the most common practitioner complaint directly.",
+      "kill_condition": "if amplifier safety does not predict collapse on three held-out runs.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "E5",
+      "name": "Clip and mask accounting",
+      "headline": "OPEN",
+      "quantities": [
+        "estimator.clip_fraction_effect"
+      ],
+      "says": "\"18% of ratios were clipped this step. Recomputing unclipped moves the gradient norm by 31%, so every gradient-derived quantity is biased.\"",
+      "access_min": "RECORD",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "clip fraction is logged; nobody propagates its effect into the quantities derived from the gradient norm.",
+      "kill_condition": "n/a.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "E6",
+      "name": "Train-inference logprob mismatch",
+      "headline": "OPEN",
+      "quantities": [
+        "policy.train_infer_logprob_mismatch"
+      ],
+      "says": "\"The sampling engine and the training engine disagree on this rollout's logprobs by 0.4 nats on average. Your importance ratio is measuring the engines, not the policy.\"",
+      "access_min": "RECORD with both logprob streams",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "this is an instrument, not a footnote, and it is the record-level expression of the numerics floor.",
+      "kill_condition": "if the mismatch is below the numerics floor everywhere, which would be good news and worth publishing.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "F1",
+      "name": "The selection term and the residual",
+      "headline": "OPEN",
+      "quantities": [
+        "selection.term",
+        "selection.residual"
+      ],
+      "says": "\"This step, 'response length' moved +0.04, of which selection explains +0.031 and 0.009 is unexplained.\"",
+      "access_min": "RECORD + a featuriser",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [
+        "LINEAR_RESPONSE",
+        "GROUP_NONDEGENERATE",
+        "NEAR_POLICY"
+      ],
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "the pair, per feature per step",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`reward.affine`, `units`",
+      "baselines": [
+        "a random feature",
+        "a permuted-advantage null"
+      ],
+      "prior_art": "the Price equation is old; its use as a live measurement instrument on behavioural traits is not, and Frank's parameter-space Price partition must be cited and distinguished on page one.",
+      "kill_condition": "if `ρ` is the same size as the selection term for every feature, in which case the first-order picture explains nothing and Level 1 collapses to Level 2.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "F2",
+      "name": "The selection-explained fraction Λ",
+      "headline": "The cheapest strong diagnostic here.",
+      "quantities": [
+        "selection.explained_fraction",
+        "selection.eta_eff"
+      ],
+      "says": "\"Λ = 0.62. Sixty-two percent of the variance in what moved is explained by what this step selected for. It was 0.81 at step 100.\"",
+      "access_min": "RECORD + a featuriser",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "the `R²` of `Δz` regressed on `η·Cov(A,f)` across steps, with the OLS slope reported as `η_eff`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`units`",
+      "baselines": [
+        "a permuted-step null"
+      ],
+      "prior_art": "no higher rung exists, which is unusual and is the point: it is a validity certificate for every other Level 1 claim, computable from a record alone. **Preregistered question worth freezing: does Λ move before the labelled hack rate does, reported as a fraction of the transition window?**",
+      "kill_condition": "nothing; a low Λ is itself the finding.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "F3",
+      "name": "The cost book: KL budget and efficiency",
+      "headline": "OPEN",
+      "quantities": [
+        "update.kl_spent",
+        "update.kl_min",
+        "update.efficiency",
+        "update.kl_share"
+      ],
+      "says": "\"This step spent 0.031 nats. The minimum needed for the behavioural change we can see is 0.019, so efficiency is 0.61. Of the 0.019: 41% length, 22% tool-call frequency, 8% the target behaviour, 29% unattributed.\"",
+      "access_min": "RECORD for `D_t`; POLICY:BACKWARD for `G` and therefore `KL_min`",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [
+        "LINEAR_RESPONSE",
+        "ESS_ADEQUATE"
+      ],
+      "envelope_measured_by": {
+        "LINEAR_RESPONSE": "OPEN",
+        "ESS_ADEQUATE": "frontier.visibility_horizon"
+      },
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "`D_t` alone (already logged everywhere)",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "`KL_min` and efficiency",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "the eigenbasis decomposition",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 3,
+          "estimator": "Shapley allocation to named features with the projection residual reported",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`policy.reparam`, `units` (nats, per-sequence)",
+      "baselines": [
+        "the total KL with no decomposition",
+        "an equal-share attribution"
+      ],
+      "prior_art": "`all:\"KL budget\"` returns 7 papers on arXiv and every one treats KL as a scalar resource to allocate, never decomposed into named-feature shares. **Efficiency is bounded in [0,1] by construction, so a value above 1 is a self-check failure.**",
+      "kill_condition": "if `KL_min` exceeds `D_t` on real data, which means either `G` is mis-estimated or the natural-gradient approximation has failed, and either way the book does not balance.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "F4",
+      "name": "The reconciliation residual, budgeted",
+      "headline": "OPEN",
+      "quantities": [
+        "books.reconciliation_residual",
+        "books.budget_closure"
+      ],
+      "says": "\"`Var(ρ)` = 0.0041. The itemised budget accounts for 0.0038. The books close within 8%.\"",
+      "access_min": "all four books",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "the residual alone",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "the GUM itemisation",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "the closure test",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`units`",
+      "baselines": [
+        "the residual reported as unexplained"
+      ],
+      "prior_art": "report 12 names closing this budget the highest-value concrete experiment it found. Either outcome is publishable: a closed budget characterises the instrument, and an open one names an unmodelled term.",
+      "kill_condition": "if the budget never closes on any run, in which case the first-order model is wrong and that is the result.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "F5",
+      "name": "The selection covector and spectrum",
+      "headline": "OPEN",
+      "quantities": [
+        "selection.covector",
+        "selection.spectrum",
+        "selection.dimensionality",
+        "selection.stable_rank"
+      ],
+      "says": "\"Selection pressure at layer 18 is concentrated: stable rank 3.4 of 4096. The top direction is 61% of the pressure and it decodes as 'assertive closing'.\"",
+      "access_min": "POLICY:BACKWARD",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [
+        "LINEAR_RESPONSE"
+      ],
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "the score-function `s_ℓ`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "the second-moment `M_ℓ` eigendecomposition",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "the whitened generalised problem `M_ℓ v = μ G_ℓ v`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 3,
+          "estimator": "the differentiable-surrogate `∂r/∂h_ℓ` where it exists",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`repr.basis` (covariant; needs a shared frame for comparison)",
+      "baselines": [
+        "a random direction of matched norm",
+        "a coherent irrelevant semantic direction",
+        "the vanilla logit lens",
+        "string matching"
+      ],
+      "prior_art": "the score-function variance is **the largest technical risk in this design** and F5 does not get built until the spike returns a go. Report stable rank and participation ratio, never numerical rank.",
+      "kill_condition": "the variance spike: if `K = 64` is still too noisy with all variance reduction applied, F5 reduces to the differentiable-surrogate case and the plan changes here.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "F6",
+      "name": "Realised versus predicted response, the Lande slope",
+      "headline": "OPEN",
+      "quantities": [
+        "selection.lande_slope"
+      ],
+      "says": "\"Regressing observed `Δz` on `ηGβ` across 200 steps gives slope 0.83 [0.71, 0.95]. Lande holds to within 17%, and the deviation is drifting.\"",
+      "access_min": "all books over a window",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "the load-bearing assumption of the whole Level 1 story, and it is empirically checkable rather than assumed. If it fails, that failure is a publishable result about how policy optimisation differs from natural selection.",
+      "kill_condition": "slope near zero retires Level 1.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "G1",
+      "name": "The credit measure",
+      "headline": "OPEN",
+      "quantities": [
+        "credit.measure",
+        "credit.conservation_error"
+      ],
+      "says": "\"This step's credit disintegrates as: 34% on tool-call arguments, 41% on the final answer span, 25% elsewhere. Total mass matches the update norm to 1e-6.\"",
+      "access_min": "per-token advantages and gradients",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [
+        "NO_COMPACTION"
+      ],
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "consume SkyRL's `dump_data_batch` where it exists",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "compute in the tap",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`tokenization` (a per-token quantity must declare its normalisation)",
+      "baselines": [
+        "uniform attribution over tokens"
+      ],
+      "prior_art": "all thirteen frameworks compute per-token advantages and all thirteen discard the tensor. The conservation test (mass equals the update norm) makes this an audit, not an attribution heuristic.",
+      "kill_condition": "if per-token gradients cannot be obtained at scale within the memory budget, which is the one place this design has to write real numerical code.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "G2",
+      "name": "Turn and tool-call disintegration",
+      "headline": "The agentic form.",
+      "quantities": [
+        "credit.by_turn",
+        "credit.by_tool_call"
+      ],
+      "says": "\"In a 40-turn episode, 71% of the log-probability mass that received advantage is in turns 1 to 3 and turn 40.\"",
+      "access_min": "RECORD with turn structure",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "every token in a trajectory receives the identical scalar advantage, so all structure lives in `∇log π` and the interesting disintegration is by turn, not by token. RLVR is reported to reallocate probability at a small set of critical positions concentrated near the start and end of trajectories, which this would confirm or refute directly.",
+      "kill_condition": "n/a.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "G3",
+      "name": "The implicit process reward model, extracted",
+      "headline": "OPEN",
+      "quantities": [
+        "credit.implicit_prm"
+      ],
+      "says": "\"GRPO's induced per-step credit function agrees with a trained PRM at ρ = 0.4 and with counterfactual re-rolls at ρ = 0.7.\"",
+      "access_min": "RECORD + re-roll capability",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "GRPO with an outcome reward is provably equivalent to a PRM-aware objective with a non-trivial Monte-Carlo PRM. **Nobody has extracted it.** Cheap, sharp, unoccupied.",
+      "kill_condition": "if the induced function is constant.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "G4",
+      "name": "Localiser scoring, done validly",
+      "headline": "OPEN",
+      "quantities": [
+        "credit.localiser_quality"
+      ],
+      "says": "\"Against counterfactual re-rolls rather than outcome-propagated labels, our localiser scores 0.68. Against the labels it scores 0.28, and the labels are one-third wrong.\"",
+      "access_min": "re-roll capability",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [],
+      "envelope_unconditional_justification": "\"`LABEL_QUALITY_UNKNOWN` must not fire\" names a RefusalReason rather than a RegimeCondition.",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": [
+        "a position-stratified null",
+        "a uniform-position prior"
+      ],
+      "prior_art": "outcome-propagated step labels are wrong roughly a third of the time (18.2% in correct-answer responses, 49.9% in incorrect-answer ones), so **held-out AUC against them measures label noise.** SOTA representation-level step-error localisation is AUROC 0.629 in-domain, which is the number to beat and is barely above chance.",
+      "kill_condition": "n/a; this instrument exists to stop a bad practice.",
+      "wedge": false,
+      "status": "OPEN"
+    },
+    {
+      "id": "G5",
+      "name": "Successor representation",
+      "headline": "OPEN",
+      "quantities": [
+        "credit.successor_representation"
+      ],
+      "says": "the discounted state-visitation structure of the policy, which is a representation-level object and therefore lives where a white-box instrument already operates.",
+      "access_min": "OPEN",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "the credit-assignment survey's own gap statement names limited explicit use of successor representations in LLM settings. OPEN: the state abstraction for a language trajectory is undefined and defining it is the research content.",
+      "kill_condition": "OPEN",
+      "wedge": false,
+      "status": "OPEN"
+    },
+    {
+      "id": "H1",
+      "name": "Adiabaticity number",
+      "headline": "Is this run quasi-static?",
+      "quantities": [
+        "run.adiabaticity",
+        "run.tau_relax"
+      ],
+      "says": "\"Ad = 2.3. This run is being driven faster than it relaxes. Equilibrium extrapolation and slowing-down early warning are not licensed here.\"",
+      "access_min": "RECORD + perturb-and-hold for `τ_relax`",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "`τ_relax` from the early AR(1) coefficient (free)",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "perturb-and-hold",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`units`",
+      "baselines": [
+        "assume quasi-static, which is what everyone does"
+      ],
+      "prior_art": "gates a whole layer.",
+      "kill_condition": "if `Ad ≪ 1` on every real run.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "H2",
+      "name": "The two-run rate test",
+      "headline": "The decisive, cheap experiment.",
+      "quantities": [
+        "run.rate_dependence"
+      ],
+      "says": "\"Two anneal rates, plotted against λ rather than t: the curves separate. The transition is rate-induced, so critical slowing down will not fire.\"",
+      "access_min": "CONTROL, two small arms, shared seed",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": [
+        "a single-rate run"
+      ],
+      "prior_art": "nobody has run it, and Predictable GRPO's fitted `λ_train` *is* a relaxation rate that nobody has connected to it. **Run this first among the compute items.** A negative result kills a layer cheaply; a positive one licenses it.",
+      "kill_condition": "this is the kill test.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "H3",
+      "name": "Rate-extrapolated hysteresis",
+      "headline": "OPEN",
+      "quantities": [
+        "run.hysteresis_area"
+      ],
+      "says": "\"The loop area extrapolated to zero sweep rate is 0.11, so the irreversibility is genuine rather than lag.\"",
+      "access_min": "CONTROL, three sweep rates, forward and reverse",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": [
+        "the raw loop area at one rate, which is confounded with lag"
+      ],
+      "prior_art": "reward parameters are annealed monotonically and never back; nobody runs the reverse sweep.",
+      "kill_condition": "if the extrapolated area is zero.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "H4",
+      "name": "Relaxation time and the transition window",
+      "headline": "OPEN",
+      "quantities": [
+        "run.tau_relax",
+        "run.transition_width"
+      ],
+      "says": "\"The behavioural transition has a fitted width of 58 steps. A 40-step lead is 0.69 of a window.\"",
+      "access_min": "RECORD",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "**this is the unit convention, and defining it is free.** Lead time is currently reported four incommensurable ways. Every forecast is scored in these units.",
+      "kill_condition": "n/a.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "H5",
+      "name": "Regime reading",
+      "headline": "The whole envelope, measured per step.",
+      "quantities": [
+        "run.regime"
+      ],
+      "says": "the twelve regime conditions with their statistics and thresholds.",
+      "access_min": "RECORD",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "consulted by every preflight; it is the mechanism, not a finding.",
+      "kill_condition": "OPEN",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "I1",
+      "name": "Density discontinuity at a reward gate",
+      "headline": "McCrary as a hacking detector.",
+      "quantities": [
+        "gate.mccrary_statistic"
+      ],
+      "says": "\"The density of token counts is discontinuous at τ·b₀(x) with p < 1e-6. The policy is manipulating the running variable.\"",
+      "access_min": "RECORD with the gate's running variable",
+      "substrates": "OPEN",
+      "substrates_open_reason": "the phrase \"any hard threshold\" is an applicability condition rather than a Substrate member. The instrument applies wherever a reward gate has a hard cutoff, on any substrate.",
+      "phases": "OPEN",
+      "phases_open_reason": "as substrates; no phase is stated.",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "the McCrary density test",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "with robust bias correction",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`units`",
+      "baselines": [
+        "a smooth-density null",
+        "the same test at a placebo cutoff"
+      ],
+      "prior_art": "hard reward thresholds are **sharp regression discontinuities with a deterministic, perfectly measured assignment rule**, which is the ideal case, and two independent searches found nothing joining these literatures. Zero compute, logs already on disk, works on any lab's stack.",
+      "kill_condition": "if no real pipeline has a hard gate, which is false.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "I2",
+      "name": "Bunching elasticity",
+      "headline": "How hard the policy is pushing on the gate.",
+      "quantities": [
+        "gate.bunching_elasticity"
+      ],
+      "says": "\"Excess mass below the length gate implies an elasticity of 1.7: a 10% looser gate buys 17% more length.\"",
+      "access_min": "RECORD",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "excess mass `b = B/h_0(c)`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "Saez elasticity",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "OPEN",
+      "baselines": [
+        "a placebo cutoff"
+      ],
+      "prior_art": "converts excess mass into a comparable measure of adversarial effort across gates and runs.",
+      "kill_condition": "if the elasticity does not respond when the gate is synthetically moved.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "I3",
+      "name": "Gradient dead-zone fraction",
+      "headline": "OPEN",
+      "quantities": [
+        "gate.deadzone_fraction"
+      ],
+      "says": "\"31% of over-budget rollouts sit in a region where the gradient with respect to task quality is exactly zero. Stopping early strictly dominates verifying.\"",
+      "access_min": "RECORD + the composition tree",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "the override mechanism, with the two mandatory controls (contrast against a graded penalty, and fix the decode length separately from the training budget).",
+      "kill_condition": "if the graded-penalty control shows the same verification suppression.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "I4",
+      "name": "Monitor degradation under pressure",
+      "headline": "The figure of merit nobody uses.",
+      "quantities": [
+        "monitor.degradation_curve",
+        "monitor.half_life"
+      ],
+      "says": "\"Placed in the loop, this monitor's AUROC falls from 0.94 to 0.71 over 180 steps. Its half-life under pressure is 96 steps. The competing monitor starts at 0.89 and holds 0.86.\"",
+      "access_min": "CONTROL, a monitor in the loop",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [
+        "STATIONARY_GRADER"
+      ],
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "pre/post AUROC",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "the full curve against steps",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "separating *evasion* (hacks look less suspicious) from *degradation* (the monitor loses discrimination)",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "OPEN",
+      "baselines": [
+        "a monitor not being optimised against, run in parallel",
+        "the gradient-norm peak"
+      ],
+      "prior_art": "**occupied as a phenomenon and open as a figure of merit.** MonitorBench reports monitorability dropping by up to 30% under stress-testing; one paper finds adversarial optimisation degrades monitors and another finds RL does not materially decrease monitorability at frontier scale (read both, the signs differ); the Obfuscation Atlas maps honest against obfuscated-activations against obfuscated-policy; and a curve exists, published 2026-07-29, reporting d′ 3.75 to 1.25 and AUROC 0.996 to 0.810 with the evasion-versus-degradation split. **What nobody does is rank competing monitors by this curve rather than by static AUROC.** Do that.",
+      "kill_condition": "if the ranking by degradation curve matches the ranking by static AUROC across ten monitors.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "I5",
+      "name": "The derivative of within-group reward variance",
+      "headline": "OPEN",
+      "quantities": [
+        "run.variance_derivative"
+      ],
+      "says": "\"d/dt of within-group reward variance crossed its CUSUM threshold at step 71, 14 steps before the labelled hack rate moved. Lead = 0.24 of the transition window.\"",
+      "access_min": "RECORD (veRL already logs `E[A²]`)",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "the derivative with an ARL-designed CUSUM",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "OPEN",
+      "baselines": [
+        "the *level* of variance, which is known not to be predictive",
+        "the gradient-norm peak, which is a free leading indicator every trainer already logs and which any new statistic must beat"
+      ],
+      "prior_art": "Prime Intellect measured that hidden reward variance peaks within 0 to 2 steps of liftoff while the ramp climbs over roughly 20 steps beforehand, so **the level is not predictive and the derivative might be.** Costs reading logs that already exist. Should run in week one alongside A1.",
+      "kill_condition": "if it does not beat the gradient-norm peak.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "I6",
+      "name": "Obfuscation pressure on the monitored channel",
+      "headline": "OPEN",
+      "quantities": [
+        "run.cot_faithfulness_under_kl"
+      ],
+      "says": "\"Raising the KL penalty raised the hack rate's CoT-mention rate's *complement*: the model hacks and reasons unfaithfully.\"",
+      "access_min": "the AISI KL sweep, which is 48 `cc-*` repos across seven β values and four hint difficulties",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "UK AISI found KL penalties *increased* CoT unfaithfulness, with models learning two reasoning traces and hiding the hack in one. A standard mitigation making the monitored channel less trustworthy is the obfuscation-pressure argument, measured by a government institute, and it is a strong argument for representation-level over text-level monitoring.",
+      "kill_condition": "if the KL sweep shows no faithfulness effect.",
+      "wedge": false,
+      "status": "OPEN"
+    },
+    {
+      "id": "I7",
+      "name": "Exploit transfer graph",
+      "headline": "OPEN",
+      "quantities": [
+        "exploit.transfer_matrix"
+      ],
+      "says": "\"Of 23 exploit families found on verifier A, 14 transfer to verifier B. The suite has a geometry and it is not diverse.\"",
+      "access_min": "an exploit corpus + multiple graders",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "\"verifier suites have no geometry and nobody is building one.\" Dual-use, sensitive by default.",
+      "kill_condition": "if transfer is near zero, which would be good news about suite diversity.",
+      "wedge": false,
+      "status": "OPEN"
+    },
+    {
+      "id": "J1",
+      "name": "E-values and confidence sequences",
+      "headline": "Peek freely.",
+      "quantities": [
+        "monitor.evalue",
+        "monitor.confidence_sequence"
+      ],
+      "says": "\"The anytime-valid interval on the hack rate is [0.03, 0.11] at step 140 and it has never been invalid, despite our having looked at every step.\"",
+      "access_min": "RECORD",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "Hoeffding by α-spending `δ_n = 6δ/(π²n²)`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "polynomial stitching",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "betting with the ONS schedule",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`units`",
+      "baselines": [
+        "a fixed-sample interval, and report how often it would have been wrong under continuous peeking"
+      ],
+      "prior_art": "Ville 1939. `confseq` exists (MIT) but is stale on PyPI since 2023 and needs C++14 plus Boost; `certified-interventional-fidelity` (MIT, UAI 2026) ships a pure-Python `cif.py` with `spending_delta`, `cs_radius`, `cs_radius_is` for importance sampling, `CIFTracker` and `BettingCSTracker`, and it explicitly frames interventional interpretability metrics as bounded causal estimands wrapped in anytime-valid sequences, valid under peeking and adaptive stress testing, at 10 to 30x lower certification cost. **Vendor `cif.py`.** It is simultaneously a competitor for the epistemics lane and the exact upgrade this layer needs.",
+      "kill_condition": "n/a.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "J2",
+      "name": "ARL-designed alarms",
+      "headline": "OPEN",
+      "quantities": [
+        "monitor.arl0",
+        "monitor.detection_delay"
+      ],
+      "says": "\"Designed for one false alarm per 1000 steps: k = 0.5, h = 5.71. Realised delay on the labelled series: 22 steps, or 0.38 of the transition window.\"",
+      "access_min": "RECORD",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "CUSUM with a derived `h`",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "EWMA",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "MEWMA on the multivariate channel",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "`units` (an earlier description declares `reward.affine` invariance on normalised statistics and requires it be declared otherwise; no group is stated for J2)",
+      "baselines": [
+        "the shipped ad hoc `k_sds = 0.5, h_sds = 5.0` with no derivation",
+        "a fixed threshold"
+      ],
+      "prior_art": "Page 1954, Lorden 1971, Siegmund's ARL approximation. CHERRL (arXiv:2606.04923) states the gap outright: \"No automated monitor detects onset from a deployed judge-blind signal in rubric-based RL reward hacking.\"",
+      "kill_condition": "n/a.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "J3",
+      "name": "Conjunction detectors",
+      "headline": "OPEN",
+      "quantities": [
+        "monitor.conjunction_alarm"
+      ],
+      "says": "\"The conjunction of entropy decline, prediction saturation and length pinning fired at step 62, 21 steps before collapse. Entropy alone fired three times, twice falsely.\"",
+      "access_min": "RECORD, multiple channels",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": [
+        "each channel alone, with its own false-alarm count"
+      ],
+      "prior_art": "measured: entropy alone false-alarms in three distinct ways; the conjunction precedes collapse by 15 to 30 steps. Compose with e-values, which multiply legally under arbitrary dependence, so e-BH gives FDR control over a per-feature ledger of alarms.",
+      "kill_condition": "if a single channel matches the conjunction's operating characteristic.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "J4",
+      "name": "Operating point from an asymmetric loss",
+      "headline": "OPEN",
+      "quantities": [
+        "monitor.operating_point",
+        "monitor.ppv_curve"
+      ],
+      "says": "\"At your stated 20:1 cost of a missed hack over a false alarm, the threshold is 0.31. At a 2.5% base rate that gives PPV 0.34.\"",
+      "access_min": "a loss statement",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": [
+        "a 0.5 threshold",
+        "a 5% FPR convention"
+      ],
+      "prior_art": "at a 2.5% base rate and a 31.7% FPR the PPV is under 8% even with perfect sensitivity, which is exactly the shape of the library's own `EVAL-AWARE` result and was predictable from Bayes' rule. **Every detector should report a PPV curve against assumed prevalence.** One line, prevents a recurring class of overclaim.",
+      "kill_condition": "n/a.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "J5",
+      "name": "Check standard",
+      "headline": "OPEN",
+      "quantities": [
+        "monitor.check_standard_drift"
+      ],
+      "says": "\"The frozen invariant probe set moved 0.04 this session. That is instrument drift, not model drift.\"",
+      "access_min": "a fixed probe set, measured every session",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "a check standard is chosen for *stability*, not difficulty, which is subtly and importantly different from a held-out eval. Pair with the isochronous design.",
+      "kill_condition": "n/a.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "K1",
+      "name": "The distillation gap",
+      "headline": "Kill risk number one.",
+      "quantities": [
+        "artifact.distillation_delta"
+      ],
+      "says": "\"Of the behaviour RL installed, 62% survives the on-policy distillation step. The reward-hacking propensity survives at 91%.\"",
+      "access_min": "a pre-distillation expert and the consolidated model",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "multi-teacher on-policy distillation is the default final step at seven or more labs and **not one publishes a behavioural audit of it.** Two searches for an RL-expert-versus-distilled-student behavioural comparison returned zero. The single existing audit found a shift \"invisible from aggregate losses alone\", localised to \"behavior leverage imbalance: local token-level signals at mode-entry and structural positions\", correctable to cut over-calling from 13.7% to 9.0% at fixed decision accuracy, and its conclusion is a one-line brief for this instrument: \"multi-teacher OPD should monitor *where* teacher signals act, not only *how large* they are in aggregate.\" They used two teachers. Kimi K3 uses nine.",
+      "kill_condition": "if nothing survives, everything measured during RL is measured on a model that never ships and the whole in-run layer is for the lab's internal use only.",
+      "wedge": false,
+      "status": "planned"
+    },
+    {
+      "id": "K2",
+      "name": "Planted-to-real transfer coefficient",
+      "headline": "OPEN",
+      "quantities": [
+        "calibration.transfer_t32"
+      ],
+      "says": "\"Calibrated on planted organisms and evaluated on AISI's naturally-arising labelled hacks over 25,664 rollouts, an instrument differs by t32 = 0.4732 [0.4543, 0.4933]. Under a substitute planting design the same coefficient is 0.0204, a spread of 0.4528, so a transfer coefficient quoted without its organism design is not yet a measurement.\"",
+      "access_min": "organisms + a labelled real corpus",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": [],
+      "envelope_unconditional_justification": "\"`REFERENCE_UNCERTIFIED` must not fire\" names a RefusalReason rather than a RegimeCondition.",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "the raw gap",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "with standard addition into the target",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "with a Pearl-Bareinboim selection diagram stating which quantities may legally cross",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "OPEN",
+      "baselines": [
+        "the organism-only number, which is what everyone reports"
+      ],
+      "prior_art": "the library's worst-looking result is the field's missing number. A July 2026 paper reached the same conclusion independently and a bank rediscovered it and named it \"feature-identity drift across checkpoints and SAE recipes.\" **Publish it as a quantity with a method, not as a caveat.**",
+      "kill_condition": "if standard addition drives it to zero, in which case the matrix-effect diagnosis was right and the fix works, which is the good outcome.",
+      "wedge": false,
+      "status": "planned"
+    },
+    {
+      "id": "K3",
+      "name": "Shelf life of a readout",
+      "headline": "OPEN",
+      "quantities": [
+        "instrument.shelf_life"
+      ],
+      "says": "\"This readout's AUROC decays from 0.61 to 0.51 over 250 GRPO steps. Its shelf life at the 0.55 threshold is 140 steps.\"",
+      "access_min": "a checkpoint series",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "the lens paper's own §9.2 predicts this (\"a misaligned behavior that has been reinforced enough to become a fixed circuit might\" proceed without engaging the J-space) and a decay curve exists in the wild. **An instrument that tells you when it has stopped working is worth more than one that quietly stops.** Note the claim to drop: it is no longer true that no such curve exists.",
+      "kill_condition": "n/a.",
+      "wedge": false,
+      "status": "planned"
+    },
+    {
+      "id": "K4",
+      "name": "Sparsity under staleness",
+      "headline": "OPEN",
+      "quantities": [
+        "policy.update_sparsity_vs_staleness"
+      ],
+      "says": "\"Update sparsity is 82% at staleness 0 and 79% at staleness 8. The mechanism's prediction does not hold.\"",
+      "access_min": "checkpoint pairs at controlled staleness",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": [
+        "the published cross-algorithm table, which trends the *other* way"
+      ],
+      "prior_art": "the central weight-space fact about RL was established on published checkpoints downloaded from the Hub rather than in a controlled configuration, its mechanism is a conjecture about *data proximity* rather than the on-policy axis, its stated numerical mechanism (updates below 1e-40 unrepresentable) is orthogonal to staleness, and **nobody has tested it either way.** Report the FP32-master-weight version too: roughly 99% of per-step updates are invisible after the BF16 cast, so re-measuring from master weights may collapse the reported sparsity entirely.",
+      "kill_condition": "n/a; both outcomes are results.",
+      "wedge": false,
+      "status": "planned"
+    },
+    {
+      "id": "L1",
+      "name": "Reference-material certificate",
+      "headline": "OPEN",
+      "quantities": [
+        "reference.u_homogeneity",
+        "reference.u_stability",
+        "reference.u_characterisation"
+      ],
+      "says": "\"This organism family: assigned dose ρ = 0.75, characterisation uncertainty 0.06, between-seed homogeneity 0.14, stability under 200 further steps not measured.\"",
+      "access_min": "ORGANISM:MUTATE, at least 3 seeds",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "characterisation only",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "plus homogeneity across seeds",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "plus stability under continued training",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "OPEN",
+      "baselines": [
+        "a single-seed plant with a nominal dose, which is current practice everywhere"
+      ],
+      "prior_art": "AuditBench ships 56 organisms, the foundry plants LoRA rules, Pando varies the explanation axis, and **none ships a stated uncertainty on the reference value.** The Model Organism Lottery result (interpretability of a planted behaviour varies with the training pipeline even after controlling for behaviour strength) *is* an uncharacterised homogeneity term. In metrology terms the field is calibrating against uncertified reference materials and reporting the result as a scorecard.",
+      "kill_condition": "if homogeneity is negligible across seeds, in which case single-seed plants are fine and this is one measurement, once.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "L2",
+      "name": "Label error rate and the ceiling it implies",
+      "headline": "OPEN",
+      "quantities": [
+        "labels.error_rate",
+        "labels.score_ceiling"
+      ],
+      "says": "\"This label set is 4.2% wrong, so the maximum achievable score is 95.8%. A model reported at 97% is partly matching the annotation error.\"",
+      "access_min": "a labelled corpus + an audit sample",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "a hand-audited sample with a Wilson interval",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 1,
+          "estimator": "IRT-based mislabel surfacing",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        },
+        {
+          "rung": 2,
+          "estimator": "a two-rater agreement design",
+          "access": "OPEN",
+          "access_open_reason": "not stated per rung; the per-rung access column is unfilled for every rung of this row.",
+          "bias": "OPEN",
+          "bias_open_reason": "not stated per rung; EstimatorEntry.bias is unfilled for every rung of this row.",
+          "cost": "OPEN",
+          "cost_open_reason": "not stated per rung; EstimatorEntry.cost is unfilled for every rung of this row."
+        }
+      ],
+      "invariance_group": "OPEN",
+      "baselines": [
+        "assume the labels are right"
+      ],
+      "prior_art": "label error rates are heavily published (roughly 3.3% average across ten benchmarks, 6% on ImageNet validation, a 0.15% to 10.12% range; MMLU-Redux; PlatinumBench; SWE-Bench+ at 33.04% leakage), and an IRT audit surfaces mislabels at 95% precision in the top 200 across seven benchmarks. **No benchmark publishes an estimated label-noise floor and no leaderboard normalises by it.** As models approach the ceiling, the leaderboard increasingly ranks agreement with annotation error.",
+      "kill_condition": "n/a.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "L3",
+      "name": "Two-sided verifier error",
+      "headline": "OPEN",
+      "quantities": [
+        "labels.false_success_rate",
+        "labels.corrupt_success_rate"
+      ],
+      "says": "\"36% of this benchmark's zeros are trajectories where the agent claimed success, and 27 to 78% of its ones are trajectories that violated the procedure and reached the right end state anyway.\"",
+      "access_min": "a labelled corpus + trajectory inspection",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": [
+        "the scalar as given"
+      ],
+      "prior_art": "on tau2-bench both numbers are measured, which makes the verifier scalar wrong in both directions on the same benchmark. Also: LLM judges are *anti-correlated* with truth on the false-success distinction (AUROC 0.18 to 0.30 across 25 judge-condition cells) while a TF-IDF logistic regression gets 0.849 and an XGBoost on AppWorld gets 0.953, at 1.19 ms against roughly 4,000 ms. **Ship the TF-IDF baseline as a mandatory comparator for any transcript-level detector.**",
+      "kill_condition": "n/a.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "L4",
+      "name": "The distributed-tell question, which is a free white-box experiment",
+      "headline": "OPEN",
+      "quantities": [
+        "labels.fs_signal_locality"
+      ],
+      "says": "\"The tell that an agent will falsely claim success is present across the whole episode, not at the end: text excluding the closing message scores 0.924 against 0.934 for closing-message-only.\" And then: \"the same question, asked of the residual stream, gives X.\"",
+      "access_min": "a labelled FS corpus + POLICY:FORWARD",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "the text-level result is published. **Nobody has asked the same question of the residual stream.** One well-defined experiment against a published comparison number, and either outcome is publishable.",
+      "kill_condition": "n/a.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "L5",
+      "name": "Position-stratified null for localisation",
+      "headline": "OPEN",
+      "quantities": [
+        "labels.position_prior"
+      ],
+      "says": "\"Scored against a uniform prior over positions our localiser gets 0.28. Against the position-stratified null it gets 0.72.\"",
+      "access_min": "the existing `VERIF-PRM` artifacts",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "costs nothing, uses data already held, and would resolve whether 0.2821 is a failure or a sign error. RLVR is reported to reallocate probability at critical positions concentrated near the start and end of trajectories, and a grader whose own position sensitivity was uncontrolled would produce exactly a below-chance AUC against a uniform prior. **Run this before citing 0.2821 again.**",
+      "kill_condition": "n/a.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "M1",
+      "name": "Substrate noise floor, LOD and LOQ",
+      "headline": "Consulted by every preflight, cached per configuration.",
+      "quantities": [
+        "intervention.ec50",
+        "substrate.noise_floor",
+        "substrate.lod",
+        "substrate.loq"
+      ],
+      "says": "OPEN",
+      "access_min": "OPEN",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "OPEN",
+      "kill_condition": "OPEN",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "M2",
+      "name": "Instrument effect",
+      "headline": "The overhead this measurement imposed, per step, as a term in the uncertainty budget. **No competitor has published an overhead number of any kind**, so a monitor with a measured one would be the first.",
+      "quantities": [
+        "instrument.effect"
+      ],
+      "says": "OPEN",
+      "access_min": "OPEN",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "OPEN",
+      "kill_condition": "OPEN",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "M3",
+      "name": "Dumb-baseline bank",
+      "headline": "String match, length, TF-IDF, n-gram diversity, a scaffolded black-box prompt, the gradient-norm peak. Every claim ships against all six. The reason is a single published case: a probe reported at AUC 0.998 on a task where a zero-parameter string match scores 100%, whose author's summary is \"the probe detects the hack, and the detection is empty.\"",
+      "quantities": [
+        "baseline.best_score"
+      ],
+      "says": "OPEN",
+      "access_min": "OPEN",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "OPEN",
+      "kill_condition": "OPEN",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "M4",
+      "name": "Semantic placebo",
+      "headline": "A coherent but irrelevant direction, not a random Gaussian one. Mandatory on every steering and ablation claim, because a vampires-versus-werewolves direction suppressed deployment-time hacking to 0.000 exactly as well as the real direction.",
+      "quantities": [
+        "placebo.effect_ratio"
+      ],
+      "says": "OPEN",
+      "access_min": "OPEN",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "OPEN",
+      "kill_condition": "OPEN",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "M5",
+      "name": "Matched positive control",
+      "headline": "A null without an identically-powered positive control is indistinguishable from an underpowered experiment. `NO_MATCHED_CONTROL` is a refusal reason. The library's own susceptibility card at accepted power 0.13 conspicuously lacked one.",
+      "quantities": [
+        "study.power"
+      ],
+      "says": "OPEN",
+      "access_min": "OPEN",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "OPEN",
+      "kill_condition": "OPEN",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "M6",
+      "name": "Reasoning-stripped ablation",
+      "headline": "For anything that reads text, because a leading detector drops from AUC 0.9467 to 0.6213 once natural-language reasoning is removed from its input, and reviewers will run this if we do not.",
+      "quantities": "OPEN",
+      "says": "OPEN",
+      "access_min": "OPEN",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "OPEN",
+      "kill_condition": "OPEN",
+      "wedge": false,
+      "status": "OPEN"
+    },
+    {
+      "id": "M7",
+      "name": "Uncertainty budget",
+      "headline": "The GUM table, lint-enforced to compose, with the largest term named. It is almost never sampling noise.",
+      "quantities": "OPEN",
+      "says": "OPEN",
+      "access_min": "OPEN",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "OPEN",
+      "kill_condition": "OPEN",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "M8",
+      "name": "Interlaboratory comparison",
+      "headline": "HuggingFace against vLLM, eager against compiled, two seeds, two precisions. Report `s_L` and the Birge ratio beside every reading.",
+      "quantities": [
+        "study.tau2"
+      ],
+      "says": "OPEN",
+      "access_min": "OPEN",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "OPEN",
+      "kill_condition": "OPEN",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "M9",
+      "name": "Incremental validity",
+      "headline": "Required on every white-box reading.",
+      "quantities": [
+        "instrument.incremental_validity",
+        "instrument.error_correlation"
+      ],
+      "says": "OPEN",
+      "access_min": "OPEN",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "OPEN",
+      "kill_condition": "OPEN",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "M10",
+      "name": "Power and minimum detectable effect",
+      "headline": "Before the run, not after. Three of five standard power calculators are roughly 2x wrong for close paired model comparisons, and the resolution ratio `q = N/N*` says outright when a leaderboard row is not resolved. Also carry the detection-band lesson: position bias is statistically detectable only within roughly a 60% to 95% base-accuracy window, so **absence of signal above that band should be read as \"not measurable\", not as \"unbiased\"**, and that logic applies to several of the library's own refuted cards.",
+      "quantities": [
+        "study.power",
+        "study.mde",
+        "study.resolution_ratio"
+      ],
+      "says": "OPEN",
+      "access_min": "OPEN",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "OPEN",
+      "kill_condition": "OPEN",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "M11",
+      "name": "Rung disagreement, published",
+      "headline": "When two rungs of the same ladder disagree on the same data, that difference is the cheap method's transfer uncertainty. It becomes a `Transfer` row and it composes into the calibration chain. Nobody publishes this.",
+      "quantities": [
+        "ladder.rung_disagreement"
+      ],
+      "says": "OPEN",
+      "access_min": "OPEN",
+      "substrates": "OPEN",
+      "phases": "OPEN",
+      "envelope_requires": "OPEN",
+      "envelope_measured_by": "OPEN",
+      "ladder": "OPEN",
+      "invariance_group": "OPEN",
+      "baselines": "OPEN",
+      "prior_art": "OPEN",
+      "kill_condition": "OPEN",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "N1",
+      "name": "The reward-versus-gold frontier",
+      "headline": "The whole frontier is estimable before any optimisation is run, from n base-policy rollouts scored by both channels.",
+      "quantities": [
+        "frontier.gold_vs_kl"
+      ],
+      "says": "\"Gold peaks at KL = 1.8 nats and we can see out to 3.1 before ESS falls below floor.\"",
+      "access_min": "GRADER:QUERY + GOLD:QUERY + POLICY:QUERY, on the same n samples",
+      "substrates": [
+        "NEURAL_SCALAR",
+        "NEURAL_GEN",
+        "PROGRAM",
+        "PROCEDURAL",
+        "HUMAN",
+        "COMPOSITE"
+      ],
+      "phases": [
+        "PRE_RUN"
+      ],
+      "envelope_requires": [
+        "LIGHT_TAILED",
+        "ESS_ADEQUATE"
+      ],
+      "envelope_measured_by": {
+        "LIGHT_TAILED": "frontier.tail_index",
+        "ESS_ADEQUATE": "frontier.visibility_horizon"
+      },
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "self-normalised importance sampling over the tilt family; every reported number is a ratio of weighted means with the max-subtraction applied before exponentiating",
+          "access": "GRADER:QUERY + GOLD:QUERY",
+          "bias": "consistent, downward-biased in variance at small ESS; the self-normalised ratio is biased at order 1/ESS and the bias grows exactly where the horizon is about to refuse",
+          "cost": "n grader calls and n gold calls, both reusable across every lambda on the sweep"
+        }
+      ],
+      "invariance_group": "reward.affine",
+      "baselines": [
+        "HedgeTune (arXiv 2506.19248), run on the same samples. This is mandatory rather than a citation, because it is a bisection and Newton solver for the same turning point consuming the same data, and the two turning-point estimates are reported side by side.",
+        "the untilted base-policy gold mean at lambda = 0",
+        "a linear extrapolation from the first two points of the sweep, which is the null under which the curve has no shape"
+      ],
+      "prior_art": "The Goodhart turning point is occupied. arXiv 2506.19248 (NeurIPS 2025 Spotlight) defines the identical tilt, names the hacking threshold, proves the true-reward curve is monotone or has a single interior extremum, and ships the solver. The closed-form cumulant expression is a convenience over their root-finder, not a new result. What survives is the horizon (N2), the concomitant framing (N4) and the surrogate conditions (N4).",
+      "kill_condition": "if HedgeTune and the cumulant estimate agree within their intervals on every grader tested, report HedgeTune and drop the second estimator. There is a stronger kill, for the layer rather than for the estimator: if the predicted turn does not match the realised turn on any open model where both are measurable, at any horizon, Level 0 is descriptive rather than predictive.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "N2",
+      "name": "The visibility horizon",
+      "headline": "Where a tilt extrapolation goes blind, which nobody states.",
+      "quantities": [
+        "frontier.visibility_horizon"
+      ],
+      "says": "\"Past lambda = 2.4 this instrument declines to answer. n/ESS = 20.\"",
+      "access_min": "GRADER:QUERY + POLICY:QUERY",
+      "substrates": [
+        "NEURAL_SCALAR",
+        "NEURAL_GEN",
+        "PROGRAM",
+        "PROCEDURAL",
+        "HUMAN",
+        "COMPOSITE"
+      ],
+      "phases": [
+        "PRE_RUN"
+      ],
+      "envelope_requires": [
+        "LIGHT_TAILED"
+      ],
+      "envelope_measured_by": {
+        "LIGHT_TAILED": "frontier.tail_index"
+      },
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "Kish ESS(lambda) = (sum w_i)^2 / sum w_i^2, swept until it crosses a stated floor, default 0.05 of n",
+          "access": "GRADER:QUERY",
+          "bias": "approximately unbiased as a summary of the realised weights, being a property of the sample rather than an estimate of a population quantity. The envelope still requires LIGHT_TAILED because the horizon is reported in nats, and the KL it bounds exists only where K(lambda) does. On a heavy-tailed reward the empirical K is a finite sum converging to nothing.",
+          "cost": "none beyond N1's n grader calls"
+        }
+      ],
+      "invariance_group": "reward.affine",
+      "baselines": [
+        "the raw sample size n, which is what a frontier reported without a horizon implicitly claims",
+        "the naive count of rollouts with nonzero weight"
+      ],
+      "prior_art": "Word-boundary ESS returns zero in arXiv 2506.19248, and its one use of \"effective sample size\" means a best-of-N count. The best-of-n coverage theory's controlling coefficient C = 1 + chi^2(pi* || pi_ref) = n/ESS is this quantity reciprocated, and that literature concedes the turn \"may be impossible to know\" because the constant is unmeasured.",
+      "kill_condition": "if the horizon never binds before the sweep's own range on any real grader, it is a formality rather than an instrument and it collapses into N1's reporting range.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "N3",
+      "name": "Reward tail index",
+      "headline": "The precondition the whole tilt layer rests on, measured rather than assumed.",
+      "quantities": [
+        "frontier.tail_index"
+      ],
+      "says": "\"Hill gamma-hat = 0.19 [0.12, 0.27]. Light-tailed assumption holds.\"",
+      "access_min": "GRADER:QUERY + POLICY:QUERY",
+      "substrates": [
+        "NEURAL_SCALAR",
+        "NEURAL_GEN",
+        "PROGRAM",
+        "PROCEDURAL",
+        "HUMAN",
+        "COMPOSITE"
+      ],
+      "phases": [
+        "PRE_RUN"
+      ],
+      "envelope_requires": [],
+      "envelope_unconditional_justification": "The Hill estimator on the upper tail depends on no regime condition. What it depends on is exceedance count, and an inadequate one is a refusal with a stated required n rather than a violated envelope, because the quantity stays well defined and only the estimate is unavailable.",
+      "envelope_measured_by": {},
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "Hill estimator over a threshold sweep, reported as a Hill plot with the stability protocol rather than as a point estimate at one k",
+          "access": "GRADER:QUERY",
+          "bias": "upward-biased at small k and threshold-sensitive; the plot is the reading and a single k is not",
+          "cost": "n grader calls, shared with N1"
+        }
+      ],
+      "invariance_group": "reward.affine",
+      "baselines": [
+        "a light-tailed parametric fit (exponential upper tail) at the same threshold, for contrast"
+      ],
+      "prior_art": "The one real measurement goes our way, a Hill estimate around 0.20 on an open reward model consistent with light-tailed error. Per-prompt tail-index estimation is itself occupied as of March 2026, so the novelty in series N is the horizon and the concomitant framing, not the tail estimation.",
+      "kill_condition": "if every grader tested is unambiguously light-tailed, the instrument becomes a precondition check rather than a reported quantity, and it renders as an envelope line on the card instead of a row.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "J6",
+      "name": "The forecast calibration ledger",
+      "headline": "The score of the library's own forecasts, in public, with the honest starting position printed at the top.",
+      "quantities": [
+        "forecast.brier_score",
+        "forecast.calibration_reliability",
+        "forecast.calibration_resolution",
+        "forecast.decision_value"
+      ],
+      "says": "\"Directional Brier 0.26 over 16 calls against a coin at 0.25. Interval coverage 0.75 against a registered 0.80. Decision value 0.000: the forecaster acts every time and so does climatology.\"",
+      "access_min": "RECORD",
+      "substrates": [
+        "NEURAL_SCALAR",
+        "NEURAL_GEN",
+        "PROGRAM",
+        "PROCEDURAL",
+        "HUMAN",
+        "COMPOSITE"
+      ],
+      "phases": [
+        "POST_RUN"
+      ],
+      "envelope_requires": [],
+      "envelope_unconditional_justification": "a proper scoring rule is a function of forecasts and realised outcomes and of nothing about the run that produced them, so no regime condition bears on it. The conditions that matter here are on the forecasts, and the barrier enforces them at construction rather than at scoring.",
+      "envelope_measured_by": {},
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "the half-Brier score with the Murphy decomposition into reliability, resolution and uncertainty, a skill score against each mandatory baseline with a bootstrap interval, a reliability diagram, and the expected loss saved under the forecast's own DecisionSpec",
+          "access": "RECORD",
+          "bias": "unbiased for the forecasts it is given, and it says how many resolutions went void rather than scoring them as misses, because dropping a call and scoring it wrong are different numbers and the reader has to see which was done",
+          "cost": "none"
+        }
+      ],
+      "invariance_group": "none",
+      "baselines": [
+        "climatology, the base rate in the reference class",
+        "persistence",
+        "the dumb statistic, which here means string matching, the gradient-norm peak or I5's variance derivative",
+        "the scaffolded black-box method, currently contrastive belief-flipping, which is the first thing a reviewer raises"
+      ],
+      "prior_art": "Murphy (1973) for the decomposition and Gneiting and Raftery (2007) for proper scoring rules; both are standard in meteorology and neither is applied to a forecast about a training run. Decision value is computed nowhere in this field: it is the number that answers \"so what\", and it can be exactly zero while a Brier score looks informative.",
+      "kill_condition": "if the ledger never scores a forecast the library did not also issue, it is a self-assessment rather than a ledger.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "C9",
+      "name": "Policy readout recoverability",
+      "headline": "What a linear readout of the policy's own residual stream recovers, against the black-box bank on the same items.",
+      "quantities": [
+        "policy.readout_recoverability"
+      ],
+      "says": "\"The probe reads 0.536 where the best black-box baseline reads 0.964, at an error correlation of +0.21 and an ensemble gain of exactly zero. On this run, opening the network bought nothing.\"",
+      "access_min": "POLICY:FORWARD",
+      "substrates": [
+        "NEURAL_SCALAR",
+        "NEURAL_GEN"
+      ],
+      "phases": [
+        "POST_RUN"
+      ],
+      "envelope_requires": [],
+      "envelope_unconditional_justification": "a cross-fitted probe on a fixed item set depends on no property of the optimisation that produced the items. What it does depend on is label quality and class balance, and both are checked in preflight and refused by name rather than declared as regime conditions, because neither is a property of a run.",
+      "envelope_measured_by": {},
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "a ridge readout of the residual stream at a named site, cross-fitted over folds, scored against the black-box baseline bank on the same items with the error correlation between the two methods' per-item margins",
+          "access": "POLICY:FORWARD",
+          "bias": "the penalty is fixed rather than tuned, at alpha times the mean eigenvalue of the training Gram, because a hyperparameter chosen on the evaluation set is a fitted parameter the baseline bank exists to count. That makes the reading a floor on what a tuned probe would recover.",
+          "cost": "one forward pass per item plus a ridge solve; no grader calls"
+        }
+      ],
+      "invariance_group": "repr.basis",
+      "baselines": [
+        "the six-member black-box bank, on the same items",
+        "the best single baseline, which is what the incremental record is scored against"
+      ],
+      "prior_art": "\"incremental validity\" is the established psychometrics term and has zero uses in machine-learning interpretability. arXiv 2507.12691 makes the white-box-minus-black-box gap the benchmark itself and computes three of the four numbers; what nobody reports is the error correlation, so complementarity is currently inferred from ensemble gain rather than measured.",
+      "kill_condition": "if the probe never beats the black-box bank and is never decorrelated from it on any real subject, a linear readout of the residual stream is not carrying anything the text does not, and the instrument reports that rather than the field assuming otherwise.",
+      "wedge": false,
+      "status": "built"
+    },
+    {
+      "id": "N4",
+      "name": "Surrogate conditions and the concomitant of best-of-n",
+      "headline": "Falsifiable conditions on the proxy beat a predicted turning point, and best-of-n Goodhart is a concomitant problem nobody has recognised as one.",
+      "quantities": [
+        "frontier.prentice_checklist",
+        "frontier.concomitant_bon"
+      ],
+      "says": "\"Fails criterion 4: the proxy does not fully mediate the treatment effect on gold. At n = 64, expected gold at the proxy-argmax is 0.71 [0.66, 0.75], exactly.\"",
+      "access_min": "GRADER:QUERY + GOLD:QUERY, on the same n samples",
+      "substrates": [
+        "NEURAL_SCALAR",
+        "NEURAL_GEN",
+        "PROGRAM",
+        "PROCEDURAL",
+        "HUMAN",
+        "COMPOSITE"
+      ],
+      "phases": [
+        "PRE_RUN"
+      ],
+      "envelope_requires": [
+        "STATIONARY_GRADER"
+      ],
+      "envelope_measured_by": {
+        "STATIONARY_GRADER": "monitor.check_standard_drift"
+      },
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "the four surrogate-endpoint criteria as explicit testable conditions on the joint distribution of (r, g, treatment), each returning pass, fail or untestable; and the exact finite-n concomitant expectation of the maximum-of-selected-concomitants problem",
+          "access": "GRADER:QUERY + GOLD:QUERY",
+          "bias": "the concomitant expectation is exact at the stated n given the joint sample; the criteria are verdicts rather than estimates and carry no bias direction",
+          "cost": "none beyond N1's n grader and gold calls"
+        }
+      ],
+      "invariance_group": "reward.affine",
+      "baselines": [
+        "the marginal proxy-gold correlation, which is what practice currently looks at and which cannot distinguish a mediating surrogate from a merely correlated one",
+        "simulation of best-of-n at the same n, to check the exact expression"
+      ],
+      "prior_art": "\"surrogate endpoint\" AND \"reward\" returns zero on arXiv; \"surrogate paradox\" returns five papers, all biostatistics. The concomitant of the nth order statistic has forty years of exact finite-n theory (David and Nagaraja; Nagaraja and David 1994 solves the maximum-of-selected-concomitants problem directly) and zero applications to language models.",
+      "kill_condition": "if every criterion returns untestable on every real grader for want of an intervention, the checklist is a research note rather than an instrument and only the concomitant reading ships.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "N5",
+      "name": "Optimal component weights",
+      "headline": "Nobody sets a reward component's weight from that component's measured noise, and the formula that does has been sitting in contract theory since 1991.",
+      "quantities": [
+        "reward.optimal_weights"
+      ],
+      "says": "\"skywork-v2-qwen3-8b keeps 0.141 of the weight its value alone would buy it, and armorm keeps 0.926, decided by measured noise on components of equal stated value. Where one task cannot be measured, the correction sends the measurable component's weight to exactly zero, and only when the two tasks are equally valuable.\"",
+      "access_min": "GRADER: REPLICATE, for Sigma. Every other parameter is stated or swept",
+      "substrates": [
+        "NEURAL_SCALAR",
+        "NEURAL_GEN",
+        "PROGRAM",
+        "PROCEDURAL",
+        "HUMAN",
+        "COMPOSITE"
+      ],
+      "phases": [
+        "PRE_RUN",
+        "POST_RUN"
+      ],
+      "envelope_requires": [
+        "STATIONARY_GRADER"
+      ],
+      "envelope_measured_by": {
+        "STATIONARY_GRADER": "monitor.check_standard_drift"
+      },
+      "ladder": [
+        {
+          "rung": 1,
+          "estimator": "alpha* = [M C''^-1 M' + r Sigma]^-1 M C''^-1 B', with Sigma from A2 and the other four parameters stated or swept. The diagonal form alpha_i = B_i / (1 + r C_ii sigma_i^2) and the unmeasurable-task form are special cases of the same solve and are checked against it.",
+          "access": "GRADER: REPLICATE",
+          "bias": "exact given the parameters, and the parameters are where the error lives. The recommendation is a deterministic function of five inputs of which one is measured, so its uncertainty is dominated by the four that are not, and the sweep rather than an interval is what reports it.",
+          "cost": "none beyond A2's crossed design"
+        }
+      ],
+      "invariance_group": "`reward.affine`",
+      "baselines": [
+        "equal weights across components, which is what a composite with no analysis uses",
+        "weights proportional to B', which is what weighting by importance means and is this recommendation with the noise term deleted"
+      ],
+      "prior_art": "Holmstrom and Milgrom (1991), linear contracts under CARA and Brownian noise. The shrinkage factor is the same object as the regressional-Goodhart factor, derived by contract theory as what the principal should do and by the Goodhart literature as what happens if you do not. Prendergast (1999) finds the risk-incentive relationship it rests on weak or wrong-signed in humans, so this ships as a design check with five printed assumptions rather than as a law. No RLHF tooling sets a weight from a measured noise.",
+      "kill_condition": "if the recommended weights are within measurement error of the value-proportional baseline on every real composite tested, the noise term is doing no work and the instrument is a restatement of B'.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "N6",
+      "name": "The equal-compensation table",
+      "headline": "Which component of a composite reward the policy is being paid least to work on.",
+      "quantities": [
+        "reward.equal_compensation_ratio"
+      ],
+      "says": "\"The commissions are 0.037, 0.421 and 1.117. armorm is starved: it pays the policy under four percent of what the best-paying component pays for the same unit of capacity, and its stated weight of one third is not the incentive it delivers.\"",
+      "access_min": "GRADER: RECORD for the weights; POLICY: CONTROL for a measured sensitivity",
+      "substrates": [
+        "NEURAL_SCALAR",
+        "NEURAL_GEN",
+        "PROGRAM",
+        "PROCEDURAL",
+        "HUMAN",
+        "COMPOSITE"
+      ],
+      "phases": [
+        "PRE_RUN",
+        "POST_RUN"
+      ],
+      "envelope_requires": [
+        "STATIONARY_GRADER"
+      ],
+      "envelope_measured_by": {
+        "STATIONARY_GRADER": "monitor.check_standard_drift"
+      },
+      "ladder": [
+        {
+          "rung": 0,
+          "estimator": "kappa_i = alpha_i mu'_i from a stated sensitivity, normalised by the largest kappa across components; the starved component is argmin kappa. A stated mu' makes the table a conditional statement and every row says which of the two it is on.",
+          "access": "GRADER: RECORD",
+          "bias": "exact given mu'. A stated mu' is an assumption and the reading names it as one.",
+          "cost": "free. Arithmetic on parameters the caller already holds."
+        },
+        {
+          "rung": 1,
+          "estimator": "the same table with mu' from a measured weight sweep",
+          "access": "GRADER: RECORD, POLICY: CONTROL",
+          "bias": "a finite-difference sensitivity, so it inherits the sweep's step size",
+          "cost": "one sweep per component"
+        }
+      ],
+      "invariance_group": "`reward.affine`",
+      "baselines": [
+        "the weights read as commissions, which is what treating a weight as an incentive assumes and is this table under mu' = 1",
+        "equal weights, which is what the table would say if the composite had not been tuned"
+      ],
+      "prior_art": "The phrase \"equal compensation principle\" is Milgrom and Roberts (1992) and does not appear in Holmstrom and Milgrom (1991). The source description states the principle backwards, and on the real panel the printed rule and the correct one name opposite ends. `EqualCompensation.deviations` carries the printed rule verbatim so a reader can see which of the two they have.",
+      "kill_condition": "if the commission ratio is within a few percent of 1 for every component of every real composite tested, composites are already equal-compensating and the table is a formality. It does not fire here; the spread is 0.033.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "N7",
+      "name": "The sorting cutoff",
+      "headline": "Do not put a noisy judge and a crisp unit test in the same weighted sum, with the threshold at which that stops being a slogan.",
+      "quantities": [
+        "reward.sorting_cutoff"
+      ],
+      "says": "\"Split at rho = 0.183: armorm in one stage, tulu-rm and skywork-v2-qwen3-8b in another. Keeping skywork-v2-qwen3-8b in one sum with the rest multiplies every other component's incentive intensity by 0.49, and splitting is worth +141% against the single weighted sum at the same total capacity.\"",
+      "access_min": "GRADER: REPLICATE for Sigma; POLICY: CONTROL for the sensitivities",
+      "substrates": [
+        "NEURAL_SCALAR",
+        "NEURAL_GEN",
+        "PROGRAM",
+        "PROCEDURAL",
+        "HUMAN",
+        "COMPOSITE"
+      ],
+      "phases": [
+        "PRE_RUN",
+        "POST_RUN"
+      ],
+      "envelope_requires": [
+        "STATIONARY_GRADER"
+      ],
+      "envelope_measured_by": {
+        "STATIONARY_GRADER": "monitor.check_standard_drift"
+      },
+      "ladder": [
+        {
+          "rung": 1,
+          "estimator": "exhaustive maximisation of the summed contract value B_g^2 / [2 C (1 + r C N_g)] over partitions, with the interval partition in rho order computed alongside and the two compared, so the sorting theorem's own claim is checked rather than assumed. Comparisons across the number of contracts carry the capacity correction C -> k C, without which splitting compares one agent against several and looks free.",
+          "access": "GRADER: REPLICATE, POLICY: CONTROL",
+          "bias": "exact given the parameters. Above the enumeration limit only the interval scan runs and the reading records that the check did not happen.",
+          "cost": "free. Arithmetic on parameters the caller already holds."
+        }
+      ],
+      "invariance_group": "`reward.affine`",
+      "baselines": [
+        "one contract holding every component, which is what every composite reward is",
+        "one contract per component, which is the other extreme and is usually worse"
+      ],
+      "prior_art": "The optimum is provably asymmetric, so symmetric treatment of components whose noise differs at all is suboptimal. For two components, one noiseless and one with x = r C n, splitting beats the single sum by (1 + x)^2 / (1 + 2x), which is exactly 1 at x = 0 and above 1 everywhere else. Not applied to reward composition anywhere in this literature.",
+      "kill_condition": "if the single-contract baseline is optimal on every real composite tested, splitting never pays and the instrument reports a cutoff nobody should act on.",
+      "wedge": true,
+      "status": "built"
+    },
+    {
+      "id": "N8",
+      "name": "Noise and angle, per component",
+      "headline": "Every reward component needs at least two numbers, a noise and an angle, and no RLHF tooling separates them.",
+      "quantities": [
+        "reward.component_congruity"
+      ],
+      "says": "\"The three components' effort-equivalent noise is 0.029, 1.172 and 2.296, so tulu-rm and skywork-v2-qwen3-8b want lower weights. Their distortions are exactly zero, and by construction rather than by measurement: the sensitivity matrix is diagonal here, so the angle half is not a reading this subject can support.\"",
+      "access_min": "GRADER: REPLICATE for Sigma; POLICY: CONTROL for the sensitivity matrix",
+      "substrates": [
+        "NEURAL_SCALAR",
+        "NEURAL_GEN",
+        "PROGRAM",
+        "PROCEDURAL",
+        "HUMAN",
+        "COMPOSITE"
+      ],
+      "phases": [
+        "PRE_RUN",
+        "POST_RUN"
+      ],
+      "envelope_requires": [
+        "STATIONARY_GRADER"
+      ],
+      "envelope_measured_by": {
+        "STATIONARY_GRADER": "monitor.check_standard_drift"
+      },
+      "ladder": [
+        {
+          "rung": 1,
+          "estimator": "n_i = sigma_i^2 / mu'_i^2 from A2's variance components and the sensitivity matrix; congruity is the cosine between the i-th row of M and B', with the whole-contract cosine between M' alpha and B' reported beside it. A single component's cosine cannot reach 1 when the value direction spreads over several tasks, so distortion is measured against the clean-measure reference B_i / ||B'|| rather than against 1.",
+          "access": "GRADER: REPLICATE, POLICY: CONTROL",
+          "bias": "exact given the parameters. Congruity is degenerate under a diagonal M, where it equals the normalised benefit vector, and the reading refuses to call that a measurement of distortion.",
+          "cost": "free. Arithmetic on parameters the caller already holds."
+        }
+      ],
+      "invariance_group": "`reward.affine`",
+      "baselines": [
+        "the marginal correlation between each component and the outcome, which is what practice looks at and which cannot separate a noisy measure from a distorted one",
+        "the component's raw variance, which is the noise half with the sensitivity left in and is therefore not comparable across components"
+      ],
+      "prior_art": "A noisy but congruent measure wants a lower weight; a precise but distorted measure wants a different measure, because no weight fixes an angle. Reporting one number cannot distinguish those remedies, and current practice reports one number.",
+      "kill_condition": "Fires on this subject, and the reading says which half is a measurement. The tasks are identified one-to-one with the components, so M is diagonal by construction and every distortion is exactly zero; the off-diagonal path is exercised on a constructed M that is labelled synthetic. Recorded rather than hidden, and it is also why the noise half must be divided by the squared sensitivity: the diagonal weight formula is not scale free, and on this panel the three components' raw noise variances differ by a factor of 74,890, which is almost entirely the scale each model emits on, while their effort-equivalent noise differs by 80, which is the real difference.",
+      "wedge": true,
+      "status": "built"
+    }
+  ]
+}

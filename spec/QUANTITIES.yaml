@@ -1,0 +1,3447 @@
+# The quantity registry. 179 rows, 103 in the wedge, 37 declaring no group. 124 come from the
+# source quantity table; the other 55 arrived as later corrections, under the `errata` tags the
+# rows themselves carry: E10 (1), E14 (3), E19 (28), E22 (3), E23 (5), E29 (10), and five
+# adjudicated later and listed at the foot of this file. Five source rows carry an amended unit
+# decomposition under E15.
+#
+# The counts are derived from the rows, not restated from the prose. The source table's own header
+# says "126 quantities, of which 68 are in the wedge" and the table has 124 rows and 69 markers,
+# which is a defect on record; the instruction "if you edit a row, recount" sits at the top of both
+# files and three errata edited rows before anyone did. The wedge count later moved from 85 to 103:
+# thirteen of the 28 retrofit rows are in the wedge on their own `min_access` and were marked out
+# of it, and five new rows are in it.
+#
+# Unit decomposition into (dimension, per, scale) is this build's, because the source table prints
+# one undecomposed token per row and no Unit body appears in either document. `as_printed` always
+# carries the source token so the decomposition is checkable.
+#
+# One row is not from the source quantity table. `credit.successor_representation` is named only in
+# a prose footnote, which is the same defect the later document criticises the earlier one
+# for. It is registered here so the docs build can name it as an open research target, which is
+# what the footnote asks for and what a prose-only mention cannot deliver.
+#
+# Three more are named in the source instrument entries and have no quantity-table row either:
+# `verifier.fp_catalogue` (D5), `verifier.trusted_inputs` (D9) and
+# `selection.dimensionality` (F5). Registered here for the same reason, marked
+# `errata: E14`. Two further ids in the instrument entries, `grader.condorcet` and
+# `reference.u_char`, are alternate spellings of `grader.condorcet_rate` and
+# `reference.u_characterisation`, which the table does carry; those are not registered twice.
+quantities:
+- id: grader.effective_group_size
+  unit:
+    as_printed: count
+    dimension: count
+    per: group
+    scale: null
+  # Amended: `per` was null, which merged this with `verifier.surviving_mutants`, a count with
+  # no denominator at all. The A1 instrument entry defines it over "a group of K rollouts" and reports it
+  # as "4.2, not 16", where 16 is K. `group` is one of the four `per` values the Unit class
+  # names and no row used it. See errata E15.
+  errata: E15
+  invariance_group: reward.affine
+  min_access: GRADER:RECORD
+  rungs: 4
+  instrument:
+  - A1
+  wedge: true
+  # Filled when A1 stopped multiplying the Kish shape factor into this quantity. The
+  # three fields were OPEN because nobody had had to say precisely what the number was until the
+  # correction forced the question. Lifted verbatim from `EFFECTIVE_GROUP_SIZE` in
+  # `measure/metrology/gstudy.py`, which is the declaration the instrument is checked against.
+  definition: >-
+    For a group of K rollouts scored on one prompt under one grader configuration: the number of
+    noiselessly scored rollouts that would carry the same amount of signal as the K observed
+    scores. It is K times the generalizability coefficient of a single observed score over the
+    declared universe of grader draws, sigma2(tau) / (sigma2(tau) + sigma2(delta)) at one draw of
+    every facet, which is 1 for a noiseless grader and falls toward 0 as measurement error takes
+    over the observed spread. Every rung of the ladder estimates this one number and differs only
+    in which error terms its design can see, so rung 0, which can see none, returns exactly K. The
+    shape of the reward distribution inside the group does not enter: how unevenly a group spends
+    its gradient is a fact about the policy and the reward, not about the grader, and it is
+    reported separately as the group's Kish shape factor.
+  interpretation: >-
+    Compare it to K. n_eff = 4.2 at K = 16 means eleven point eight rollouts' worth of compute
+    bought grader noise rather than an independent gradient-relevant observation. The rung tells
+    you how much of the grader's error the number could see: below rung 3 some error terms are
+    invisible and are counted as signal, so the reading is an upper bound and the invisible terms
+    are named on it.
+  support:
+  - 0.0
+  - .inf
+- id: run.group_shape_factor
+  unit:
+    as_printed: fraction
+    dimension: ratio
+    per: group
+    scale: null
+  # Registered to carry the half of the old `grader.effective_group_size` that was
+  # never a property of the grader. A1 multiplied Kish's shape factor by the reliability and
+  # called the product an effective group size; the two answer different questions and their
+  # product is not a quantity. The shape factor asks how unequal the deviations within a group
+  # are, which is a fact about the policy and the reward. The reliability asks how much of the
+  # observed variance is true score, which is a fact about the grader. This id exists so the
+  # first one can be reported, compared and stored on its own terms rather than smuggled into
+  # the second.
+  #
+  # It is `run.` rather than `grader.` deliberately: filing it under `grader.` would re-assert
+  # the exact conflation the correction removed.
+  invariance_group: reward.affine
+  min_access: GRADER:RECORD
+  rungs: 1
+  instrument:
+  - A1
+  wedge: true
+  definition: >-
+    For a group of K rollouts, Kish's shape factor on the group's centred scores,
+    (sum w)^2 / (K * sum w^2), which is 1 when every rollout deviates from the group mean by the
+    same magnitude and falls toward 0 as the group's gradient signal concentrates in fewer and
+    fewer rollouts. It is computed on the observed scores, so it carries grader noise, and it is
+    reported as a property of the group rather than of the grader for that reason.
+  interpretation: >-
+    How evenly a group spends its gradient. A value near 1 means every rollout in the group is
+    contributing comparably to the advantage; a low value means a few rollouts carry the update
+    and the rest are close to the mean. Measured across eleven real reward models it runs 0.7346
+    to 0.7562 with a spread of 0.0216, which is where the per-grader variation in the old
+    effective-group-size reading was coming from.
+  support:
+  - 0.0
+  - 1.0
+# ---------------------------------------------------------------------------
+# Series N5-N8, the contract layer.
+#
+# These exist because nothing was scheduled for the contract layer and the mathematics
+# there is pure wedge. The instruments were built and shipped; their
+# catalogue rows and these four quantity ids were never written, so four shipped instruments were
+# failing `lint_instrument` rule 1 for some time while the schedule read `done`. Found
+# while enumerating the registry for something else, which is the third
+# time in this build that an enumeration-as-a-test caught a hole nobody was looking for.
+#
+# The invariance declarations are the shipped instruments' own and they were thought through:
+# `reward.optimal_weights` is **covariant at weight -1** under `reward.affine`, because if the
+# reward scales by `a` the weight that keeps the incentive constant scales by `1/a`. The other three
+# are ratios and cosines of things that scale together, so they are invariant.
+- id: reward.optimal_weights
+  unit:
+    as_printed: weight
+    dimension: '1'
+    per: component
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:RECORD
+  rungs: 2
+  instrument:
+  - N5
+  wedge: true
+  definition: >-
+    The weight a reward component should carry in a composite reward given its measured noise:
+    alpha* = (I + r C'' Sigma)^-1 B', and in the diagonal case alpha*_i = B_i / (1 + r C_ii
+    sigma_i^2). Holmstrom and Milgrom (1991) under CARA and Brownian noise, with the ordering
+    C'' before Sigma, since matrix products do not commute and at least one transcription in this
+    project's own corpus has them the other way round.
+  interpretation: >-
+    A component's optimal weight falls as its measurement noise rises, and the shrinkage factor is
+    the same object as the regressional-Goodhart factor Var(X)/(Var(X)+Var(Z)), derived by contract
+    theory as what the principal should do and by the Goodhart literature as what happens if you do
+    not. Ships as a design check with its five assumptions printed, not as a law.
+  support: OPEN
+- id: reward.equal_compensation_ratio
+  unit:
+    as_printed: varrho
+    dimension: ratio
+    per: component
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:RECORD
+  rungs: 2
+  instrument:
+  - N6
+  wedge: true
+  definition: >-
+    The information coefficient varrho(k) = n(k)/t(k) with n(k) = sigma^2(k)/mu'(t(k),k)^2, per
+    component of a composite reward. After dividing each signal by its own sensitivity mu', the
+    commissions must be equal, so the raw weights must satisfy alpha_i proportional to mu'_i.
+  interpretation: >-
+    Whether the reward is mis-weighted, and if so which component is being starved: the one with
+    the lowest alpha_i/mu'_i. The phrase "equal compensation principle" is Milgrom and Roberts
+    (1992) and does not appear in Holmstrom and Milgrom (1991). The source description states the
+    principle backwards, and on a real panel the printed rule and the correct one name opposite ends.
+  support: OPEN
+- id: reward.sorting_cutoff
+  unit:
+    as_printed: varrho
+    dimension: ratio
+    per: component
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:RECORD
+  rungs: 1
+  instrument:
+  - N7
+  wedge: true
+  definition: >-
+    The value of the information coefficient varrho at which components should be separated into
+    different incentive contracts rather than summed into one.
+  interpretation: >-
+    Do not put a noisy judge and a crisp unit test in the same weighted sum. Split them across
+    separate optimisation stages, separate models, or separate gradient paths. The optimum is
+    provably asymmetric, so symmetric treatment of components whose noise differs at all is
+    suboptimal.
+  support: OPEN
+- id: reward.component_congruity
+  unit:
+    as_printed: cos
+    dimension: correlation
+    per: component
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:RECORD
+  rungs: 2
+  instrument:
+  - N8
+  wedge: true
+  definition: >-
+    Congruity = cos of the angle between M-transpose alpha and B', per reward component, with
+    Distortion = 1 - Congruity travelling beside it.
+  interpretation: >-
+    Every reward component needs at least two numbers, a noise and an angle, and no RLHF tooling
+    separates them. A noisy but congruent measure wants a lower weight; a precise but distorted
+    measure wants a different measure. Those are different remedies and one number cannot
+    distinguish them.
+  support:
+  - -1.0
+  - 1.0
+- id: grader.variance_components
+  unit:
+    as_printed: var
+    dimension: variance
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:REPLICATE
+  rungs: 4
+  instrument:
+  - A2
+  wedge: true
+  # Lifted from the `Quantity` this package has carried since it was written. The module
+  # held the definition because `spec/QUANTITIES.yaml` was not that module's file to write,
+  # and `test_the_registry_carries_no_definition_for_any_of_them` was left as a tripwire so
+  # the duplicate would be deleted when the row landed rather than drifting against it.
+  definition: >-
+    The decomposition of the variance of a single grader score into additive components, one per
+    source of variation in a fully crossed design: the object of measurement, each facet of the
+    measurement procedure, every interaction among them, and a residual. In a crossed
+    object-by-rater-by-occasion design with one observation per cell the components are sigma2(p),
+    sigma2(r), sigma2(o), sigma2(pr), sigma2(po), sigma2(ro) and sigma2(pro,e), estimated by
+    inverting the expected mean squares. The three-way interaction and the residual are one term
+    because a design with one observation per cell cannot separate them. Components are truncated at
+    zero and every truncation is recorded, because a negative estimate means the true component is
+    near zero and the design could not resolve it, which is a different statement from an
+    established zero.
+  interpretation: >-
+    Read the shares, not the values: the values are in the square of whatever units the grader emits
+    and are not comparable across graders. A large sigma2(r) share means the score depends on which
+    judge you drew. A large sigma2(pr) share means the judges disagree about which response is
+    better, which is the term a group-relative estimator cannot cancel.
+  support: OPEN
+- id: grader.grr_percent
+  unit:
+    as_printed: '%'
+    dimension: percent
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:REPLICATE
+  rungs: 1
+  instrument:
+  - A2
+  wedge: true
+  # Lifted from the `Quantity` this package has carried since it was written. The module
+  # held the definition because `spec/QUANTITIES.yaml` was not that module's file to write,
+  # and `test_the_registry_carries_no_definition_for_any_of_them` was left as a tripwire so
+  # the duplicate would be deleted when the row landed rather than drifting against it.
+  definition: >-
+    100 * sigma_GRR / sigma_total, where sigma_total is the standard deviation of a single score and
+    sigma_GRR is the square root of the total variance minus the variance of the object of
+    measurement. Everything that is not the object is gauge: facet main effects, object-by-facet
+    interactions, facet-by-facet interactions and the residual. A ratio of standard deviations,
+    following the automotive convention, and not of variances.
+  interpretation: >-
+    Under 10% the measurement system is acceptable, 10 to 30 is conditional on what the measurement
+    is for, over 30 is not acceptable for process control. At 61% most of what you are ranking on is
+    the measurement rather than the thing measured.
+  support: OPEN
+- id: grader.ndc
+  unit:
+    as_printed: count
+    dimension: count
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:REPLICATE
+  rungs: 1
+  instrument:
+  - A2
+  wedge: true
+  # Lifted from the `Quantity` this package has carried since it was written. The module
+  # held the definition because `spec/QUANTITIES.yaml` was not that module's file to write,
+  # and `test_the_registry_carries_no_definition_for_any_of_them` was left as a tripwire so
+  # the duplicate would be deleted when the row landed rather than drifting against it.
+  definition: >-
+    1.41 * sigma_part / sigma_GRR, truncated to an integer: the number of distinct non-overlapping
+    categories the measurement system can sort the population of objects into. The 1.41 is the
+    square root of two, from the width of the distribution of true values relative to the width of
+    the measurement error.
+  interpretation: >-
+    Five or more is the threshold for using a gauge to control a process. Two means the gauge can
+    tell good from bad and nothing finer, so it cannot resolve two adjacent models. One means it
+    cannot do that either.
+  support: OPEN
+- id: grader.attenuation
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:REPLICATE
+  rungs: 2
+  instrument:
+  - A3
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: grader.blackwell_order
+  unit:
+    as_printed: partial order
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY
+  rungs: 4
+  instrument:
+  - A4
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: grader.allocation
+  unit:
+    as_printed: plan
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: units
+  min_access: derived
+  rungs: 2
+  instrument:
+  - A5
+  wedge: false
+  # Lifted from the `Quantity` this package has carried since it was written. The module
+  # held the definition because `spec/QUANTITIES.yaml` was not that module's file to write,
+  # and `test_the_registry_carries_no_definition_for_any_of_them` was left as a tripwire so
+  # the duplicate would be deleted when the row landed rather than drifting against it.
+  definition: >-
+    The four-tuple (n prompts, K rollouts per prompt, s grader draws per rollout, m repeat calls per
+    draw) that minimises a stated error variance subject to a stated cost constraint, together with
+    the error variance it achieves and the error variance the current allocation achieves. The error
+    variance is one of three: the batch relative error (sigma2(p) + sigma2(delta; s, m)) / (n*K),
+    the batch absolute error which adds sigma2(Delta) - sigma2(delta), or the per-advantage error
+    sigma2(delta; s, m) * (1 - 1/K). sigma2(delta) and sigma2(Delta) are the D-study relative and
+    absolute error variances of the crossed design that produced the components. The plan is a
+    decision and not a measurement: it is exact arithmetic on estimated components and inherits
+    their uncertainty.
+  interpretation: >-
+    Read the ratio, not the tuple. A plan that moves 30% of the spend from rollouts to grader
+    replications and cuts the error variance by 22% is a 22% cut for free; the same plan on a grader
+    whose sigma2(delta) is already small will move nothing, and that is the answer too.
+  support: OPEN
+- id: grader.score_distribution
+  # Superseded by `grader.score_sigma` and `grader.flip_rate`, which are the two things this id was
+  # carrying. The spread is covariant under `reward.affine` and scales by |a|; the flip rate is
+  # invariant. One `invariance_group` field cannot say both, and an id that has to lie about its own
+  # invariance in order to exist is two ids. This row stays registered until
+  # `measure/metrology/distribution.py:674` moves off it, because an instrument whose quantity is not
+  # registered fails `lint_instrument` and A6 is shipped.
+  unit:
+    as_printed: dist
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: group.permutation
+  min_access: GRADER:REPLICATE
+  rungs: 3
+  instrument:
+  - A6
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: env.flakiness
+  unit:
+    as_printed: pp
+    dimension: percentage_points
+    per: null
+    scale: null
+  invariance_group: group.permutation
+  min_access: TASK:QUERY
+  rungs: 3
+  instrument:
+  - A7
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: grader.curl_mass
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY
+  rungs: 3
+  instrument:
+  - B1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: grader.harmonic_mass
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY
+  rungs: 3
+  instrument:
+  - B1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: grader.afriat_index
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:RECORD
+  rungs: 4
+  instrument:
+  - B2
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: grader.composition
+  unit:
+    as_printed: tree
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: reward.null
+  min_access: GRADER:RECORD
+  rungs: 1
+  instrument:
+  - B3
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: grader.counterfactual_score
+  unit:
+    as_printed: reward
+    dimension: reward
+    per: null
+    scale: null
+  invariance_group: reward.null
+  min_access: GRADER:RECORD
+  rungs: 2
+  instrument:
+  - B3
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: grader.silent_zero_rate
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: GRADER:RECORD
+  rungs: 2
+  instrument:
+  - B4
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: grader.sep_distance
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY
+  rungs: 2
+  instrument:
+  - B5
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: grader.condorcet_rate
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: group.permutation
+  min_access: GRADER:RECORD
+  rungs: 1
+  instrument:
+  - B6
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: grader.smith_set_size
+  unit:
+    as_printed: count
+    dimension: count
+    per: null
+    scale: null
+  invariance_group: group.permutation
+  min_access: GRADER:RECORD
+  rungs: 1
+  instrument:
+  - B6
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: grader.graph_lambda2
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  # Amended: was `none`, which resolves to the trivial group whose generated property test asserts
+  # nothing. Relabelling the comparison graph's vertices is a similarity transform of the Laplacian
+  # and eigenvalues are similarity-invariant, so this quantity is provably invariant under a group
+  # that really acts on it, and a unit test already asserts it directly. Declaring `none`
+  # discarded a free test of a property that holds.
+  invariance_group: group.permutation
+  min_access: GRADER:RECORD
+  rungs: 1
+  instrument:
+  - B6
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.differential_S
+  unit:
+    as_printed: cov
+    dimension: covariance
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:RECORD
+  rungs: 1
+  instrument:
+  - C1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.gradient_beta
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:RECORD
+  rungs: 3
+  instrument:
+  - C1
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.response_Gbeta
+  unit:
+    as_printed: feature
+    dimension: feature
+    per: null
+    scale: null
+  invariance_group: policy.reparam
+  min_access: POLICY:BACKWARD
+  rungs: 2
+  instrument:
+  - C1
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.heritability_h2
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: policy.reparam
+  min_access: POLICY:RECORD (r0)
+  rungs: 3
+  instrument:
+  - C2
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.evolvability
+  unit:
+    as_printed: feature²
+    dimension: feature_squared
+    per: null
+    scale: null
+  invariance_group: policy.reparam
+  min_access: POLICY:BACKWARD
+  rungs: 1
+  instrument:
+  - C2
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.autonomy
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: policy.reparam
+  min_access: POLICY:BACKWARD
+  rungs: 1
+  instrument:
+  - C2
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.G_conditioning
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: policy.reparam
+  min_access: POLICY:BACKWARD
+  rungs: 1
+  instrument:
+  - C1
+  - C2
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: instrument.recovery_auc
+  unit:
+    as_printed: AUC
+    dimension: auc
+    per: null
+    scale: null
+  invariance_group: repr.basis
+  min_access: ORGANISM:MUTATE
+  rungs: 2
+  instrument:
+  - C3
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: intervention.erasure_cost
+  unit:
+    as_printed: pp
+    dimension: percentage_points
+    per: null
+    scale: null
+  invariance_group: repr.basis
+  min_access: GRADER:MUTATE
+  rungs: 2
+  instrument:
+  - C4
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: intervention.ec50
+  unit:
+    as_printed: dose
+    dimension: dose
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: GRADER:MUTATE
+  rungs: 1
+  instrument:
+  - C4
+  - M1
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: intervention.emax
+  unit:
+    as_printed: effect
+    dimension: effect
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: GRADER:MUTATE
+  rungs: 1
+  instrument:
+  - C4
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: intervention.hill_n
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: GRADER:MUTATE
+  rungs: 1
+  instrument:
+  - C4
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: intervention.therapeutic_index
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: GRADER:MUTATE
+  rungs: 1
+  instrument:
+  - C4
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: intervention.acute_effect
+  unit:
+    as_printed: effect
+    dimension: effect
+    per: null
+    scale: null
+  invariance_group: repr.basis
+  min_access: POLICY:MUTATE
+  rungs: 1
+  instrument:
+  - C5
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: intervention.chronic_effect
+  unit:
+    as_printed: effect
+    dimension: effect
+    per: null
+    scale: null
+  invariance_group: repr.basis
+  min_access: POLICY:MUTATE+CONTROL
+  rungs: 1
+  instrument:
+  - C5
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: intervention.rescue_fraction
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: repr.basis
+  min_access: POLICY:MUTATE
+  rungs: 1
+  instrument:
+  - C6
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: intervention.dissociation
+  unit:
+    as_printed: bool
+    dimension: bool
+    per: null
+    scale: null
+  invariance_group: repr.basis
+  min_access: POLICY:MUTATE
+  rungs: 1
+  instrument:
+  - C7
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: judge.verdict_direction
+  unit:
+    as_printed: direction
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD
+  rungs: 2
+  instrument:
+  - C8
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: judge.commitment_position
+  # Amended. This row declared `token idx` (count per token) under `tokenization`, and
+  # `tokenization` admits **only** `invariant`, so the row asserted that a raw token index does not
+  # move under retokenisation. It does: that is what retokenisation is. The unit and the invariance
+  # group were making incompatible claims and the group was the one telling the truth.
+  #
+  # Same defect as A6's, which is why the fix is the same shape: the quantity becomes the thing that
+  # actually holds the declared invariance. A **fraction of the generated sequence** is stable under
+  # retokenisation where an index is not, so the fraction is the quantity and the index travels
+  # beside it as presentation. Found in the module that computes it, which had already declared the
+  # fraction and recorded the index in `deviations` rather than declaring an invariance it could
+  # not defend.
+  unit:
+    as_printed: fraction of sequence
+    dimension: fraction
+    per: sequence
+    scale: null
+  invariance_group: tokenization
+  min_access: GRADER:FORWARD
+  rungs: 2
+  instrument:
+  - C8
+  wedge: false
+  support:
+  - 0.0
+  - 1.0
+  definition: >-
+    The position at which a judge's verdict direction becomes fixed, as a fraction of its own
+    generated sequence: 0.0 if it is committed before generating anything and 1.0 if the verdict is
+    only determined at the final token. Reported as a fraction rather than as a token index because
+    the quantity is declared invariant under retokenisation and an index is not.
+  interpretation: OPEN
+  support: OPEN
+- id: verifier.decision_coverage
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: source+RECORD
+  rungs: 3
+  instrument:
+  - D1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: verifier.surviving_mutants
+  unit:
+    as_printed: count
+    dimension: count
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: source+MUTATE
+  rungs: 3
+  instrument:
+  - D2
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: verifier.mutation_score
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: source+MUTATE
+  rungs: 1
+  instrument:
+  - D2
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: verifier.metamorphic_violations
+  unit:
+    as_printed: count
+    dimension: count
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: GRADER:QUERY
+  rungs: 3
+  instrument:
+  - D3
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: verifier.sobol_ST
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY
+  rungs: 3
+  instrument:
+  - D4
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: verifier.false_positive_rate
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: GRADER:QUERY
+  rungs: 4
+  instrument:
+  - D5
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: verifier.fp_catalogue
+  unit:
+    as_printed: OPEN
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: this quantity has no unit row at all, so no unit token was recorded for it.
+  # Group inherited from its instrument sibling `verifier.false_positive_rate`, which
+  # the source table prints as `none`: a catalogue of accepted-but-wrong inputs is a set of reproducers
+  # and no affine rescaling of the reward acts on it.
+  invariance_group: none
+  min_access: GRADER:QUERY
+  rungs: 4
+  instrument:
+  - D5
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+  errata: E14
+- id: verifier.unseen_exploit_mass
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: exploit log
+  rungs: 3
+  instrument:
+  - D6
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: verifier.reliability_growth_beta
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: exploit log
+  rungs: 1
+  instrument:
+  - D6
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: grader.card
+  unit:
+    as_printed: artifact
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: none
+  min_access: composite
+  rungs: 1
+  instrument:
+  - D7
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: env.attack_surface
+  unit:
+    as_printed: inventory
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: none
+  min_access: env source
+  rungs: 3
+  instrument:
+  - D8
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: env.attack_cheapness
+  unit:
+    as_printed: ratio
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: env source+QUERY
+  rungs: 1
+  instrument:
+  - D8
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: verifier.cfg
+  unit:
+    as_printed: graph
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: none
+  min_access: source
+  rungs: 3
+  instrument:
+  - D9
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: verifier.trusted_inputs
+  unit:
+    as_printed: OPEN
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: this quantity has no unit row at all, so no unit token was recorded for it.
+  # Group inherited from its instrument sibling `verifier.cfg`, which the source table prints as `none`.
+  invariance_group: none
+  min_access: source
+  rungs: 3
+  instrument:
+  - D9
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+  errata: E14
+- id: env.replay_fidelity
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: TASK:QUERY+RECORD
+  rungs: 1
+  instrument:
+  - D10
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: estimator.spec
+  unit:
+    as_printed: spec
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: none
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - E1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: estimator.degenerate_fraction
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: RECORD
+  rungs: 2
+  instrument:
+  - E2
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: estimator.allfail_fraction
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - E2
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: estimator.noise_share
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: RECORD
+  rungs: 3
+  instrument:
+  - E3
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: estimator.noise_attribution
+  unit:
+    as_printed: shares
+    dimension: '1'
+    per: null
+    scale: normalised
+  invariance_group: units
+  min_access: RECORD+A2
+  rungs: 2
+  instrument:
+  - E3
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: estimator.amplifier_safety
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: RECORD
+  rungs: 3
+  instrument:
+  - E4
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: estimator.clip_fraction_effect
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - E5
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: policy.train_infer_logprob_mismatch
+  unit:
+    as_printed: nats
+    dimension: nats
+    per: token
+    scale: nats
+  # Amended: was per=sequence, which made this unit byte-identical to `update.kl_spent` and
+  # licensed exactly the per-token-against-per-sequence comparison the source documents call the
+  # most common silent error in the literature. Four independent lines say per-token: the quantity
+  # table prints bare `nats` while printing `nats/seq` two rows later; the invariance group is
+  # `tokenization`, whose invariance-table assertion is about per-token quantities; the
+  # estimator-transform table routes "what per token means" to E6; and the record schema puts
+  # `logprobs_sampling` and `logprobs_train` on `Turn` as per-token vectors. See errata E15.
+  errata: E15
+  invariance_group: tokenization
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - E6
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.term
+  unit:
+    as_printed: feature
+    dimension: feature
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - F1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.residual
+  unit:
+    as_printed: feature
+    dimension: feature
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - F1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.explained_fraction
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - F2
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.eta_eff
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - F2
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: update.kl_spent
+  unit:
+    as_printed: nats/seq
+    dimension: nats
+    per: sequence
+    scale: nats
+  invariance_group: policy.reparam
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - F3
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: update.kl_min
+  unit:
+    as_printed: nats/seq
+    dimension: nats
+    per: sequence
+    scale: nats
+  invariance_group: policy.reparam
+  min_access: POLICY:BACKWARD
+  rungs: 1
+  instrument:
+  - F3
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: update.efficiency
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: policy.reparam
+  min_access: POLICY:BACKWARD
+  rungs: 1
+  instrument:
+  - F3
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: update.kl_share
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: policy.reparam
+  min_access: POLICY:BACKWARD
+  rungs: 3
+  instrument:
+  - F3
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: books.reconciliation_residual
+  unit:
+    as_printed: feature
+    dimension: feature
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: all four
+  rungs: 3
+  instrument:
+  - F4
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: books.budget_closure
+  unit:
+    as_printed: bool
+    dimension: bool
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: all four
+  rungs: 1
+  instrument:
+  - F4
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.covector
+  unit:
+    as_printed: covector
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: repr.basis
+  min_access: POLICY:BACKWARD
+  rungs: 4
+  instrument:
+  - F5
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.spectrum
+  unit:
+    as_printed: spectrum
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: repr.basis
+  min_access: POLICY:BACKWARD
+  rungs: 4
+  instrument:
+  - F5
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.stable_rank
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: repr.basis
+  min_access: POLICY:BACKWARD
+  rungs: 1
+  instrument:
+  - F5
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: selection.dimensionality
+  unit:
+    as_printed: OPEN
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: this quantity has no unit row at all, so no unit token was recorded for it.
+  # Group taken from F5's own printed Grp cell, "`repr.basis` (covariant; needs a shared frame
+  # for comparison)", which is also what its two registered siblings carry.
+  invariance_group: repr.basis
+  min_access: POLICY:BACKWARD
+  rungs: 4
+  instrument:
+  - F5
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+  errata: E14
+- id: selection.lande_slope
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: all four
+  rungs: 1
+  instrument:
+  - F6
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: credit.measure
+  unit:
+    as_printed: grad
+    dimension: OPEN
+    per: token
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  # Amended: `per` was OPEN, but the source instrument entry calls this "a per-token quantity" in
+  # those words and the quantity table's own min-access cell reads `per-token grads`. `dimension` stays
+  # OPEN, so the unit is still undecided and still refuses comparison. See errata E15.
+  errata: E15
+  invariance_group: tokenization
+  min_access: per-token grads
+  rungs: 2
+  instrument:
+  - G1
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: credit.conservation_error
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: per-token grads
+  rungs: 1
+  instrument:
+  - G1
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: credit.by_turn
+  unit:
+    as_printed: shares
+    dimension: '1'
+    per: null
+    scale: normalised
+  invariance_group: none
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - G2
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: credit.by_tool_call
+  unit:
+    as_printed: shares
+    dimension: '1'
+    per: null
+    scale: normalised
+  invariance_group: none
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - G2
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: credit.implicit_prm
+  unit:
+    as_printed: function
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: none
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - G3
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: credit.localiser_quality
+  unit:
+    as_printed: AUC
+    dimension: auc
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: re-roll
+  rungs: 2
+  instrument:
+  - G4
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: run.adiabaticity
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: RECORD
+  rungs: 2
+  instrument:
+  - H1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: run.tau_relax
+  unit:
+    as_printed: steps
+    dimension: count
+    per: step
+    scale: null
+  invariance_group: units
+  min_access: RECORD
+  rungs: 2
+  instrument:
+  - H1
+  - H4
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: run.rate_dependence
+  unit:
+    as_printed: bool
+    dimension: bool
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: CONTROL
+  rungs: 1
+  instrument:
+  - H2
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: run.hysteresis_area
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: CONTROL
+  rungs: 2
+  instrument:
+  - H3
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: run.transition_width
+  unit:
+    as_printed: steps
+    dimension: count
+    per: step
+    scale: null
+  invariance_group: units
+  min_access: RECORD
+  rungs: 2
+  instrument:
+  - H4
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: run.regime
+  unit:
+    as_printed: reading
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: none
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - H5
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: gate.mccrary_statistic
+  unit:
+    as_printed: z
+    dimension: z
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: RECORD
+  rungs: 2
+  instrument:
+  - I1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: gate.bunching_elasticity
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: RECORD
+  rungs: 2
+  instrument:
+  - I2
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: gate.deadzone_fraction
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - I3
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: monitor.degradation_curve
+  unit:
+    as_printed: AUC(t)
+    dimension: auc
+    per: step
+    scale: null
+  invariance_group: units
+  min_access: CONTROL
+  rungs: 3
+  instrument:
+  - I4
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: monitor.half_life
+  unit:
+    as_printed: steps
+    dimension: count
+    per: step
+    scale: null
+  invariance_group: units
+  min_access: CONTROL
+  rungs: 1
+  instrument:
+  - I4
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: run.variance_derivative
+  unit:
+    as_printed: var/step
+    dimension: variance
+    per: step
+    scale: null
+  invariance_group: units
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - I5
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: run.cot_faithfulness_under_kl
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: checkpoint series
+  rungs: 1
+  instrument:
+  - I6
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: exploit.transfer_matrix
+  unit:
+    as_printed: matrix
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: none
+  min_access: exploit corpus
+  rungs: 1
+  instrument:
+  - I7
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: monitor.evalue
+  unit:
+    as_printed: e-value
+    dimension: e_value
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: RECORD
+  rungs: 3
+  instrument:
+  - J1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: monitor.confidence_sequence
+  unit:
+    as_printed: interval
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: units
+  min_access: RECORD
+  rungs: 3
+  instrument:
+  - J1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: monitor.arl0
+  unit:
+    as_printed: steps
+    dimension: count
+    per: step
+    scale: null
+  invariance_group: units
+  min_access: design
+  rungs: 1
+  instrument:
+  - J2
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: monitor.detection_delay
+  unit:
+    as_printed: frac window
+    dimension: '1'
+    per: transition_window
+    scale: null
+  invariance_group: units
+  min_access: RECORD
+  rungs: 3
+  instrument:
+  - J2
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: monitor.conjunction_alarm
+  unit:
+    as_printed: bool
+    dimension: bool
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - J3
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: monitor.operating_point
+  unit:
+    as_printed: threshold
+    dimension: threshold
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: loss spec
+  rungs: 1
+  instrument:
+  - J4
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: monitor.ppv_curve
+  unit:
+    as_printed: curve
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: units
+  min_access: derived
+  rungs: 1
+  instrument:
+  - J4
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: monitor.check_standard_drift
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: repr.basis
+  min_access: fixed probe set
+  rungs: 1
+  instrument:
+  - J5
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: artifact.distillation_delta
+  unit:
+    as_printed: pp
+    dimension: percentage_points
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: two artifacts
+  rungs: 1
+  instrument:
+  - K1
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: calibration.transfer_t32
+  unit:
+    as_printed: ΔAUC
+    dimension: auc_difference
+    per: null
+    scale: null
+  # Amended: `ΔAUC` was decomposed as `auc`, dropping the delta, which made it identical to
+  # the three rows printed `AUC`. An AUC lives in [0,1] with 0.5 the null; this is a
+  # difference, null at 0. See errata E15.
+  errata: E15
+  invariance_group: repr.basis
+  min_access: organisms+real
+  rungs: 3
+  instrument:
+  - K2
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: instrument.shelf_life
+  unit:
+    as_printed: steps
+    dimension: count
+    per: step
+    scale: null
+  invariance_group: units
+  min_access: checkpoint series
+  rungs: 1
+  instrument:
+  - K3
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: policy.update_sparsity_vs_staleness
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: policy.reparam
+  min_access: checkpoint pairs
+  rungs: 2
+  instrument:
+  - K4
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: reference.u_characterisation
+  unit:
+    as_printed: dose
+    dimension: dose
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: ORGANISM:MUTATE
+  rungs: 1
+  instrument:
+  - L1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: reference.u_homogeneity
+  unit:
+    as_printed: dose
+    dimension: dose
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: ORGANISM:MUTATE ×3
+  rungs: 1
+  instrument:
+  - L1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: reference.u_stability
+  unit:
+    as_printed: dose
+    dimension: dose
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: ORGANISM:MUTATE+train
+  rungs: 1
+  instrument:
+  - L1
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: labels.error_rate
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: corpus+audit
+  rungs: 3
+  instrument:
+  - L2
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: labels.score_ceiling
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: derived
+  rungs: 1
+  instrument:
+  - L2
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: labels.false_success_rate
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: corpus
+  rungs: 1
+  instrument:
+  - L3
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: labels.corrupt_success_rate
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: corpus
+  rungs: 1
+  instrument:
+  - L3
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: labels.fs_signal_locality
+  unit:
+    as_printed: AUC
+    dimension: auc
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: corpus
+  rungs: 2
+  instrument:
+  - L4
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: labels.position_prior
+  unit:
+    as_printed: 'null'
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: none
+  min_access: stored artifacts
+  rungs: 1
+  instrument:
+  - L5
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: substrate.noise_floor
+  unit:
+    as_printed: rel L2
+    dimension: '1'
+    per: null
+    scale: relative
+  invariance_group: repr.basis
+  min_access: two engines
+  rungs: 1
+  instrument:
+  - M1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: substrate.lod
+  unit:
+    as_printed: effect
+    dimension: effect
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: derived
+  rungs: 1
+  instrument:
+  - M1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: substrate.loq
+  unit:
+    as_printed: effect
+    dimension: effect
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: derived
+  rungs: 1
+  instrument:
+  - M1
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: instrument.effect
+  unit:
+    as_printed: ms, bytes
+    dimension: OPEN
+    per: step
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  # Amended: `per` was OPEN, but the M2 instrument entry says "per step" and the source documents
+  # say the overhead "is recorded as `InstrumentEffect` per step". `dimension` stays OPEN because `ms, bytes`
+  # is two dimensions in one registry cell, which is a spec defect in its own right and is
+  # recorded as such. See errata E15.
+  errata: E15
+  invariance_group: units
+  min_access: tap
+  rungs: 1
+  instrument:
+  - M2
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: instrument.incremental_validity
+  unit:
+    as_printed: 4-tuple
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the unit is recorded as one undecomposed token and no Unit body is given anywhere;
+      this token does not decompose unambiguously into dimension/per/scale.
+  invariance_group: units
+  min_access: baseline+own
+  rungs: 1
+  instrument:
+  - M9
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: instrument.error_correlation
+  unit:
+    as_printed: ρ
+    dimension: correlation
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: baseline+own
+  rungs: 1
+  instrument:
+  - M9
+  wedge: false
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: study.power
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: design
+  rungs: 3
+  # Kept at [M10, M5], against the conflict adjudication's proposal to drop M5. The quantity table
+  # names only M10, and the installed source is rung 2 of the precedence ladder and beats it:
+  # `measure/controls/matched.py:449` declares `study.power` and states the argument at :428, that
+  # M5's reading is the control's realised detection at the claim's own design, which is the same
+  # quantity M10 computes before the run, estimated at a higher rung by measurement rather than by a
+  # calculation. It lints clean. Registering a second id for it would make two ladders for one
+  # quantity, which the registry forbids, so the earlier document's K6 `control.matched_positive`
+  # is not registered.
+  instrument:
+  - M10
+  - M5
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: study.mde
+  unit:
+    as_printed: effect
+    dimension: effect
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: design
+  rungs: 3
+  instrument:
+  - M10
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: study.resolution_ratio
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: design
+  rungs: 1
+  instrument:
+  - M10
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: ladder.rung_disagreement
+  unit:
+    as_printed: Δ
+    dimension: difference
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: two rungs
+  rungs: 1
+  instrument:
+  - M11
+  wedge: true
+  definition: OPEN
+  interpretation: OPEN
+  support: OPEN
+- id: credit.successor_representation
+  unit:
+    as_printed: OPEN
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the quantity is named in prose and has no unit row of its own
+  invariance_group: none
+  min_access: OPEN
+  rungs: 0
+  instrument: G5
+  wedge: false
+  definition: The discounted state-visitation structure of the policy, M(s,s') = E[sum gamma^t 1(s_t =
+    s')].
+  interpretation: OPEN
+  support: OPEN
+  open_reason: 'an open research target rather than a bug: the state abstraction for a language
+    trajectory is undefined and defining it is the research content.'
+
+# ---------------------------------------------------------------------------
+# The shipped battery and index corpus.
+#
+# The source documents say the 2.0.1 observables "survive as instruments here", and then give none
+# of them a quantity-table row: the catalogue's C series is C1 to C8 and covers none of the shipped
+# battery. So 28 of the 29 retrofitted instruments had no quantity to declare, and an instrument
+# whose quantity is not registered fails at import by design. These 28 rows are what the retrofit
+# measured off the implementations, one per instrument, at rung 1.
+#
+# None is in the wedge: this is the white-box corpus, which needs GRADER:FORWARD at minimum.
+# The 29th, Chi, declares the existing `selection.differential_S`.
+# ---------------------------------------------------------------------------
+- id: grader.crystallization_depth
+  unit:
+    as_printed: fraction
+    dimension: fraction
+    per: null
+    scale: depth
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD
+  rungs: 1
+  instrument:
+  - LensCrystallization
+  wedge: false
+  definition: The layer index, as a fraction of depth, at which the chosen-minus-rejected projection of
+    the residual stream onto the reward direction first reaches half its final value.
+  interpretation: How deep in the network the preference forms. Near 0 means the reward is decided at
+    the embedding; near 1 means it is decided in the last blocks.
+  errata: E19
+- id: grader.component_attribution
+  unit:
+    as_printed: reward
+    dimension: reward
+    per: component
+    scale: raw
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD
+  rungs: 1
+  instrument:
+  - DirectLinearAttribution
+  wedge: false
+  definition: 'The signed contribution of one additive residual-stream component to the chosen-minus-rejected
+    reward differential, as that component''''s output projected onto the reward direction. Exact: the
+    contributions sum to the differential.'
+  interpretation: Which parts of the network carry the preference, observationally. It is not a causal
+    claim and it does not survive compensation by other components.
+  errata: E19
+- id: grader.component_patch_effect
+  unit:
+    as_printed: reward
+    dimension: reward
+    per: component
+    scale: raw
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD|MUTATE
+  rungs: 1
+  instrument:
+  - PatchGrid
+  wedge: false
+  definition: The reduction in the chosen-minus-rejected reward differential when one component's activation
+    is replaced by the rejected side's, holding everything else clean.
+  interpretation: 'Which components are causally necessary for the preference. Necessity only: it tests
+    nothing about sufficiency and carries no rescue arm.'
+  errata: E19
+- id: grader.path_effect
+  unit:
+    as_printed: reward
+    dimension: reward
+    per: null
+    scale: raw
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD|MUTATE
+  rungs: 1
+  instrument:
+  - PathEffect
+  wedge: false
+  definition: The reduction in the reward differential when only the sender-head to receiver path carries
+    the source-side activation and every other path stays clean.
+  interpretation: Whether a component's effect flows through one particular downstream route rather than
+    through the network at large.
+  errata: E19
+- id: grader.concept_dose_slope
+  unit:
+    as_printed: reward/unit
+    dimension: reward
+    per: unit_steer
+    scale: raw
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD|MUTATE
+  rungs: 1
+  instrument:
+  - ConceptDoseResponse
+  wedge: false
+  definition: The least-squares slope of the reward against steering strength along a unit concept direction
+    added at the final-token residual.
+  interpretation: How much reward one unit of a concept buys. A concept with a large slope is a lever
+    an optimiser can pull.
+  errata: E19
+- id: grader.surface_bias_d
+  unit:
+    as_printed: d
+    dimension: effect_size
+    per: null
+    scale: standardised
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY
+  rungs: 1
+  instrument:
+  - BiasBattery
+  # Amended: in the wedge on this row's own `min_access`. The retrofit marked all 28 rows out of
+  # it on the claim that the 2.0.1 corpus needs `GRADER: FORWARD`, and thirteen of them do not.
+  wedge: true
+  definition: One-sample Cohen's d of the chosen-minus-rejected reward delta on one surface axis, reported
+    beside the lineage-honest effective sample size of its seeds.
+  interpretation: How strongly the grader prices a surface change that should not matter. Standardised,
+    so it is comparable across graders.
+  errata: E19
+- id: grader.prompt_snr
+  unit:
+    as_printed: ratio
+    dimension: ratio
+    per: null
+    scale: power
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY
+  rungs: 1
+  instrument:
+  - PromptSNR
+  # Amended: in the wedge on this row's own `min_access`. The retrofit marked all 28 rows out of
+  # it on the claim that the 2.0.1 corpus needs `GRADER: FORWARD`, and thirteen of them do not.
+  wedge: true
+  definition: The power ratio mean(delta)^2 / var(delta) of the chosen-minus-rejected reward delta across
+    one axis's stimuli.
+  interpretation: Whether an axis's preference signal rises above the spread of that signal. A lower bound
+    on the robustness SNR, not an estimate of it.
+  errata: E19
+- id: grader.term_conflict
+  unit:
+    as_printed: cos
+    dimension: correlation
+    per: pair
+    scale: null
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD
+  rungs: 1
+  instrument:
+  - ConflictMatrix
+  wedge: false
+  definition: The pairwise cosine between reward-term directions, each estimated as the mean chosen-minus-rejected
+    activation difference for one quality axis.
+  interpretation: Whether two quality axes cooperate, are independent, or pull against each other inside
+    one model's representation.
+  errata: E19
+- id: grader.circuit_overlap
+  unit:
+    as_printed: jaccard
+    dimension: fraction
+    per: null
+    scale: null
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD
+  rungs: 1
+  instrument:
+  - CircuitJaccard
+  wedge: false
+  definition: The Jaccard index of the top-k attributed components of two reward models on the same view,
+    matched by component name.
+  interpretation: Whether two reward models route the preference through the same parts of the network.
+    Requires a shared architecture.
+  errata: E19
+- id: grader.feature_alignment
+  unit:
+    as_printed: reward/feature
+    dimension: reward
+    per: feature
+    scale: raw
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD
+  rungs: 1
+  instrument:
+  - FeatureRewardAlignment
+  wedge: false
+  definition: The per-feature inner product of a sparse autoencoder's decoder columns with the reward
+    direction, W_dec @ w_r.
+  interpretation: Which dictionary features move the reward and in which direction. It says nothing about
+    whether those features ever fire.
+  errata: E19
+- id: grader.objective_geometry
+  unit:
+    as_printed: cos
+    dimension: correlation
+    per: pair
+    scale: null
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD
+  rungs: 1
+  instrument:
+  - MultiObjectiveGeometry
+  wedge: false
+  definition: The pairwise cosine matrix of a multi-objective head's per-objective readout vectors, never
+    the row-mean composite.
+  interpretation: Whether a multi-objective reward's objectives cooperate or conflict in weight space.
+    Weight geometry only; it never looks at an activation.
+  errata: E19
+- id: grader.criterion_coherence
+  unit:
+    as_printed: cos
+    dimension: correlation
+    per: pair
+    scale: null
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD
+  rungs: 1
+  instrument:
+  - Coherence
+  wedge: false
+  definition: The Gram matrix of unit-normalised criterion directions, with the Welch floor for (K, d)
+    and the participation ratio d_eff of the spanned subspace.
+  interpretation: Whether a reward is carrying more criteria than its effective dimension supports, past
+    which the criteria must contaminate one another.
+  errata: E19
+- id: grader.contested_axis
+  unit:
+    as_printed: r
+    dimension: correlation
+    per: null
+    scale: null
+  invariance_group: repr.basis
+  min_access: RECORD:RECORD
+  rungs: 1
+  instrument:
+  - Contested
+  # Amended: in the wedge on this row's own `min_access`. The retrofit marked all 28 rows out of
+  # it on the claim that the 2.0.1 corpus needs `GRADER: FORWARD`, and thirteen of them do not.
+  wedge: true
+  definition: The correlation between the disagreement signal and its projection onto the covariance direction
+    of the per-pair activation difference with that signal.
+  interpretation: How much annotator disagreement is organised along a single representation axis rather
+    than scattered.
+  errata: E19
+- id: grader.coverage_disparity
+  unit:
+    as_printed: fraction
+    dimension: fraction
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: RECORD:RECORD
+  rungs: 1
+  instrument:
+  - CoverageDisparity
+  # Amended: in the wedge on this row's own `min_access`. The retrofit marked all 28 rows out of
+  # it on the claim that the 2.0.1 corpus needs `GRADER: FORWARD`, and thirteen of them do not.
+  wedge: true
+  definition: 'The spread of per-property reward coverage across a battery: the range, the standard deviation,
+    and the mean absolute difference.'
+  interpretation: How unequally a reward covers the properties in a battery. This is v1's coverage statistic,
+    not Wang-Huang distortion.
+  errata: E19
+- id: grader.dark_fraction
+  unit:
+    as_printed: fraction
+    dimension: fraction
+    per: null
+    scale: variance
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY
+  rungs: 1
+  instrument:
+  - DarkReward
+  # Amended: in the wedge on this row's own `min_access`. The retrofit marked all 28 rows out of
+  # it on the claim that the 2.0.1 corpus needs `GRADER: FORWARD`, and thirteen of them do not.
+  wedge: true
+  definition: One minus the R-squared of the reward regressed on the named-channel contributions, with
+    a constant term.
+  interpretation: 'The share of reward variance no named channel explains. A residual: it attributes nothing,
+    it only says something is unaccounted for.'
+  errata: E19
+- id: grader.distortion_index
+  unit:
+    as_printed: reward/unit
+    dimension: reward
+    per: unit_direction
+    scale: raw
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD
+  rungs: 1
+  instrument:
+  - Distortion
+  wedge: false
+  definition: Per-dimension distortion D(P) = sensitivity(P) * (1 - coverage(P)), with sensitivity defaulting
+    to the linear proxy |w_r . v_P| and coverage supplied by the knowledge-utilization mediation term.
+  interpretation: Where a reward is sensitive to a property it does not intend to price. High sensitivity
+    that is fully covered is intended pricing, not distortion.
+  errata: E19
+- id: grader.eval_awareness
+  unit:
+    as_printed: accuracy
+    dimension: probability
+    per: null
+    scale: balanced
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD
+  rungs: 1
+  instrument:
+  - EvalAwareness
+  wedge: false
+  definition: The held-out balanced accuracy of a mean-difference linear probe discriminating benchmark-style
+    from organic inputs on the grader's activations.
+  interpretation: Whether the grader can tell a test from real traffic. Presence of the information, not
+    use of it; the causal half needs a steering arm.
+  errata: E19
+- id: instrument.interp_coverage
+  unit:
+    as_printed: fraction
+    dimension: fraction
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: RECORD:RECORD
+  rungs: 1
+  instrument:
+  - InterpCoverage
+  # Amended: in the wedge on this row's own `min_access`. The retrofit marked all 28 rows out of
+  # it on the claim that the 2.0.1 corpus needs `GRADER: FORWARD`, and thirteen of them do not.
+  wedge: true
+  definition: The share of attributed reward magnitude carried by interpretable feature nodes rather than
+    by reconstruction-error nodes.
+  interpretation: How much of a reward an attribution graph actually explains. It measures reconstruction
+    and is routinely read as interpretability.
+  errata: E19
+- id: grader.knowledge_utilization
+  unit:
+    as_printed: pct
+    dimension: percentile
+    per: null
+    scale: within_battery
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD
+  rungs: 1
+  instrument:
+  - KUI
+  wedge: false
+  definition: The signed distance from the diagonal in the (decodability, mediation) plane, both axes
+    standardised to percentile-within-battery before subtraction.
+  interpretation: Which properties a reward represents but does not price. Relative to the battery supplied,
+    so two batteries give incomparable numbers.
+  errata: E19
+- id: grader.legibility_frontier
+  unit:
+    as_printed: rho
+    dimension: correlation
+    per: null
+    scale: spearman
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY
+  rungs: 1
+  instrument:
+  - Legibility
+  # Amended: in the wedge on this row's own `min_access`. The retrofit marked all 28 rows out of
+  # it on the claim that the 2.0.1 corpus needs `GRADER: FORWARD`, and thirteen of them do not.
+  wedge: true
+  definition: The Spearman rank agreement between the reward and a least-squares program built from predicates
+    within a description-length budget, as a function of that budget, with its knee and the tacit residual.
+  interpretation: How short a program has to be before it stops tracking the reward. Bounded by the predicate
+    library supplied, not by what is expressible.
+  errata: E19
+- id: grader.receipt_reliance
+  unit:
+    as_printed: fraction
+    dimension: fraction
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: RECORD:RECORD
+  rungs: 1
+  instrument:
+  - ReceiptReliance
+  # Amended: in the wedge on this row's own `min_access`. The retrofit marked all 28 rows out of
+  # it on the claim that the 2.0.1 corpus needs `GRADER: FORWARD`, and thirteen of them do not.
+  wedge: true
+  definition: The share of the corruption reward effect attributable to receipt spans, as the ratio of
+    the falsify-receipt arm delta to the total corruption delta.
+  interpretation: Whether a reward grounds its judgment in the receipts or in the narrative gloss around
+    them.
+  errata: E19
+- id: grader.skepticism
+  unit:
+    as_printed: reward
+    dimension: reward
+    per: null
+    scale: raw
+  invariance_group: reward.affine
+  min_access: RECORD:RECORD
+  rungs: 1
+  instrument:
+  - Skepticism
+  # Amended: in the wedge on this row's own `min_access`. The retrofit marked all 28 rows out of
+  # it on the claim that the 2.0.1 corpus needs `GRADER: FORWARD`, and thirteen of them do not.
+  wedge: true
+  definition: S = r(claim, receipt absent) - r(claim, receipt showing failure) at matched narrative.
+  interpretation: Whether a missing receipt is read as failure (S near 0, skeptical) or rewarded over
+    disclosure (S well above 0, credulous). Carries reward-scale units.
+  errata: E19
+- id: grader.robustness_snr
+  unit:
+    as_printed: ratio
+    dimension: ratio
+    per: null
+    scale: variance
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY
+  rungs: 1
+  instrument:
+  - RobustnessSNR
+  # Amended: in the wedge on this row's own `min_access`. The retrofit marked all 28 rows out of
+  # it on the claim that the 2.0.1 corpus needs `GRADER: FORWARD`, and thirteen of them do not.
+  wedge: true
+  definition: The variance of the paraphrase-cluster reward means over the mean within-cluster reward
+    variance.
+  interpretation: Whether a reward's between-condition ordering survives meaning-preserving perturbation.
+    Near one, any ranking read off it is fragile.
+  errata: E19
+- id: grader.style_share
+  unit:
+    as_printed: fraction
+    dimension: fraction
+    per: null
+    scale: null
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD
+  rungs: 1
+  instrument:
+  - StyleShare
+  wedge: false
+  definition: The fraction of the reward change w_r . delta_h carried by the projection of delta_h onto
+    the style subspace.
+  interpretation: How much of a correctness reward gap the reward is reading off style. Does not partition
+    with the verification score; the remainder is unexplained.
+  errata: E19
+- id: grader.tail_index
+  unit:
+    as_printed: xi
+    dimension: shape
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY
+  rungs: 1
+  instrument:
+  - TailIndex
+  # Amended: in the wedge on this row's own `min_access`. The retrofit marked all 28 rows out of
+  # it on the claim that the 2.0.1 corpus needs `GRADER: FORWARD`, and thirteen of them do not.
+  wedge: true
+  definition: The generalized-Pareto shape parameter of the reward's right tail, fitted by the method
+    of moments over peaks above a quantile threshold and cross-checked against a Hill estimate.
+  interpretation: Whether optimisation pressure against this reward has a finite safe budget. A polynomial
+    tail puts the critical pressure at zero.
+  errata: E19
+- id: grader.induced_variance
+  unit:
+    as_printed: reward^2
+    dimension: variance
+    per: null
+    scale: raw
+  invariance_group: repr.basis
+  min_access: GRADER:FORWARD
+  rungs: 1
+  instrument:
+  - TeacherCompatibility
+  wedge: false
+  definition: The reward variance a policy's own samples induce, w_r' Sigma_pi w_r, decomposable by layer
+    and over the eigenbasis of Sigma.
+  interpretation: Whether a reward model is a usable teacher for a given policy. A reward whose scores
+    barely move across a policy's samples teaches it nothing.
+  errata: E19
+- id: grader.value_convergence_excess
+  unit:
+    as_printed: align
+    dimension: alignment
+    per: null
+    scale: canonicalised
+  invariance_group: repr.basis
+  min_access: RECORD:RECORD
+  rungs: 1
+  instrument:
+  - VCE
+  # Amended: in the wedge on this row's own `min_access`. The retrofit marked all 28 rows out of
+  # it on the claim that the 2.0.1 corpus needs `GRADER: FORWARD`, and thirteen of them do not.
+  wedge: true
+  definition: The reward-subspace alignment of a reward-model pair minus their matched capability-subspace
+    alignment, both on frame-canonicalised subspaces at the same layers, read against the random-utility
+    identifiability null.
+  interpretation: Whether two reward models agree on what they reward beyond how much they agree on what
+    they know.
+  errata: E19
+- id: grader.verification_score
+  unit:
+    as_printed: fraction
+    dimension: fraction
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: RECORD:RECORD
+  rungs: 1
+  instrument:
+  - VerificationScore
+  # Amended: in the wedge on this row's own `min_access`. The retrofit marked all 28 rows out of
+  # it on the claim that the 2.0.1 corpus needs `GRADER: FORWARD`, and thirteen of them do not.
+  wedge: true
+  definition: The share of the clean-versus-corrupted reward gap causally attributable to the labelled
+    error span, by patching the clean twin's error-span activations into the corrupted run.
+  interpretation: Whether a process reward is checking the work or reacting to surface style. Rises with
+    span width for reasons unrelated to verification.
+  errata: E19
+
+# ---------------------------------------------------------------------------
+# The controls bank (M3 and M4).
+#
+# M3 to M8 carry `quantities: OPEN` in the catalogue, so the four control instruments every
+# other series has to ship against had nothing to declare. M5 declares the existing `study.power`
+# and M10 already owns its three, so only these two instruments needed new ids.
+#
+# `reward.affine` here is a real generated test rather than a formality: every baseline reads the
+# transcript and the label and never the reward, so a control reading that moves when the reward
+# is rescaled is reading the very thing it exists to be a control for.
+# ---------------------------------------------------------------------------
+- id: baseline.best_score
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:RECORD
+  rungs: 1
+  instrument:
+  - M3
+  wedge: true
+  definition: 'The discrimination achieved on a claim''s own task by the strongest member of the six-baseline
+    bank: the area under the ROC curve of that baseline''s per-item scores against the claim''s labels.'
+  interpretation: The floor a claim has to clear. A claim whose own discrimination does not exceed this
+    has not been shown to detect anything a zero-parameter comparator could not.
+  support:
+  - 0.0
+  - 1.0
+  errata: E22
+- id: baseline.margin
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:RECORD
+  rungs: 1
+  instrument:
+  - M3
+  wedge: true
+  definition: A claim's own discrimination minus the strongest baseline's, computed on the same items
+    with the pairing preserved, so the interval on the difference is narrower than the two marginal
+    intervals would suggest.
+  interpretation: Positive with an interval excluding zero is a win. An interval containing zero is
+    a match, and a match reported as a win is the failure the bank exists to catch.
+  support:
+  - -1.0
+  - 1.0
+  errata: E22
+- id: placebo.effect_ratio
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:RECORD
+  rungs: 1
+  instrument:
+  - M4
+  wedge: true
+  definition: The effect of a coherent semantically irrelevant direction, applied at the same norm and
+    the same dose, divided by the effect of the claimed direction on the same outcome.
+  interpretation: 1.0 means a direction with no relation to the claim did the intervention's work, so
+    the claim does not describe what happened. Near 0 means the effect is specific to the claimed direction.
+    Values above 1 happen and mean the placebo did more.
+  support: OPEN
+  errata: E22
+# --- Series N, Level 0: the frontier. Registered here, not by the source table. -----------------
+# Every catalogue series was scheduled except the two bodies of mathematics the source documents
+# develop in full and that need only a callable grader and a gold channel on the same n samples:
+# the frontier and the contract layer. Neither has a quantity-table row, so every field below is
+# this build's judgement from that mathematics rather than the specification's, and is marked so.
+# The build checks them against it and reports what is wrong rather than editing them.
+- id: frontier.gold_vs_kl
+  unit:
+    as_printed: reward
+    dimension: reward
+    per: sequence
+    scale: raw
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY+GOLD:QUERY+POLICY:QUERY
+  rungs: 1
+  instrument:
+  - N1
+  wedge: true
+  definition: E_lambda[g] as a function of KL(pi_lambda || pi_0) over the exponential tilt family,
+    estimated on n base-policy rollouts scored by both the proxy r and the gold channel g with
+    w_i = exp(lambda r_i). Both axes are ratios of weighted means, so the curve needs no optimisation
+    run to exist.
+  interpretation: Where the curve turns is where further optimisation against the proxy stops buying
+    gold. It is a statement about g, not about anything g stands for, and it is only defined out to
+    the visibility horizon.
+  support: null
+  errata: E23
+- id: frontier.visibility_horizon
+  unit:
+    as_printed: nats
+    dimension: nats
+    per: sequence
+    scale: nats
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY+POLICY:QUERY
+  rungs: 1
+  instrument:
+  - N2
+  wedge: true
+  definition: The largest KL(pi_lambda || pi_0) at which the Kish effective sample size
+    ESS(lambda) = (sum w_i)^2 / sum w_i^2 still clears a stated floor, default 0.05 of n. Reported in
+    nats rather than in lambda because lambda carries the reciprocal of the reward's scale and is not
+    comparable across graders; the instrument reports lambda_max and n/ESS alongside.
+  interpretation: Past this point the tilt estimate is carried by a handful of rollouts and the
+    instrument declines to answer. It is the reciprocal of the best-of-n coverage coefficient
+    C = 1 + chi^2(pi* || pi_ref) = n/ESS, which the coverage literature leaves unmeasured.
+  support:
+  - 0.0
+  - null
+  errata: E23
+- id: frontier.tail_index
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY+POLICY:QUERY
+  rungs: 1
+  instrument:
+  - N3
+  wedge: true
+  definition: The extreme value index of the reward's upper tail, reported with the estimator's plot
+    over the threshold choice rather than as a point estimate at one k. Hill is reported because it
+    is what makes us comparable to the one published measurement; Pickands carries the LIGHT_TAILED
+    verdict, because Hill is exactly scale invariant
+    and not location invariant, and its support is positive so it can never return evidence of
+    light-tailedness.
+  interpretation: The LIGHT_TAILED precondition the whole tilt layer rests on, because K(lambda) is
+    finite only if the moment generating function exists. Strictly the condition is gamma <= 0, and
+    an exactly Gaussian tail gives a Hill estimate near 0.196 at these thresholds, which is what the
+    cited 0.20 is consistent with. A defensible estimate needs about 1,570 exceedances, which is
+    31,400 prompts at q = 0.95; below that the instrument refuses rather than reporting a number from
+    200 prompts.
+  support:
+  - null
+  - null
+  errata: E23
+- id: frontier.prentice_checklist
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY+GOLD:QUERY+POLICY:QUERY
+  rungs: 1
+  instrument:
+  - N4
+  wedge: true
+  definition: >-
+    A per-criterion pass, fail or untestable verdict on the four surrogate-endpoint conditions under
+    which optimising the proxy cannot harm the gold. They are Prentice (1989), Freedman's proportion
+    of treatment effect explained (1992), Buyse and Molenberghs individual-level against trial-level
+    association (1998), and VanderWeele's monotonicity conditions excluding the surrogate paradox
+    (2013).
+  interpretation: A failed criterion names the condition the proxy violates, which is a stronger and
+    more actionable statement than a predicted turning point. Criterion 4 usually returns untestable
+    without an intervention, and reporting that honestly is the point rather than a shortfall.
+  support: null
+  errata: E23
+- id: frontier.concomitant_bon
+  unit:
+    as_printed: reward
+    dimension: reward
+    per: sequence
+    scale: raw
+  invariance_group: reward.affine
+  min_access: GRADER:QUERY+GOLD:QUERY+POLICY:QUERY
+  rungs: 1
+  instrument:
+  - N4
+  wedge: true
+  definition: The expected gold score of the response that maximises the proxy among n draws, which
+    is the concomitant of the nth order statistic, computed from the finite-n distribution theory
+    rather than by simulation.
+  interpretation: Best-of-n Goodhart is a concomitant problem, and the exact finite-n answer has been
+    available for forty years. The reading is exact at the stated n rather than asymptotic.
+  support: null
+  errata: E23
+# --- Rows requested by the modules that needed them, registered centrally. -----------------------
+# Each was proposed by the package that needed it, in a report, rather than edited into this file
+# directly. Every one is the same recorded defect: the specification
+# names a quantity in prose or in an instrument entry and the quantity table gives it no row.
+- id: grader.abstention_rate
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: GRADER:RECORD
+  rungs: 2
+  instrument:
+  - B4
+  wedge: true
+  definition: >-
+    The fraction of grader calls that declined to score, counting a leaf whose value is None with
+    abstained set. It is not the silent-zero rate. A silent zero is the subset where a number was
+    substituted for the decline, so a grader with a working abstention channel has a silent-zero
+    rate of zero and an abstention rate that is not.
+  interpretation: A rollout whose grader abstained must receive no advantage. It is a first-class
+    reported quantity in its own right, not merely the subset the silent-zero rate covers.
+  support:
+  - 0.0
+  - 1.0
+  errata: E29
+- id: intervention.att_staggered
+  unit:
+    as_printed: OPEN
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the quantity is named in prose and has no unit row of its own
+  invariance_group: reward.affine
+  min_access: OPEN
+  rungs: 0
+  instrument: OPEN
+  wedge: false
+  definition: The average effect on the treated of an intervention introduced partway through a run,
+    where different arms adopt at different steps.
+  interpretation: OPEN
+  support: OPEN
+  open_reason: the corrected staggered-adoption estimators are the ones to use and no work is
+    scheduled to build them. Two-way fixed effects is a weighted average of
+    all two-by-two comparisons including late against already-treated, with weights that can be
+    negative, so the naive estimator is a different quantity rather than a conservative version of
+    this one. record/arms.py records the adoption step per arm and reports when two arms differ in
+    it; no estimator exists. The group is reward.affine because under the group z-score the trained
+    policy is unchanged by an affine rescaling of the reward, so an effect on a behavioural outcome
+    is invariant and one on a reward-scale outcome is covariant with weight 1; E13 puts the status
+    on the relation, so the group is right either way and the relation settles with the estimator.
+  errata: E29
+- id: run.max_staleness
+  unit:
+    as_printed: steps
+    dimension: count
+    per: step
+    scale: null
+  invariance_group: none
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - H5
+  wedge: true
+  definition: The largest staleness in optimizer steps over the segment provenance and the staleness
+    histograms of a window.
+  interpretation: The NEAR_POLICY precondition. Above the bound, the importance weights an estimator
+    would need are not in the record.
+  support: OPEN
+  errata: E29
+- id: run.curriculum_response
+  unit:
+    as_printed: rho
+    dimension: correlation
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - H5
+  wedge: true
+  definition: The rank-biserial correlation between a task's mean score at a step and its presence at
+    the next, pooled over consecutive step pairs in a window.
+  interpretation: The EXOGENOUS_CURRICULUM precondition. Nonzero means the score is on both sides of
+    any estimate taken over this window.
+  support:
+  - -1.0
+  - 1.0
+  errata: E29
+- id: run.compaction_events
+  unit:
+    as_printed: count
+    dimension: count
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - H5
+  wedge: true
+  definition: The number of lossy compaction events strictly inside a measurement window.
+  interpretation: The NO_COMPACTION precondition. Above zero, per-token importance ratios crossing
+    the boundary are undefined rather than stale.
+  support: OPEN
+  errata: E29
+- id: run.importance_ess
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: token
+    scale: normalised
+  invariance_group: none
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - H5
+  wedge: true
+  definition: Kish's effective sample size over the exponentiated difference of the training and
+    sampling logprobs, as a fraction of the tokens carrying both streams.
+  interpretation: The ESS_ADEQUATE precondition. It conflates policy drift with the train-inference
+    engine mismatch E6 measures and cannot separate them, which the reading says.
+  support:
+  - 0.0
+  - 1.0
+  errata: E29
+- id: run.mask_signature
+  unit:
+    as_printed: count
+    dimension: count
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - H5
+  wedge: true
+  definition: The number of distinct loss-mask states recorded for any single turn role across a
+    window.
+  interpretation: The MASK_STABLE precondition. Above one, per-token quantities in the window are not
+    on a common basis.
+  support: OPEN
+  errata: E29
+- id: study.pooled_effect
+  unit:
+    as_printed: OPEN
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: a pooled effect inherits the unit of the effect measure it pools
+  invariance_group: units
+  min_access: design
+  rungs: 1
+  instrument: OPEN
+  wedge: false
+  definition: The random-effects pooled estimate over a set of studies, with the estimator of the
+    between-study variance named on the reading.
+  interpretation: The confidence interval is about the mean effect and the prediction interval is
+    about the effect in a new study. Reporting only the first overstates what is known, and with real
+    heterogeneity the two differ a lot.
+  support: OPEN
+  errata: E29
+- id: study.tau2
+  unit:
+    as_printed: OPEN
+    dimension: OPEN
+    per: OPEN
+    scale: OPEN
+    open_reason: the between-study variance is in the square of the effect measure's unit
+  invariance_group: units
+  min_access: design
+  rungs: 3
+  instrument: OPEN
+  wedge: false
+  definition: The between-study variance of a random-effects meta-analysis, by DerSimonian-Laird,
+    Paule-Mandel or restricted maximum likelihood, reported with a Q-profile interval.
+  interpretation: An estimate of zero is not evidence of homogeneity. At small k, Cochran's Q detects
+    heterogeneity equal to the typical within-study variance well under half the time, so the
+    interval carries the information the point estimate does not.
+  support:
+  - 0.0
+  - null
+  errata: E29
+- id: study.prediction_interval_ratio
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: units
+  min_access: design
+  rungs: 1
+  instrument: OPEN
+  wedge: false
+  definition: The width of the prediction interval divided by the width of the confidence interval,
+    on the analysis scale.
+  interpretation: One means the two coincide, which happens exactly when the between-study variance
+    is estimated at zero and is where a reader following a package default prints the same pair twice
+    and ends up with no interval about a new study at all.
+  support:
+  - 1.0
+  - null
+  errata: E29
+# Five rows adjudicated later, from six ids the modules computed and declined to invent.
+# Three register what B2 and B3 already compute; two split one id that could not state its own
+# invariance. The sixth, `grader.copeland_slater_disagreement`, is refused rather than deferred: the
+# statistical review measured it at 0.1813 against an achievable range over tie-breaks of
+# [0.0200, 0.4820], with 1,163 of 3,000 groups carrying a tied Copeland maximum, and a number that
+# moves 24-fold on an arbitrary tie-break is not a measurement. An id is what would let it be stored,
+# compared and ranked, so it does not get one.
+- id: grader.houtman_maks_index
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:RECORD
+  rungs: 1
+  instrument:
+  - B2
+  wedge: true
+  definition: >-
+    The fraction of recorded pairwise verdicts that lie in the largest subset a single utility can
+    order. `measure/composition/revealed.py:838` computes it exactly up to eight items per set and
+    brackets it above that, reporting `lower_fraction` and `upper_fraction` rather than a point when
+    the exact search is out of reach.
+  interpretation: >-
+    One minus this is the share of the record that has to be thrown away before the grader looks like
+    it is maximising anything. It stays informative on purely ordinal data, where the Afriat index
+    cannot, which is why B2's refusal path points here.
+  support:
+  - 0.0
+  - 1.0
+- id: grader.money_pump_index
+  unit:
+    as_printed: reward
+    dimension: reward
+    per: null
+    scale: raw
+  invariance_group: reward.affine
+  min_access: GRADER:RECORD
+  rungs: 1
+  instrument:
+  - B2
+  wedge: true
+  definition: >-
+    The mean margin around each of the grader's own preference cycles, averaged over the cycles
+    enumerated. `measure/composition/revealed.py:925` walks each simple cycle x1 > x2 > ... > xk > x1
+    and takes the mean of its step margins, so a cycle decided by hairs costs nearly nothing and one
+    decided by wide margins all the way round costs a great deal.
+  interpretation: >-
+    What an arbitrageur could extract per trade by walking the grader in a circle. It is in the
+    grader's own reward units, so it is not comparable across graders without a common scale, and it
+    is a magnitude rather than a rate. Covariant under `reward.affine`, scaling by |a|, because a
+    margin is a difference of scores and the offset cancels.
+  support:
+  - 0.0
+  - null
+- id: grader.null_reach
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  # `group.permutation` rather than B3's own `reward.null`. The reach is what measures whether
+  # `reward.null` holds, so declaring it invariant under the group it is testing would assert the
+  # thing under test. Reordering rollouts within a group cannot change the fraction of rollouts whose
+  # score moved, which is a property that really holds and gives the generated test something to
+  # check. This mirrors B5, whose quantity is the distance from scalar representability and whose
+  # envelope therefore does not require it.
+  invariance_group: group.permutation
+  min_access: GRADER:RECORD
+  rungs: 1
+  instrument:
+  - B3
+  wedge: true
+  definition: >-
+    The fraction of rollouts whose composed score moved when a per-prompt constant was added below a
+    named node of the composition tree. `measure/composition/composition.py:508` computes it as
+    n_reached / n over the rollouts that are comparable; an abstaining rollout has no advantage in
+    either arm and is counted in neither direction, because folding it in would make an
+    all-abstaining group look like a perfectly cancelling one.
+  interpretation: >-
+    Zero or one means the constant reached none of the group or all of it, the group mean moved by
+    the same amount, and the `reward.null` invariance is exact. Anything strictly between them is the
+    invariance failing, and a hard override is the thing that makes it happen, because a constant
+    added below an override never reaches the rollouts the override pinned.
+  support:
+  - 0.0
+  - 1.0
+- id: grader.score_sigma
+  unit:
+    as_printed: reward
+    dimension: reward
+    per: null
+    scale: raw
+  invariance_group: reward.affine
+  min_access: GRADER:REPLICATE
+  rungs: 3
+  instrument:
+  - A6
+  wedge: true
+  definition: >-
+    The pooled within-item standard deviation of a grader's repeated scores at fixed input, on the
+    grader's own scale. `measure/metrology/distribution.py` computes it from the within-item variance
+    with the per-item spreads kept beside it, because a grader at sigma = 0.18 on average and
+    sigma = 0.7 on its worst decile is a different instrument from one at 0.25 everywhere.
+  interpretation: >-
+    How much of the score is the grader arguing with itself. Covariant under `reward.affine`, scaling
+    by |a|, which is the whole reason this is not one id with the flip rate.
+  support:
+  - 0.0
+  - null
+- id: grader.flip_rate
+  unit:
+    as_printed: '1'
+    dimension: '1'
+    per: null
+    scale: null
+  invariance_group: reward.affine
+  min_access: GRADER:REPLICATE
+  rungs: 3
+  instrument:
+  - A6
+  wedge: true
+  definition: >-
+    The probability that a pairwise verdict disagrees with its own modal verdict, as a U-statistic
+    over all repeat combinations rather than over a diagonal pairing. The diagonal depends on an
+    ordering the data does not carry unless the caller declares `paired_occasions`, which is why it
+    is not the default.
+  interpretation: >-
+    How often re-running the same comparison changes which side wins, which is the pairwise cost of
+    the spread `grader.score_sigma` reports. Invariant under `reward.affine`: an affine rescaling of
+    the scores cannot change which of two is larger.
+  support:
+  - 0.0
+  - 1.0
+- id: forecast.brier_score
+  unit:
+    as_printed: '1'
+    dimension: probability
+    per: forecast
+    scale: raw
+  invariance_group: none
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - J6
+  wedge: true
+  definition: the mean squared error of a set of probability forecasts against their realised binary
+    outcomes, on the half-Brier convention of one term per forecast. Void resolutions are excluded
+    from the numerator and from n, and the count of them travels with the score, because scoring an
+    unresolvable call as a miss and dropping it are different numbers and the reader has to see which
+    was done.
+  interpretation: lower is better and the number alone means nothing. A Brier score is only
+    interpretable against the base rate of its own reference class, which is why the uncertainty term
+    of the Murphy decomposition ships beside it.
+- id: forecast.calibration_reliability
+  unit:
+    as_printed: '1'
+    dimension: probability
+    per: forecast
+    scale: raw
+  invariance_group: none
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - J6
+  wedge: true
+  definition: the reliability term of the Murphy decomposition, the binned mean squared gap between
+    a forecast probability and the realised frequency at that probability. Lower is better and zero
+    means the stated probabilities are the observed frequencies.
+- id: forecast.calibration_resolution
+  unit:
+    as_printed: '1'
+    dimension: probability
+    per: forecast
+    scale: raw
+  invariance_group: none
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - J6
+  wedge: true
+  definition: the resolution term of the Murphy decomposition, how far the binned outcome
+    frequencies sit from the overall base rate. Higher is better, and it is the term that separates a
+    forecaster who says something from one who is merely well calibrated to the climatology.
+- id: forecast.decision_value
+  unit:
+    as_printed: loss per event
+    dimension: '1'
+    per: forecast
+    scale: raw
+  invariance_group: units
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - J6
+  wedge: true
+  definition: the expected loss saved per event by acting on the forecast rather than on the best
+    mandatory baseline, under the forecast's own DecisionSpec. Covariant under a rescaling of the
+    loss, which is why the group is units and not none.
+  interpretation: the number that answers "so what", and nobody in this field computes it. It can be
+    exactly zero while the Brier score looks informative, which happens whenever the forecast and the
+    baseline act identically at every threshold the DecisionSpec admits.
+- id: grader.design_balance
+  unit:
+    as_printed: fraction
+    dimension: fraction
+    per: null
+    scale: null
+  invariance_group: none
+  min_access: RECORD
+  rungs: 1
+  instrument:
+  - A2
+  wedge: false
+  definition: the fraction of cells of a fully crossed measurement design that were actually
+    observed. One means every subject was scored by every rater at every occasion, which is the
+    design the expected-mean-square inversion is derived for. Below one the inversion is being
+    applied to a design it does not describe.
+  interpretation: what DESIGN_CROSSED is measured by. It is a property of a measurement design and
+    not of a training run, so it is not determinable from a bare record and `measure_regime` reports
+    it as unknown rather than as a pass, which is the third state that exists for exactly this case.
+- id: policy.readout_recoverability
+  unit:
+    as_printed: fraction
+    dimension: fraction
+    per: null
+    scale: null
+  invariance_group: repr.basis
+  min_access: POLICY:FORWARD
+  rungs: 1
+  instrument:
+  - C9
+  wedge: false
+  definition: how much of a held-out outcome a linear readout of the policy's own residual stream
+    recovers, cross-fitted, scored against the black-box baseline bank on the same items. A fraction
+    because it is an accuracy, and it travels with the four numbers of an IncrementalValidity rather
+    than alone.
+  interpretation: 'the number is uninterpretable without its baseline, which is why the instrument
+    refuses to emit one without it. The bar for a white-box method is decorrelation plus signal
+    rather than superiority. A probe ten points worse than the best black-box baseline and
+    uncorrelated with it is worth more than one two points better and redundant.'
