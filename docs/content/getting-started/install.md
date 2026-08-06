@@ -6,28 +6,46 @@
 pip install reward-lens
 ```
 
-Python 3.10 or newer. Two extras, both optional:
+Python 3.10 or newer. That base install brings **nothing compiled**: numpy, scipy, pandas, scikit-learn and a CLI. No torch, no transformers.
 
-- `pip install "reward-lens[sae]"` adds the sparse-autoencoder tooling for feature-reward alignment.
-- `pip install "reward-lens[dev]"` adds the test suite and tooling for a source checkout.
+The extras are where the weight is, and each one buys a named capability:
+
+| Extra | What it adds |
+|---|---|
+| `white-box` | torch and transformers. Everything that reads a model's activations or gradients |
+| `verifier` | the program-substrate toolchain: coverage, mutation, property search. No GPU, no model |
+| `record` | columnar scalars and tensor shards for a training record. The reader works without it |
+| `organisms` | training planted model organisms, which needs `peft` and `datasets` |
+| `sampling` | vLLM, for a policy you want to sample from at speed |
+| `dict` | sparse-autoencoder tooling for feature-reward alignment |
+| `trl` | the TRL tap, for recording a live training run |
+| `viz` | matplotlib and seaborn, for the figure helpers |
+| `dev` | the test suite and the lint toolchain, for a source checkout |
+| `all` | every one of the above |
+
+Install them the usual way, quoted so the shell does not eat the brackets: `pip install "reward-lens[white-box]"`.
+
+The split is deliberate rather than tidy. A record is written by whoever ran the training and read by whoever is auditing it, and the auditor is the person most likely to be on a base install, so the reader dispatches on the file rather than on the environment.
 
 !!! tip "Nothing on your machine at all"
     The [Colab tour](https://colab.research.google.com/drive/1x5zG07HdsWlNsJmkl2ddJ1yalmwwujfY?usp=sharing) installs the library into a free hosted runtime and walks the whole thing end to end. It is the way to try the library before you commit anything to your own environment.
 
-## Half the library never imports torch
+## Importing the library never imports torch
 
-The epistemics layer, the part that computes evidence, uncertainty, effective sample size, and trust, is written in numpy and imports nothing from torch. You can confirm that in three lines:
+That is asserted in CI rather than described here, and you can confirm it in three lines:
 
 ```python
 import sys
 import reward_lens, reward_lens.core, reward_lens.stats
 
-reward_lens.__version__     # '2.0.1'
+print(reward_lens.__version__)
 "torch" in sys.modules      # False, nothing model-touching was pulled in
 "numpy" in sys.modules      # True
 ```
 
-Anything that actually reads a model imports from its own subsystem, `from reward_lens.signals import ...`, and only then does torch load. So a continuous-integration box, a notebook on a plane, a reviewer checking your arithmetic: none of them need a GPU to run the discipline.
+Anything that reads a model imports from its own subsystem, `from reward_lens.signals import ...` or `from reward_lens.policy import ...`, and only then does torch load. A module that needs an extra you do not have raises `ExtraRequiredError` naming the extra and the pip command, rather than an `ImportError` that leaves you guessing.
+
+So a continuous-integration box, a notebook on a plane, a reviewer checking your arithmetic: none of them need a GPU to run the discipline.
 
 ## What actually bites, before you load a real model
 

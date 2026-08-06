@@ -1,0 +1,177 @@
+# Numbers in prose with no evidence id, recorded before the check existed.
+# This list may shrink and must not grow. Bind one and delete its line.
+docs/content/caveats.md	0.05	On ArmoRM the same correlation is \(+0.05\), near zero
+docs/content/caveats.md	0.171	Ranked and correlated, the two agree at Spearman \(\rho = -0.171\) on Skywork-v0.2, averaged across dimensions, and down
+docs/content/caveats.md	0.44	Ranked and correlated, the two agree at Spearman \(\rho = -0.171\) on Skywork-v0.2, averaged across dimensions, and down
+docs/content/concepts/crystallization.md	0.143	That \(0.143\) is not a finding; it is a two-layer model with no room to do anything interesting
+docs/content/concepts/crystallization.md	0.6	ArmoRM decides earlier, in the \(0.6\) to \(0.8\) range, and its error bars are several times wider.
+docs/content/concepts/crystallization.md	0.8	ArmoRM decides earlier, in the \(0.6\) to \(0.8\) range, and its error bars are several times wider.
+docs/content/concepts/crystallization.md	0.803	ArmoRM, whose gated multi-objective head mixes nineteen readouts per input, commits earlier and with far more variance, 
+docs/content/concepts/crystallization.md	0.9	![Mean crystallization depth by dimension for Skywork and ArmoRM, Skywork near 0.9 with tight error bars, ArmoRM lower a
+docs/content/concepts/crystallization.md	0.9	![Mean crystallization depth by dimension for Skywork and ArmoRM, Skywork near 0.9 with tight error bars, ArmoRM lower a
+docs/content/concepts/crystallization.md	0.9	**Late and sharp is a property of a particular model.** Skywork (the taller bars) sits near \(0.9\) across helpfulness, 
+docs/content/concepts/crystallization.md	0.9	Across the diagnostic dimensions, Skywork crystallizes late and consistently, near \(0.9\) of depth on every axis measur
+docs/content/concepts/crystallization.md	0.931	Across the diagnostic dimensions, Skywork crystallizes late and consistently, near \(0.9\) of depth on every axis measur
+docs/content/concepts/crystallization.md	0.931	Skywork holds its judgment until the representations are nearly complete and then reads them off, mean depth \(0.931\)
+docs/content/concepts/crystallization.md	0.94	On Skywork that is layer 30, about \(0.94\) of the way through the network
+docs/content/concepts/index.md	2.22	Skywork scores the good answer at \(-2.22\) and the bad one at \(-26.25\), a margin of about \(+24\)
+docs/content/concepts/index.md	26.25	Skywork scores the good answer at \(-2.22\) and the bad one at \(-26.25\), a margin of about \(+24\)
+docs/content/concepts/observational-vs-causal.md	0.05	On ArmoRM the same correlation is about \(+0.05\), near zero, no reliable relationship in either direction
+docs/content/concepts/observational-vs-causal.md	0.171	Correlate the two rankings and you get Spearman \(\rho = -0.171\)
+docs/content/concepts/observational-vs-causal.md	0.31	That is the mean across quality dimensions, and on the strongest ones it is sharper: about \(-0.31\) on helpfulness, \(-
+docs/content/concepts/observational-vs-causal.md	0.44	That is the mean across quality dimensions, and on the strongest ones it is sharper: about \(-0.31\) on helpfulness, \(-
+docs/content/concepts/observational-vs-causal.md	3.99	Concretely: attribution on the sky-is-blue pair is led by the final MLPs, `mlp_L31` at \(+3.99\), then `mlp_L30`, then `
+docs/content/concepts/preference-geometry.md	2.22	Skywork scores the good "why is the sky blue" answer at \(-2.22\) and the bad one at \(-26.25\), a margin of \(+24.03\)
+docs/content/concepts/preference-geometry.md	24.03	Skywork scores the good "why is the sky blue" answer at \(-2.22\) and the bad one at \(-26.25\), a margin of \(+24.03\)
+docs/content/concepts/preference-geometry.md	24.03	The \(+24.03\) above is measured from that model; the CPU snippet earlier is the one you can run in a minute.
+docs/content/concepts/preference-geometry.md	26.25	Skywork scores the good "why is the sky blue" answer at \(-2.22\) and the bad one at \(-26.25\), a margin of \(+24.03\)
+docs/content/concepts/reward-is-relative.md	0.005	The cosine comes out around \(0.005\)
+docs/content/concepts/reward-is-relative.md	2.22	Skywork scores the good "why is the sky blue" answer at \(-2.22\)
+docs/content/concepts/reward-is-relative.md	2.22	So \(-2.22\) means nothing on its own
+docs/content/concepts/reward-is-relative.md	2.22	The margin of \(+24.03\) between the good answer and the bad one is real and reproducible; the \(-2.22\) is a coordinate
+docs/content/concepts/reward-is-relative.md	24.03	The margin of \(+24.03\) between the good answer and the bad one is real and reproducible; the \(-2.22\) is a coordinate
+docs/content/contributing/index.md	0.047	Component attribution anti-correlates with causal patching at Spearman \(\rho = -0.171\) on `Skywork-Reward-Llama-3.1-8B
+docs/content/contributing/index.md	0.171	Component attribution anti-correlates with causal patching at Spearman \(\rho = -0.171\) on `Skywork-Reward-Llama-3.1-8B
+docs/content/contributing/index.md	0.96	The detector recovers the planted rule at AUC 1.0 on the out-of-distribution split, and the recovered direction sits at 
+docs/content/contributing/index.md	1.0	If you are porting an existing 1.0 workflow, [coming from 1.0](../migration.md) maps every primitive to its new home.
+docs/content/contributing/index.md	1.0	If you are porting an existing 1.0 workflow, [coming from 1.0](../migration.md) maps every primitive to its new home.
+docs/content/contributing/index.md	1.0	The detector recovers the planted rule at AUC 1.0 on the out-of-distribution split, and the recovered direction sits at 
+docs/content/discipline/anatomy-of-evidence.md	2.0	So in 2.0 a measurement does not return a float
+docs/content/discipline/calibration-and-organisms.md	0.171	On Skywork, attribution and patching rank components in nearly opposite order, Spearman \(\rho = -0.171\) averaged over 
+docs/content/discipline/calibration-and-organisms.md	0.475	Run at the full go/no-go, the recovered rule matches by construction: the detector hits AUC \(1.0\) on the out-of-distri
+docs/content/discipline/calibration-and-organisms.md	0.85	Calibrating a detector on a spurious-correlation organism at agreement rate \(0.85\) certifies that the detector catches
+docs/content/discipline/calibration-and-organisms.md	0.85	It plants a spurious rule (a `cites` feature confounded with a `factual` label at agreement rate \(0.85\)), trains a tin
+docs/content/discipline/calibration-and-organisms.md	0.919	Run at the full go/no-go, the recovered rule matches by construction: the detector hits AUC \(1.0\) on the out-of-distri
+docs/content/discipline/calibration-and-organisms.md	0.96	An instrument then tries to recover it; a scorecard scores the recovery (here AUC \(1.0\) on the out-of-distribution spl
+docs/content/discipline/calibration-and-organisms.md	0.96	Run at the full go/no-go, the recovered rule matches by construction: the detector hits AUC \(1.0\) on the out-of-distri
+docs/content/discipline/calibration-and-organisms.md	0.96	The same numbers the full loop reports at scale, out-of-distribution AUC \(1.0\) and cosine near \(0.96\), show up here 
+docs/content/discipline/calibration-and-organisms.md	1.0	An instrument then tries to recover it; a scorecard scores the recovery (here AUC \(1.0\) on the out-of-distribution spl
+docs/content/discipline/calibration-and-organisms.md	1.0	Run at the full go/no-go, the recovered rule matches by construction: the detector hits AUC \(1.0\) on the out-of-distri
+docs/content/discipline/calibration-and-organisms.md	1.0	The same numbers the full loop reports at scale, out-of-distribution AUC \(1.0\) and cosine near \(0.96\), show up here 
+docs/content/discipline/gauge-and-frames.md	0.005	**Raw cross-model numbers are coordinates, not facts.** On the left, two reward directions over an arbitrary basis, near
+docs/content/discipline/gauge-and-frames.md	0.005	Take the cosine between them and you get \(0.005\)
+docs/content/discipline/gauge-and-frames.md	0.005	The E19 result that produced that \(0.005\) was, in the first version, an anomaly nobody could explain
+docs/content/discipline/gauge-and-frames.md	0.005	The \(0.005\) is not telling you the models disagree
+docs/content/discipline/gauge-and-frames.md	0.005	This is the one place the library would rather raise an exception than hand you a plausible number, because a plausible 
+docs/content/discipline/gauge-and-frames.md	0.37	The machinery is validated on controlled cases where the answer is known: apply a gauge transform that a raw cosine repo
+docs/content/discipline/gauge-and-frames.md	1.0	The machinery is validated on controlled cases where the answer is known: apply a gauge transform that a raw cosine repo
+docs/content/discipline/gauge-and-frames.md	1.0	The machinery is validated on controlled cases where the answer is known: apply a gauge transform that a raw cosine repo
+docs/content/discipline/studies-and-preregistration.md	0.8	Change the threshold from \(0.9\) to \(0.8\) and you get a different hash and a different study, on the record, not a si
+docs/content/discipline/studies-and-preregistration.md	0.9	Change the threshold from \(0.9\) to \(0.8\) and you get a different hash and a different study, on the record, not a si
+docs/content/discipline/studies-and-preregistration.md	0.958	Several ran and confirmed during the build against real registered evidence: the susceptibility index tracks best-of-\(n
+docs/content/getting-started/index.md	0.93	A crystallization fraction of 0.93 is what that shape means: the model waits until it has nearly finished building its r
+docs/content/getting-started/index.md	2.22	On Skywork the preferred answer scores about \(-2.22\) and the rejected one about \(-26.25\), a margin of \(+24.03\)
+docs/content/getting-started/index.md	24.03	On Skywork the preferred answer scores about \(-2.22\) and the rejected one about \(-26.25\), a margin of \(+24.03\)
+docs/content/getting-started/index.md	26.25	On Skywork the preferred answer scores about \(-2.22\) and the rejected one about \(-26.25\), a margin of \(+24.03\)
+docs/content/getting-started/index.md	3.10	Python 3.10 or newer
+docs/content/getting-started/install.md	3.10	Python 3.10 or newer
+docs/content/how-to/attribute-a-score.md	0.171	The Spearman rho between the two rankings is \(-0.171\) on average and reaches \(-0.441\) on the code-correctness axis
+docs/content/how-to/attribute-a-score.md	0.441	The Spearman rho between the two rankings is \(-0.171\) on average and reaches \(-0.441\) on the code-correctness axis
+docs/content/how-to/attribute-a-score.md	0.86	| `mlp_L29` | \(+0.86\) |
+docs/content/how-to/attribute-a-score.md	1.32	| `mlp_L30` | \(+1.32\) |
+docs/content/how-to/attribute-a-score.md	24.03	Measured from the committed artifacts, on the "why is the sky blue" pair with margin \(+24.03\), the attribution is led 
+docs/content/how-to/attribute-a-score.md	3.99	| `mlp_L31` | \(+3.99\) |
+docs/content/how-to/calibrate-on-an-organism.md	0.48	At the lowest dose the AUC sits at chance, \(0.48\); at full dose it reaches \(0.98\); the sequence is monotone with a r
+docs/content/how-to/calibrate-on-an-organism.md	0.5	Run it across a sweep of doses and a sound instrument's AUC climbs from chance at \(\rho = 0.5\) toward one as the plant
+docs/content/how-to/calibrate-on-an-organism.md	0.98	At the lowest dose the AUC sits at chance, \(0.48\); at full dose it reaches \(0.98\); the sequence is monotone with a r
+docs/content/how-to/compare-two-models.md	0.005	**A raw cross-model number is a coordinate, not a fact.** The raw cosine near \(0.005\) reads two agreeing models as nea
+docs/content/how-to/compare-two-models.md	0.005	On two versions of one Skywork model that cosine comes out around \(0.005\) (fixture E19, measured from the committed we
+docs/content/how-to/compare-two-models.md	0.005	Reproducing the real \(0.005\) raw cosine and its canonicalization needs both reward models resident in fp32, which does
+docs/content/how-to/compare-two-models.md	0.43	The canonical cosine is \(0.43\) with a CI that excludes zero: inside the frame the two directions share real structure 
+docs/content/how-to/detect-length-bias.md	0.8	Cohen's d is dimensionless, which is why the gauge is `invariant`: a d of 0.8 is a 0.8 on any signal
+docs/content/how-to/detect-length-bias.md	0.8	Cohen's d is dimensionless, which is why the gauge is `invariant`: a d of 0.8 is a 0.8 on any signal
+docs/content/how-to/effective-sample-size.md	0.8	Thirty rows, six unique, `duplicate_fraction` \(0.8\): four of every five rows are a copy of one already counted
+docs/content/how-to/freeze-and-run-a-study.md	0.17	On the shallow tiny model the margin crystallizes at \(0.17\) of depth, so "crystallizes before the last layer" confirms
+docs/content/how-to/patching-memory.md	8.47	The head-granularity result is recorded from committed artifacts: on Skywork-v0.2 the strongest causal head is `head_L12
+docs/content/index.md	0.171	Run the cheap tool that says which components *explain* the reward, then run the expensive one that says which component
+docs/content/index.md	3.10	Python 3.10 or newer
+docs/content/instruments/attribution.md	0.047	On ArmoRM the same comparison sits near zero and slightly positive, \( \rho = +0.047 \)
+docs/content/instruments/attribution.md	0.171	On `Skywork-Reward-Llama-3.1-8B-v0.2` the per-model mean Spearman correlation between attribution and patching is \( \rh
+docs/content/instruments/attribution.md	0.306	On `Skywork-Reward-Llama-3.1-8B-v0.2` the per-model mean Spearman correlation between attribution and patching is \( \rh
+docs/content/instruments/attribution.md	0.441	On `Skywork-Reward-Llama-3.1-8B-v0.2` the per-model mean Spearman correlation between attribution and patching is \( \rh
+docs/content/instruments/attribution.md	0.86	On the "why is the sky blue" pair, whose margin is \(+24.03\), the five largest contributions sit in the last four layer
+docs/content/instruments/attribution.md	1.32	On the "why is the sky blue" pair, whose margin is \(+24.03\), the five largest contributions sit in the last four layer
+docs/content/instruments/attribution.md	24.03	On the "why is the sky blue" pair, whose margin is \(+24.03\), the five largest contributions sit in the last four layer
+docs/content/instruments/attribution.md	3.99	On the "why is the sky blue" pair, whose margin is \(+24.03\), the five largest contributions sit in the last four layer
+docs/content/instruments/bias-battery.md	0.2	As a rough guide, \(|d|\) around \(0.2\) is a whisper, around \(0.8\) is loud, and anything past \(1\) is a feature a po
+docs/content/instruments/bias-battery.md	0.8	As a rough guide, \(|d|\) around \(0.2\) is a whisper, around \(0.8\) is loud, and anything past \(1\) is a feature a po
+docs/content/instruments/circuit-overlap.md	1.0	The Jaccard is \(1.0\), and that is the lesson, not a finding
+docs/content/instruments/concept-dose-response.md	0.005	And because the whole measurement is basis-dependent, do not compare a raw alignment across two models: that is a [gauge
+docs/content/instruments/concept-dose-response.md	0.19	Both quantities are read in the residual-stream basis, which is why the gauge is raw only: a cosine of \(0.19\) on one m
+docs/content/instruments/concept-dose-response.md	0.19	Both quantities are read in the residual-stream basis, which is why the gauge is raw only: a cosine of \(0.19\) on one m
+docs/content/instruments/concept-dose-response.md	0.75	When the concept is built to *be* the reward direction, its alignment comes back at essentially one, and a straight dose
+docs/content/instruments/conflict-matrix.md	0.25	Two axes give a \(2\times2\) matrix with a single off-diagonal cosine of \(0.25\), a mildly positive number with no conf
+docs/content/instruments/interventions.md	0.5	\text{recovery\_auc} = \max_j \operatorname{AUC}\big(\text{probe}_j \mid \text{erased held-out}\big), \qquad \text{passe
+docs/content/instruments/interventions.md	0.50	The real eraser drives held-out recovery into the chance band at \(0.50\) and earns `CALIBRATED`
+docs/content/instruments/interventions.md	1.0	The sham, which went through the identical motions but targeted a random direction, leaves the concept perfectly recover
+docs/content/instruments/lens-crystallization.md	0.803	ArmoRM, whose gated multi-objective head commits earlier, sits at \(0.803\) and with far more spread.
+docs/content/instruments/lens-crystallization.md	0.93	The projection itself is exact arithmetic, but "exact" is not "calibrated": no calibration provider is wired in this rel
+docs/content/instruments/lens-crystallization.md	0.931	Crystallization lands at **layer 30 of 32**, a depth fraction of \(0.931\), and it is not one pair's accident: averaged 
+docs/content/instruments/lens-crystallization.md	0.931	Crystallization lands at **layer 30 of 32**, a depth fraction of \(0.931\), and it is not one pair's accident: averaged 
+docs/content/instruments/lens-crystallization.md	1.0	Near \(1.0\) means the model decides at the very end; lower means it decides earlier
+docs/content/instruments/lens-crystallization.md	2.22	On the running "why is the sky blue" pair, `Skywork/Skywork-Reward-Llama-3.1-8B-v0.2` scores the chosen answer at \(-2.2
+docs/content/instruments/lens-crystallization.md	24.03	On the running "why is the sky blue" pair, `Skywork/Skywork-Reward-Llama-3.1-8B-v0.2` scores the chosen answer at \(-2.2
+docs/content/instruments/lens-crystallization.md	26.25	On the running "why is the sky blue" pair, `Skywork/Skywork-Reward-Llama-3.1-8B-v0.2` scores the chosen answer at \(-2.2
+docs/content/instruments/multi-objective-geometry.md	0.005	A mean off-diagonal cosine of \(0.005\) is the signature of random directions: nineteen untrained readout rows sit near-
+docs/content/instruments/patch-grid.md	8.47	Across the diagnostic battery the strongest causal head on Skywork-v0.2 is `head_L12_H6`, with a patch effect of 8.47 on
+docs/content/instruments/prompt-snr.md	0.04	As a rough map, an SNR near \(1\) corresponds to an effect size near \(1\), a loud axis; an SNR of \(0.04\) is a d of ab
+docs/content/instruments/prompt-snr.md	0.2	As a rough map, an SNR near \(1\) corresponds to an effect size near \(1\), a loud axis; an SNR of \(0.04\) is a d of ab
+docs/content/instruments/prompt-snr.md	0.534	The `helpfulness` SNR of \(0.534\) is the square of that axis's bias-battery effect size of \(+0.731\), and the `verbosi
+docs/content/instruments/prompt-snr.md	0.731	The `helpfulness` SNR of \(0.534\) is the square of that axis's bias-battery effect size of \(+0.731\), and the `verbosi
+docs/content/instruments/prompt-snr.md	1.108	The `helpfulness` SNR of \(0.534\) is the square of that axis's bias-battery effect size of \(+0.731\), and the `verbosi
+docs/content/instruments/prompt-snr.md	1.228	The `helpfulness` SNR of \(0.534\) is the square of that axis's bias-battery effect size of \(+0.731\), and the `verbosi
+docs/content/migration.md	0.047	On ArmoRM the same comparison sits near zero at \(+0.047\)
+docs/content/migration.md	0.171	Rank a model's components by how much attribution assigns them, rank them again by how much causal patching says they ca
+docs/content/migration.md	1.0	If you have per-head attribution figures from 1.0, recompute them.
+docs/content/migration.md	1.0	The place a reward visibly accumulates is not always the place that causes it, and 1.0 had no way to flag that a cheap o
+docs/content/migration.md	1.0	`ComponentAttribution.attribute_heads` had a real bug in 1.0
+docs/content/migration.md	2.0	Once your scripts run on 2.0, the next thing to read is [getting started](getting-started/index.md), which builds the sa
+docs/content/migration.md	24.03	On the canonical "why is the sky blue" pair, the committed 8B artifacts put the margin at \(+24.03\) and the preference 
+docs/content/models-and-signals/ensembles.md	0.9	Each `quantile:tau` readout is an exact head row, not an interpolation, so `score(view, "quantile:0.9")` returns the mod
+docs/content/reference/geometry.md	0.005	Two versions of one reward model can read as near-orthogonal in raw coordinates (raw cosine near \(0.005\)), which is ex
+docs/content/reference/interventions.md	0.5056	A real erase drops that AUC to chance (1.0 to 0.5056 in the test suite) and the certificate binds a [`CalibrationRef`](c
+docs/content/reference/interventions.md	1.0	A real erase drops that AUC to chance (1.0 to 0.5056 in the test suite) and the certificate binds a [`CalibrationRef`](c
+docs/content/reference/interventions.md	1.0	A sham erase leaves the AUC at 1.0 and the evidence stays `EXPLORATORY`
+docs/content/sciences.md	0.824	The contested-direction probe decoded disagreement at \(0.824\) and landed orthogonal to the reward direction \(w_r\), e
+docs/content/sciences.md	0.958	On the calibration draw the predicted susceptibility ranked the realized best-of-\(n\) drift at Spearman \(0.958\)
+docs/content/sciences.md	0.98	Under evasion pressure that silences a free-floating probe on a stylistic tell, the monitor anchored in \(w_r\) kept \(0
+docs/content/sciences.md	0.993	Across a population of graders with planted values, the reliance score recovered its planted value at \(0.993\), which i
+docs/content/sciences.md	3.06	On a bistable reward system where the answer is analytic, the order parameter followed a different branch coming down th
+docs/content/theory/bradley-terry.md	2312.00886	The leaks are known well enough that alternative formulations exist which drop the scalar-and-transitive assumption enti
+docs/content/theory/bradley-terry.md	26.25	Across models the numeric ranges diverge widely, one model's rejected response scoring \(-26.25\) where another's scores
+docs/content/theory/goodhart.md	0.171	A registered prediction means the claim predated the data, and a calibrated index means it was graded where the truth wa
+docs/content/theory/goodhart.md	2210.10760	Gao, Schulman, and Hilton (arXiv [2210.10760](https://arxiv.org/abs/2210.10760)) set up a synthetic study where a large 
+docs/content/theory/goodhart.md	2401.01879	For best-of-\(n\) sampling the KL divergence of the selected policy from the base has a closed form in \(n\) alone, \(\m
+docs/content/theory/identifiability.md	0.005	Take two versions of the same Skywork reward model and compute the raw cosine between their reward directions, and it co
+docs/content/theory/identifiability.md	0.005	That is E19's story reproduced in miniature, and the same operation on the real Skywork pair with a shared frame is what
+docs/content/theory/identifiability.md	0.05	The two directions look nearly orthogonal in raw coordinates, cosine \(0.05\), and identical once the gauge is fixed, ca
+docs/content/theory/identifiability.md	1.0	The two directions look nearly orthogonal in raw coordinates, cosine \(0.05\), and identical once the gauge is fixed, ca
+docs/content/theory/identifiability.md	2309.15257	The angle between two canonicalized directions is the STARC-invariant quantity whose cosine is the on-distribution corre
+docs/content/theory/identifiability.md	2411.15951	This is the reward-modeling instance of a general fact about reward learning: a reward function is identifiable only up 
+docs/content/theory/lens-lineage.md	0.047	For the reward lens the same caution is sharp and measured: what the lens shows forming late is not what patching finds 
+docs/content/theory/lens-lineage.md	0.171	For the reward lens the same caution is sharp and measured: what the lens shows forming late is not what patching finds 
+docs/content/theory/lens-lineage.md	2303.08112	The tuned lens (Belrose et al., 2023, "Eliciting Latent Predictions from Transformers with the Tuned Lens," arXiv [2303.
+docs/content/theory/preference-rank.md	0.299	The rank-one skew operator gets \(0.970\), recovering \(0.299\) of preference the scalar had to discard
+docs/content/theory/preference-rank.md	0.671	The best scalar reward orders only \(0.671\) of the held-out pairs correctly, barely better than the coin it is forced t
+docs/content/theory/preference-rank.md	0.970	The rank-one skew operator gets \(0.970\), recovering \(0.299\) of preference the scalar had to discard
+docs/content/theory/preference-rank.md	2312.00886	And the existence of that irreducible part is why alternatives to scalar reward exist, methods that treat alignment as a
+docs/content/training-loops/best-of-n.md	0.19	Each doubling of \(n\) adds a roughly constant increment that climbs toward \(\ln 2 \approx 0.69\) nats (0.19, then 0.44
+docs/content/training-loops/best-of-n.md	0.44	Each doubling of \(n\) adds a roughly constant increment that climbs toward \(\ln 2 \approx 0.69\) nats (0.19, then 0.44
+docs/content/training-loops/best-of-n.md	0.57	Each doubling of \(n\) adds a roughly constant increment that climbs toward \(\ln 2 \approx 0.69\) nats (0.19, then 0.44
+docs/content/training-loops/best-of-n.md	0.63	Each doubling of \(n\) adds a roughly constant increment that climbs toward \(\ln 2 \approx 0.69\) nats (0.19, then 0.44
+docs/content/training-loops/best-of-n.md	0.69	Each doubling of \(n\) adds a roughly constant increment that climbs toward \(\ln 2 \approx 0.69\) nats (0.19, then 0.44
+docs/content/training-loops/best-of-n.md	2401.01879	This is exact in the continuous-reward, no-ties limit (Beirami et al., 2401.01879), and it is what lets you price optimi
+docs/content/training-loops/best-of-n.md	8.21 nats	The cost grows like \(\ln n\): the whole ladder from \(n = 1\) to \(n = 10000\), four orders of magnitude of selection, 
+docs/content/training-loops/rollout-recorder.md	0.98	That calibration has been done as a preregistered [study](../discipline/studies-and-preregistration.md): the recorder na
+docs/content/training-loops/tilt-susceptibility.md	0.958	That study has been run: susceptibility ranks the drift directions in the same order best-of-N selection actually moves 
+docs/content/tutorials/inside-one-reward-model.md	0.047	The result is not universal, which is the honest part: on ArmoRM the same correlation is \(+0.047\), near zero and sligh
+docs/content/tutorials/inside-one-reward-model.md	0.171	Averaged over twelve objective dimensions on Skywork-v0.2, the Spearman rank correlation between attribution and patch e
+docs/content/tutorials/inside-one-reward-model.md	0.306	On individual dimensions it is more negative still: \(-0.441\) on code correctness, \(-0.306\) on helpfulness
+docs/content/tutorials/inside-one-reward-model.md	0.441	On individual dimensions it is more negative still: \(-0.441\) on code correctness, \(-0.306\) on helpfulness
+docs/content/tutorials/inside-one-reward-model.md	0.86	On Skywork, the credit piles up in the last MLP layers: `mlp_L31` carries \(+3.99\) of the margin, `mlp_L30` \(+1.32\), 
+docs/content/tutorials/inside-one-reward-model.md	1.32	On Skywork, the credit piles up in the last MLP layers: `mlp_L31` carries \(+3.99\) of the margin, `mlp_L30` \(+1.32\), 
+docs/content/tutorials/inside-one-reward-model.md	2.22	Skywork prefers the Rayleigh answer, and by a lot: reward \(-2.22\) for the good answer, \(-26.25\) for the bad one, a m
+docs/content/tutorials/inside-one-reward-model.md	24.03	Skywork prefers the Rayleigh answer, and by a lot: reward \(-2.22\) for the good answer, \(-26.25\) for the bad one, a m
+docs/content/tutorials/inside-one-reward-model.md	26.25	Skywork prefers the Rayleigh answer, and by a lot: reward \(-2.22\) for the good answer, \(-26.25\) for the bad one, a m
+docs/content/tutorials/inside-one-reward-model.md	3.99	On Skywork, the credit piles up in the last MLP layers: `mlp_L31` carries \(+3.99\) of the margin, `mlp_L30` \(+1.32\), 
+docs/content/tutorials/inside-one-reward-model.md	8.47	On Skywork the largest causal effects are early: the strongest single head is `head_L12_H6`, effect \(8.47\) on the safe

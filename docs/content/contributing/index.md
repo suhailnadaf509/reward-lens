@@ -57,7 +57,7 @@ Confirm the environment works before you change anything by running the suite:
 pytest
 ```
 
-If that passes, you have a working checkout of `reward-lens` 2.0.1.
+If that passes, you have a working checkout of `reward-lens` 3.0.0.
 
 ## Working on a change
 
@@ -92,8 +92,8 @@ If `reward-lens` helped your work, please cite it:
     title  = {reward-lens: An Instrument for the Science of Reward Misspecification},
     author = {Nadaf, Mohammed Suhail B},
     year   = {2026},
-    url    = {https://github.com/suhailnadaf509/reward-lens},
+    url    = {https://github.com/reward-lens/reward-lens},
 }
 ```
 
-`reward-lens` 2.0.1 is released under the MIT license. If you are porting an existing 1.0 workflow, [coming from 1.0](../migration.md) maps every primitive to its new home.
+`reward-lens` is released under the MIT license. If you are porting an existing 1.0 workflow, [coming from 1.0](../migration.md) maps every primitive to its new home.

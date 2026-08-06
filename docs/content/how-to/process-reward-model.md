@@ -29,7 +29,7 @@ Step boundaries come from a delimiter, the common case being a model trained wit
 tok = signal.tokenize(("Sum the primes under six.", "The answer is 10."))
 print(tok.meta["n_steps"])          # 1
 print(tok.meta["step_detection"])
-# learned step-boundary detector is a stub (section 2.3.3): a trained boundary classifier over
+# learned step-boundary detector is a stub: a trained boundary classifier over
 # the residual stream is the production fallback; here a solution with no delimiter is one step.
 ```
 

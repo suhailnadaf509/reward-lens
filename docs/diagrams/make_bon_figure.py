@@ -10,8 +10,7 @@ real by ``reward_lens.loops.bon_ladder`` on a synthetic bank of base-policy scor
 drawn from N(0, 1). Nothing here is fabricated: every KL is the exact identity and
 every reward is the library's plug-in expected-maximum estimator on the same seed.
 
-Standalone, CPU-only, no model download:
-    source /home/suhail-nadaf/final-reward/.venv/bin/activate
+Standalone, CPU-only, no model download. From an environment with the package installed:
     python docs/diagrams/make_bon_figure.py
 
 Outputs land in docs/content/assets/figures/best-of-n-ladder-{light,dark}.svg.

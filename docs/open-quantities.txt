@@ -1,0 +1,192 @@
+# Quantities registered with an estimator ladder nobody has built yet.
+# Lint rule two: a quantity with no estimator is an open research target, and the docs
+# build says so by name rather than treating it as a bug. This list may shrink and must
+# not grow. Register an estimator and delete its line; docs/gen_catalogue.py --check
+# enforces it, and --write-ledger rewrites it.
+#
+# Recorded from a base install, which is the leanest environment the docs build in. A
+# richer environment imports more estimator modules and so sees fewer open quantities,
+# which the ratchet allows.
+#
+# Five of the entries below deserve a note, because the list may otherwise read as five
+# new research problems. They are not. All five have a **shipped instrument that computes
+# them**: the four `reward.*` are the contract layer, N5 to N8, and
+# `run.group_shape_factor` is what A1 reports beside its reading after the correction that
+# stopped multiplying it in. What none of the five has is a registered `EstimatorEntry`,
+# which is the ladder, so `best_estimator` cannot resolve them and the capability report
+# cannot cost them. That is a real gap, and it is the one this file is for.
+#
+# This is the only legitimate way this list grows: a quantity registered without a ladder.
+# The ratchet forbids growth that comes from an estimator being deleted or lost.
+#
+# One entry has a second legitimate shape rather than a third:
+# `policy.readout_recoverability` HAS a registered ladder, in `policy/quantities.py`, and that
+# module imports `reward_lens.runtime`, which needs the `white-box` extra. So a base install
+# never runs the registration and the quantity reads open here while being built and running
+# everywhere torch is installed. That is the direction this file is recorded in on purpose: a
+# richer environment sees strictly fewer open quantities, so a ledger written from the leanest
+# one can only be too long, never too short. Register it outside the torch-gated import and
+# this line goes away.
+artifact.distillation_delta
+baseline.best_score
+baseline.margin
+calibration.transfer_t32
+credit.by_tool_call
+credit.by_turn
+credit.conservation_error
+credit.implicit_prm
+credit.localiser_quality
+credit.measure
+credit.successor_representation
+env.attack_cheapness
+env.attack_surface
+env.flakiness
+env.replay_fidelity
+estimator.allfail_fraction
+estimator.amplifier_safety
+estimator.clip_fraction_effect
+estimator.degenerate_fraction
+estimator.noise_attribution
+estimator.noise_share
+estimator.spec
+exploit.transfer_matrix
+frontier.concomitant_bon
+frontier.gold_vs_kl
+frontier.prentice_checklist
+frontier.tail_index
+frontier.visibility_horizon
+gate.bunching_elasticity
+gate.deadzone_fraction
+gate.mccrary_statistic
+grader.abstention_rate
+grader.allocation
+grader.attenuation
+grader.blackwell_order
+grader.card
+grader.circuit_overlap
+grader.component_attribution
+grader.component_patch_effect
+grader.composition
+grader.concept_dose_slope
+grader.contested_axis
+grader.counterfactual_score
+grader.coverage_disparity
+grader.criterion_coherence
+grader.crystallization_depth
+grader.curl_mass
+grader.dark_fraction
+grader.design_balance
+grader.distortion_index
+grader.effective_group_size
+grader.eval_awareness
+grader.feature_alignment
+grader.flip_rate
+grader.grr_percent
+grader.harmonic_mass
+grader.induced_variance
+grader.knowledge_utilization
+grader.legibility_frontier
+grader.ndc
+grader.null_reach
+grader.objective_geometry
+grader.path_effect
+grader.prompt_snr
+grader.receipt_reliance
+grader.robustness_snr
+grader.score_distribution
+grader.score_sigma
+grader.sep_distance
+grader.silent_zero_rate
+grader.skepticism
+grader.style_share
+grader.surface_bias_d
+grader.tail_index
+grader.term_conflict
+grader.value_convergence_excess
+grader.variance_components
+grader.verification_score
+instrument.effect
+instrument.error_correlation
+instrument.incremental_validity
+instrument.interp_coverage
+instrument.recovery_auc
+instrument.shelf_life
+intervention.acute_effect
+intervention.att_staggered
+intervention.chronic_effect
+intervention.dissociation
+intervention.ec50
+intervention.emax
+intervention.erasure_cost
+intervention.hill_n
+intervention.rescue_fraction
+intervention.therapeutic_index
+judge.commitment_position
+judge.verdict_direction
+labels.corrupt_success_rate
+labels.error_rate
+labels.false_success_rate
+labels.fs_signal_locality
+labels.position_prior
+labels.score_ceiling
+ladder.rung_disagreement
+monitor.arl0
+monitor.check_standard_drift
+monitor.confidence_sequence
+monitor.conjunction_alarm
+monitor.degradation_curve
+monitor.detection_delay
+monitor.evalue
+monitor.half_life
+monitor.operating_point
+monitor.ppv_curve
+placebo.effect_ratio
+policy.readout_recoverability
+policy.train_infer_logprob_mismatch
+policy.update_sparsity_vs_staleness
+reference.u_characterisation
+reference.u_homogeneity
+reference.u_stability
+reward.component_congruity
+reward.equal_compensation_ratio
+reward.optimal_weights
+reward.sorting_cutoff
+run.compaction_events
+run.cot_faithfulness_under_kl
+run.curriculum_response
+run.group_shape_factor
+run.importance_ess
+run.mask_signature
+run.max_staleness
+run.variance_derivative
+selection.G_conditioning
+selection.autonomy
+selection.covector
+selection.differential_S
+selection.dimensionality
+selection.evolvability
+selection.gradient_beta
+selection.heritability_h2
+selection.response_Gbeta
+selection.spectrum
+selection.stable_rank
+study.mde
+study.pooled_effect
+study.power
+study.prediction_interval_ratio
+study.resolution_ratio
+study.tau2
+substrate.lod
+substrate.loq
+substrate.noise_floor
+verifier.cfg
+verifier.decision_coverage
+verifier.false_positive_rate
+verifier.fp_catalogue
+verifier.metamorphic_violations
+verifier.mutation_score
+verifier.reliability_growth_beta
+verifier.sobol_ST
+verifier.surviving_mutants
+verifier.trusted_inputs
+verifier.unseen_exploit_mass

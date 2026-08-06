@@ -57,7 +57,6 @@ load_signal("Skywork/Skywork-Reward-Llama-3.1-8B-v0.2")
 #   is GPU/download-gated on this machine (8 GB GPU, cannot hold the 8B/27B campaign models).
 #   The convention sniffed as 'unknown' and the code path is implemented; set allow_download=True
 #   to attempt it on adequate hardware, or use wrap_hf_model/from_tiny for a local model.
-#   (section 2.3.4, hardware reality)
 ```
 
 The error is the honest one: the sniffing and wiring are real, the download is what is withheld, and the two ungated paths are named. `allow_download=True` (or a local path) lifts the gate on hardware that can hold the weights.

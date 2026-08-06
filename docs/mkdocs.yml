@@ -3,15 +3,24 @@
 # Preview locally:  mkdocs serve -f docs/mkdocs.yml   (from the repository root)
 # Build (strict):   mkdocs build -f docs/mkdocs.yml --strict
 # Figures:          cd docs/diagrams && ./build_figures.sh   (regenerates SVGs + palette)
+#
+# The build imports reward_lens: the catalogue, the quantity registry and the refusal reference
+# are rendered from the code by docs/hooks.py rather than transcribed, so the site cannot fall
+# behind the library. `pip install -e .` into the documentation environment, alongside
+# docs/requirements-docs.txt. Nothing heavier than the base dependencies is needed; optional
+# extras only make the open-research-target list shorter and more accurate.
 
 site_name: reward-lens
 site_description: White-box instruments and built-in measurement discipline for reward models.
-site_url: https://suhailnadaf509.github.io/reward-lens/
+site_url: https://reward-lens.github.io/reward-lens/
 site_author: Mohammed Suhail B Nadaf
-copyright: Copyright &copy; 2026 Mohammed Suhail B Nadaf — MIT License
+copyright: Copyright &copy; 2026 Mohammed Suhail B Nadaf, MIT License
 
-repo_url: https://github.com/suhailnadaf509/reward-lens
-repo_name: suhailnadaf509/reward-lens
+# Both of these point at the project's repository rather than any personal account, so the "edit
+# this page" pencil and the header link land where the code is. The authority for the URL is
+# pyproject.toml's `Homepage`; keep the two in step.
+repo_url: https://github.com/reward-lens/reward-lens
+repo_name: reward-lens/reward-lens
 edit_uri: edit/main/docs/content/
 
 docs_dir: content
@@ -98,6 +107,12 @@ markdown_extensions:
   - pymdownx.arithmatex:
       generic: true
 
+# Generated pages. `on_files` runs before the nav is built, so everything under Catalogue and the
+# refusal reference can be named in `nav:` exactly like a hand-written page, and --strict fails the
+# build if the generator stops producing one.
+hooks:
+  - hooks.py
+
 plugins:
   - search
   - mkdocstrings:
@@ -144,6 +159,7 @@ nav:
       - Patch without running out of memory: how-to/patching-memory.md
       - Compare two reward models: how-to/compare-two-models.md
       - Effective sample size of an eval set: how-to/effective-sample-size.md
+      - Effective group size of a GRPO group: how-to/effective-group-size.md
       - Calibrate a detector on an organism: how-to/calibrate-on-an-organism.md
       - Freeze and run a study: how-to/freeze-and-run-a-study.md
       - Build a card, check a manuscript: how-to/cards-and-claims.md
@@ -175,7 +191,34 @@ nav:
           - Path effects: instruments/path-effects.md
           - Concept dose-response: instruments/concept-dose-response.md
           - The intervention algebra: instruments/interventions.md
+      - On a training run:
+          - The cost book: instruments/cost-book.md
+          - Credit geometry: instruments/credit.md
+          - The four books: instruments/reconciliation.md
+          - Feature heritability: instruments/heritability.md
+          - The reward covector: instruments/covector.md
+      - On a grader:
+          - The grader card: instruments/grader-card.md
+          - Reference materials and selection: instruments/reference-materials.md
       - The index library: instruments/index-library.md
+      - The full catalogue:
+          - catalogue/index.md
+          - A. Signal metrology: catalogue/series-a.md
+          - B. Grader structure: catalogue/series-b.md
+          - C. Grader white-box: catalogue/series-c.md
+          - D. Verifier and environment: catalogue/series-d.md
+          - E. The estimator: catalogue/series-e.md
+          - F. The four books: catalogue/series-f.md
+          - G. Credit geometry: catalogue/series-g.md
+          - H. Rate and regime: catalogue/series-h.md
+          - I. Adversarial pressure: catalogue/series-i.md
+          - J. Monitoring: catalogue/series-j.md
+          - K. Transfer and survival: catalogue/series-k.md
+          - L. Reference materials and labels: catalogue/series-l.md
+          - M. Meta-instruments: catalogue/series-m.md
+          - N. The frontier: catalogue/series-n.md
+          - The quantity registry: catalogue/quantities.md
+          - Open research targets: catalogue/open.md
   - Training loops:
       - training-loops/index.md
       - Best-of-N analysis: training-loops/best-of-n.md
@@ -192,14 +235,19 @@ nav:
       - A measurement you can trust: concepts/measurement-you-can-trust.md
   - The measurement discipline:
       - discipline/index.md
+      - The kernel: discipline/the-kernel.md
       - The anatomy of evidence: discipline/anatomy-of-evidence.md
       - The trust ladder: discipline/trust-ladder.md
       - Calibration and organisms: discipline/calibration-and-organisms.md
       - Gauge and frames: discipline/gauge-and-frames.md
+      - Generalizability theory: discipline/generalizability.md
       - Studies and preregistration: discipline/studies-and-preregistration.md
       - The evidence store: discipline/evidence-store.md
+  - When it refuses: refusals.md
   - The sciences: sciences.md
+  - Findings: findings.md
   - Interpreting results honestly: caveats.md
+  - What 3.0 does not do: not-in-3-0.md
   - Background & theory:
       - theory/index.md
       - Bradley-Terry and preference: theory/bradley-terry.md
@@ -223,5 +271,5 @@ nav:
       - Studies: reference/studies.md
       - Artifacts and operate: reference/artifacts-operate.md
       - Legacy (1.0 API): reference/legacy.md
-  - Coming from 1.0: migration.md
+  - Coming from v1.0: migration.md
   - Contributing: contributing/index.md

@@ -27,6 +27,7 @@ The three gates are the spine of the whole section:
 - [The trust ladder](trust-ladder.md). The four levels, what computes each, why the caller cannot set trust, and what each level licenses you to say.
 - [Calibration and organisms](calibration-and-organisms.md). Answer keys by construction: plant a rule, verify it governs behavior, score every method against it, publish the scorecard. The floor the calibration gate stands on.
 - [Gauge and frames](gauge-and-frames.md). Why two reward directions can look orthogonal in raw coordinates when they are nearly the same function, and what a shared frame does about it.
+- [Generalizability theory](generalizability.md). How much of a score is the response and how much is which judge you drew on which day, answered by a decomposition that has existed since 1972 and has never been pointed at a reward model.
 - [Studies and preregistration](studies-and-preregistration.md). A spec, checkable predictions, kill criteria, a freeze, and a runner that adjudicates against the prediction instead of the author.
 - [The evidence store](evidence-store.md). The append-only record everything lands in, and the artifacts that are views over it, a card or a leaderboard or a safety case that can only say what the store can back.
 

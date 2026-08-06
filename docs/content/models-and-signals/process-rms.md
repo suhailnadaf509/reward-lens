@@ -49,7 +49,7 @@ Step detection has two paths, and only one of them is real here. The delimiter p
 one = prm.tokenize(("Compute.", "one line solution with no newline at all"))
 one.meta["n_steps"]           # 1
 one.meta["step_detection"]
-# 'learned step-boundary detector is a stub (section 2.3.3): a trained boundary classifier over
+# 'learned step-boundary detector is a stub: a trained boundary classifier over
 #  the residual stream is the production fallback; here a solution with no delimiter is one step.'
 ```
 

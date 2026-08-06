@@ -60,6 +60,10 @@ If you want to understand why the calls are shaped the way they are, the [instru
 
     Thirty rows from six seeds are not thirty data points. Count what the data actually earned.
 
+-   __[Effective group size of a GRPO group](effective-group-size.md)__
+
+    Sixteen rollouts is not sixteen independent observations once the grader disagrees with itself.
+
 -   __[Calibrate a detector on an organism](calibrate-on-an-organism.md)__
 
     No instrument earns more than exploratory trust without an answer key to check it against.

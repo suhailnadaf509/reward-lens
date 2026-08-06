@@ -17,11 +17,11 @@ $ reward-lens --help
 ╰──────────────────────────────────────────────────────────────────────────────╯
 ╭─ Commands ───────────────────────────────────────────────────────────────────╮
 │ card        Build an RM Card for a signal: a view over every stored Evidence │
-│             about it (section 2.15).                                         │
+│             about it.                                                        │
 │ scoreboard  Print the theorem scoreboard: standing theorems and candidate    │
-│             laws (section 2.14).                                             │
+│             laws.                                                            │
 │ claims      Check documents against the store; exit nonzero if any number is │
-│             unbound (section 2.15.5).                                        │
+│             unbound.                                                         │
 │ score       Score inputs with a reward model (GPU-gated).                    │
 │ serve       Serve a reward model as an RL-loop-compatible endpoint           │
 │             (GPU-gated).                                                     │
@@ -148,7 +148,7 @@ The model-touching commands dispatch to the kernel call that does the real work,
 $ reward-lens score Skywork/Skywork-Reward-Llama-3.1-8B-v0.2
 ╭───────────────────────────────── GPU-gated ──────────────────────────────────╮
 │ score needs a loaded reward model and a GPU.                                 │
-│ It is GPU-gated on this torch-free operator layer (DESIGN 2.16).             │
+│ It is GPU-gated on this torch-free operator layer.                           │
 │                                                                              │
 │ Dispatches to:                                                               │
 │ reward_lens.signals.load_signal('Skywork/Skywork-Reward-Llama-3.1-8B-v0.2'). │
@@ -166,7 +166,7 @@ Frozen study study:length-bias-demo@v1#48f2cb59 (analysis:
 studies.s12_hackability.analysis.analyze)
 ╭───────────────────────────────── GPU-gated ──────────────────────────────────╮
 │ study run needs a loaded reward model and a GPU.                             │
-│ It is GPU-gated on this torch-free operator layer (DESIGN 2.16).             │
+│ It is GPU-gated on this torch-free operator layer.                           │
 │                                                                              │
 │ Dispatches to:                                                               │
 │ reward_lens.studies.run_study(study:length-bias-demo@v1#48f2cb59)            │
@@ -183,7 +183,7 @@ The freeze happened. The `StudyID` is real and matches what `study freeze` produ
 $ reward-lens serve Skywork/Skywork-Reward-Llama-3.1-8B-v0.2
 ╭───────────────────────────────── GPU-gated ──────────────────────────────────╮
 │ serve needs a loaded reward model and a GPU.                                 │
-│ It is GPU-gated on this torch-free operator layer (DESIGN 2.16).             │
+│ It is GPU-gated on this torch-free operator layer.                           │
 │                                                                              │
 │ Dispatches to:                                                               │
 │ reward_lens.signals.serve.serve(load_signal('Skywork/Skywork-Reward-Llama-3. │

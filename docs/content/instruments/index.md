@@ -68,3 +68,26 @@ print(ev.observable, "|", ev.trust, "|", ev.gauge)
 `from_tiny` builds a genuine two-layer reward model on CPU in under a minute, which is enough to exercise every observational instrument end to end. It is not enough to *reproduce* the 8B results, because a two-layer model has no late-layer structure to find. Throughout the battery, the tiny runs are there so you can see the machinery move; the Skywork and ArmoRM numbers are measured results from committed artifacts, and the call that produces them is marked as needing a GPU.
 
 Start with [the reward lens](lens-crystallization.md). It is the instrument that tells the others where to look.
+
+## The instruments that are not about a preference pair
+
+The eleven above all start from one reward model and one pair. Two other groups sit in the nav beside them and start somewhere else entirely, so they are worth naming here rather than leaving to be found.
+
+**On a training run.** These read a recorded reinforcement-learning run rather than a scoring model, and each of them answers a question about a step rather than about a decision.
+
+| Instrument | What it answers |
+|---|---|
+| [The cost book](cost-book.md) | How many nats did that step spend, and how many did the movement need? |
+| [Credit geometry](credit.md) | Which turn got the reward, and does the attribution add up to the whole step? |
+| [The four books](reconciliation.md) | Do the two independent predictions of the behaviour change agree? |
+| [Feature heritability](heritability.md) | Can a gradient step move this feature at all, or does it only look susceptible? |
+| [The reward covector](covector.md) | Which direction in the residual stream would raise the expected reward? |
+
+**On a grader.** These treat the grader as the object of study rather than as the source of a score.
+
+| Instrument | What it answers |
+|---|---|
+| [The grader card](grader-card.md) | What does a buyer know about this verifier before spending a month of compute on it? |
+| [Reference materials and selection](reference-materials.md) | Did your method beat the dumb one, and against a reference with an uncertainty of its own? |
+
+Every one of them returns a refusal on at least one real subject, with the numbers that produced it. That is not a gap in the pages; it is most of what they have to teach.

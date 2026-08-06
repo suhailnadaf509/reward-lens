@@ -34,10 +34,26 @@
     options:
       heading_level: 3
 
-## The 1.0 concept tool
+## Belief probes
 
-`ConceptExtractor` is the original 1.0 interface, kept for the workflows built on it. It extracts concepts, reports their reward alignment, and intervenes on them through the older API.
+`fit_belief_probe` is the strictest of the probe factories, for reading a latent that has an
+externally verifiable answer. It refuses a self-labelled target outright, and it refuses to return
+at all without an answer key to grade against. A probe trained on labels the model produced
+measures the model's labels rather than its beliefs, so that refusal is the point of the module
+rather than a restriction on it.
 
-::: reward_lens.concepts.legacy.ConceptExtractor
+```python
+from reward_lens.concepts import answer_key_target, fit_belief_probe
+
+target = answer_key_target("is_solvable", key_fn=lambda item, side: item.meta["solvable"])
+probe = fit_belief_probe(captures, belief=target, answer_key=organism.answer_key)
+probe.calibration          # never None: the fit is verified to have earned one
+```
+
+::: reward_lens.concepts.beliefs.BeliefProbe
+    options:
+      heading_level: 3
+
+::: reward_lens.concepts.beliefs.BeliefTarget
     options:
       heading_level: 3

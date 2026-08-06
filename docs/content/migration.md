@@ -1,46 +1,45 @@
-# Coming from 1.0
+# Coming from v1.0
 
-**Did the rewrite break your 1.0 code? No.** Every v1 name still imports from the top level, and the pure layers stay torch-free, so nothing you wrote stopped working the day 2.0 landed. The migration is not a rewrite under duress. It is moving one call at a time to the version that hands back a number you can trust instead of a bare float.
+**Did the rewrite break your old code? Most of it, yes, and this page is the map.** The v1 flat API
+was kept alive through v2.0 by a lazy accessor and retired in v3.0 once its two-release deprecation
+condition was met. Pin `reward-lens<3` and move one call at a time. What you gain in exchange is
+not more tools; it is a receipt on every number.
 
-## Your 1.0 code still runs
+## What still imports
 
-`import reward_lens` pulls nothing heavier than numpy. Touch a v1 name and the module that needs torch is imported on demand, which is the correct moment for it to load.
-
-```python
-import reward_lens
-print(reward_lens.__version__)          # 2.0.1
-
-from reward_lens import RewardModel, RewardLens, ComponentAttribution   # still here
-```
-
-These names resolve through a lazy accessor to `reward_lens.legacy`, the one sanctioned home for the 1.0 surface. The rest of the classic toolkit returns the same way: `ActivationPatcher`, `PathPatcher`, `DistortionAnalyzer`, `DivergenceAwarePatching`, `MisalignmentCascadeDetector`, `RewardConflictAnalyzer`, `ConceptExtractor`, and `quick_concept_analysis`. The full list is in the [1.0 API reference](reference/legacy.md).
-
-Three tools never had a top-level export in 1.0, and still do not. Import them from their own module:
+`import reward_lens` pulls nothing heavier than numpy and now exposes `__version__`, `core` and
+`stats`. Two modules that never went through the accessor are untouched:
 
 ```python
-from reward_lens.hacking import HackingDetector
-from reward_lens.comparison import ModelComparator
-from reward_lens.sae import TopKSAE, SAETrainer
+from reward_lens.model import RewardModel          # the hooked model wrapper
+from reward_lens.sae import TopKSAE, SAETrainer    # the top-k sparse autoencoder
 ```
 
-Both blocks import cleanly on CPU. They pull torch because they touch models, which is the only reason the top-level import stays lazy in the first place.
+Both need the `[white-box]` extra, both import on CPU, and neither returns `Evidence`. Everything
+else from the old flat surface is gone: `RewardLens`, `ComponentAttribution`, `ActivationPatcher`,
+`PathPatcher`, `DistortionAnalyzer`, `DivergenceAwarePatching`, `MisalignmentCascadeDetector`,
+`RewardConflictAnalyzer`, `ConceptExtractor`, `quick_concept_analysis`, `HackingDetector` and
+`ModelComparator`. The [legacy reference](reference/legacy.md) has the full list with what happened
+to each.
 
 ## Where each primitive moved
 
-The left column keeps working; the right column is where to write new code.
-
-| 1.0 primitive | What it did | 2.0 home |
+| Retired primitive | What it did | Where to write new code |
 |---|---|---|
 | `RewardLens` | reward projected across depth | [`LensCrystallization`](instruments/lens-crystallization.md) |
 | `ComponentAttribution` | per-component reward ledger | [`DirectLinearAttribution`](instruments/attribution.md) |
 | `ActivationPatcher`, `PathPatcher` | causal patching | [`PatchGrid`](instruments/patch-grid.md), [`PathEffect`](instruments/path-effects.md), and the [intervention algebra](instruments/interventions.md) |
 | `ConceptExtractor`, `quick_concept_analysis` | concept directions and steering | [concepts](concepts/index.md) with [`ConceptDoseResponse`](instruments/concept-dose-response.md) |
 | `RewardConflictAnalyzer` | inter-objective conflict | [`ConflictMatrix`](instruments/conflict-matrix.md) |
-| `HackingDetector` (`reward_lens.hacking`) | bias and hacking scan | still `reward_lens.hacking`; the ported pieces are the [bias battery](instruments/bias-battery.md) and the [index library](instruments/index-library.md) |
-| `ModelComparator` (`reward_lens.comparison`) | cross-model comparison | still `reward_lens.comparison`; the framed 2.0 way is [gauge and frames](discipline/gauge-and-frames.md) |
-| `TopKSAE`, `SAETrainer` (`reward_lens.sae`) | SAE features on the reward | still `reward_lens.sae`; see [feature-reward alignment](instruments/feature-alignment.md) |
+| `DistortionAnalyzer` | reward distortion | [the index library](instruments/index-library.md) |
+| `HackingDetector` | bias and hacking scan | [the bias battery](instruments/bias-battery.md) and [the index library](instruments/index-library.md) |
+| `ModelComparator` | cross-model comparison | [gauge and frames](discipline/gauge-and-frames.md) |
+| `TopKSAE`, `SAETrainer` | SAE features on the reward | still `reward_lens.sae`; see [feature-reward alignment](instruments/feature-alignment.md) |
 
-There are two tiers here. The classic analysis primitives (model, lens, attribution, patching, conflict, concepts) resolve from the top level and from `reward_lens.legacy`. The three scanners in the bottom rows do not. They keep their 1.0 implementation, they still return their old report objects rather than Evidence, and they have not yet been reworked behind the protocols. If you depend on the exact output of `HackingDetector`, `ModelComparator`, or the SAE trainer, keep importing it from its module. For new work, reach for the instrument in the right column.
+No row is a rename. In each of them the replacement hands back `Evidence` with an uncertainty, a
+gauge status and a computed trust level, where the retired name handed back a numpy array or a
+report object. Wrapping the old names would have meant a shim whose only job is to throw the
+uncertainty away, which is why they went instead.
 
 ## What moving buys you
 
@@ -59,7 +58,8 @@ The honesty thread runs straight through this. Rank a model's components by how 
 A 1.0 script that traces a preference across depth and attributes it, next to its 2.0 equivalent. The shape is the same. The output is not.
 
 ```python
-# 1.0: loads an 8B reward model, returns bare arrays
+# The old way: loads an 8B reward model, returns bare arrays.
+# These three names no longer import; this block is here to be read, not run.
 from reward_lens import RewardModel, RewardLens, ComponentAttribution
 
 model = RewardModel.from_pretrained("Skywork/Skywork-Reward-Llama-3.1-8B-v0.2")

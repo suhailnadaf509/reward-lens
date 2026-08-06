@@ -95,4 +95,6 @@ pip install reward-lens
 ```
 
 !!! note "What it runs on"
-    Python 3.10 or newer. The base install brings torch and transformers, because most of the library eventually touches a model. The epistemics layer does not: `import reward_lens.core` and `import reward_lens.stats` pull only numpy, so you can measure and reason about evidence with no GPU at all. A real 8B trace wants a GPU with enough memory to hold the model. Everything conceptual, and the entire trust story, runs on CPU first.
+    Python 3.10 or newer. **The base install brings nothing compiled**: numpy, scipy, pandas, scikit-learn and a CLI, and `import reward_lens` never imports torch. That is deliberate, because a record is written by whoever ran the training and read by whoever is auditing it, and the auditor is exactly the person most likely to be on a base install. The whole grader card, the verifier series, the record reader and the entire trust story run there.
+
+    Reading a model's activations or gradients needs the `white-box` extra, which is where torch and transformers live: `pip install 'reward-lens[white-box]'`. A real 8B trace wants a GPU with enough memory to hold the model. Everything conceptual runs on CPU first.

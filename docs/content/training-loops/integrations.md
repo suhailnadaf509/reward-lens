@@ -68,7 +68,7 @@ except IntegrationUnavailableError as exc:
 # the 'trl' integration requires the optional 'trl' extra, which is not installed.
 # Install reward-lens[trl] to wire the callback/worker into a live training run. The
 # framework-agnostic reward function (make_reward_fn) and the geometry probe
-# (probe_geometry) do not need 'trl' and are usable now (DESIGN 2.13).
+# (probe_geometry) do not need 'trl' and are usable now.
 ```
 
 The error is the honest half of the design. The binding does not fake a `TrainerCallback` and log nothing. It names the framework, names the extra that would make it work, and reminds you that the reward function and the geometry probe already do. The same holds for the OpenRLHF worker hook and the veRL worker: their reward-scoring half runs now, their live binding raises the same `IntegrationUnavailableError` until the extra is installed.

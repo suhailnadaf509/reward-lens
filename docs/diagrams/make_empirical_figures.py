@@ -36,8 +36,14 @@ if HERE not in sys.path:
     sys.path.insert(0, HERE)
 from rl_palette import palette, apply_style, SEQUENTIAL, DIVERGING  # noqa: E402
 
-# Committed run artifacts live in the v1 run repository.
-DATA_REPO = "/home/suhail-nadaf/final-reward/reward-lens"
+# Committed run artifacts live in the v1 run repository, which is not this repository and is not
+# published with it. By default it is looked for beside this checkout; point REWARD_LENS_V1_REPO
+# somewhere else if you keep it elsewhere. A missing source skips its figure rather than faking it,
+# so this path being wrong costs you figures and never a wrong number.
+DATA_REPO = os.environ.get(
+    "REWARD_LENS_V1_REPO",
+    os.path.abspath(os.path.join(HERE, "..", "..", "..", "reward-lens")),
+)
 WEEKEND = os.path.join(DATA_REPO, "weekend_experiment")
 V2 = os.path.join(DATA_REPO, "outputs", "v2_20260506_222648_unknown")
 # Figures are written into the docs assets tree of the clean repo.
