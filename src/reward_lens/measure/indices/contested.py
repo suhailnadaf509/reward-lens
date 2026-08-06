@@ -1,4 +1,4 @@
-"""Contested direction: the axis annotators disagree along (Appendix A, S11 machine psychology).
+"""Contested direction: the axis annotators disagree along (S11 machine psychology).
 
 Where preferences are contested, a single scalar reward cannot represent everyone (T7); the useful
 object is the direction in representation space along which the disagreement lives. Given, per pair, the
@@ -13,11 +13,11 @@ split on pull ``c`` toward the representation change that distinguishes them; un
 nothing. The magnitude of the alignment says how much of the disagreement is linearly organized along a
 single axis versus scattered.
 
-This module has no single Appendix A letter; it is the contested-direction diagnostic S11 consumes.
-Deviation: the pure function is the covariance-direction recovery on supplied ``Δh`` and disagreement;
-the production path reads ``Δh`` from the signal and disagreement from the data plane's annotator
-records. The direction is COVARIANT, so a cross-signal comparison of contested directions needs a shared
-frame.
+This module has no single theory-object letter; it is the contested-direction diagnostic S11
+consumes. Deviation: the pure function is the covariance-direction recovery on supplied ``Δh`` and
+disagreement; the production path reads ``Δh`` from the signal and disagreement from the data
+plane's annotator records. The direction is COVARIANT, so a cross-signal comparison of contested
+directions needs a shared frame.
 """
 
 from __future__ import annotations
@@ -26,9 +26,18 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from reward_lens.core.envelope import EnvelopeSpec, RegimeCondition
 from reward_lens.core.evidence import Uncertainty
-from reward_lens.core.types import Capability, GaugeStatus
-from reward_lens.measure.base import BaseObservable, Context
+from reward_lens.core.invariance import INVARIANT
+from reward_lens.core.types import Access, AccessMatrix, Capability, Component, GaugeStatus
+from reward_lens.measure.base import BaseObservable, Context, PreflightResult
+from reward_lens.measure.indices._support import (
+    ANY_SUBSTRATE,
+    GRADER_STUDY_PHASES,
+    MEASURED_BY,
+    measured_without_input,
+    missing_injection,
+)
 
 if TYPE_CHECKING:
     from reward_lens.core.evidence import Evidence
@@ -65,16 +74,54 @@ class Contested(BaseObservable):
     annotator records supply disagreement in production). The direction is COVARIANT: comparing contested
     directions across signals requires a shared frame (gate 2). Within one signal the recovered axis and
     its correlation are reported directly.
+
+    What it cannot do. There is always a direction: the covariance of ``Δh`` with any disagreement
+    vector is non-zero for essentially any input, so this instrument returns an axis whether or not
+    the disagreement is organised at all. The correlation beside it is the only thing that says
+    otherwise, and it has no null attached here, so it must be read against the shuffled-disagreement
+    baseline rather than on its own. One axis is fitted, so disagreement that lives on two competing
+    axes is reported as their resultant, which is a direction nobody disagrees along.
     """
 
     name = "Contested"
     version = "1.0"
-    requires = Capability.ACTIVATIONS
+    capabilities = Capability.ACTIVATIONS
     gauge_status = GaugeStatus.COVARIANT
     faithful_to = None
     deviations = (
-        "no single Appendix A letter; the contested-direction diagnostic for S11 (annotator "
+        "no single theory-object letter; the contested-direction diagnostic for S11 (annotator "
         "disagreement, T7). Direction is COVARIANT and frame-gated for cross-signal comparison.",
+    )
+
+    # -- the observable declarations ---------------------------------------
+    quantity = "grader.contested_axis"
+    #: Both inputs are recorded: the per-pair activation difference from an earlier capture and the
+    #: annotator disagreement from the data plane. Nothing here calls the grader.
+    requires: AccessMatrix = {Component.RECORD: Access.RECORD}
+    substrates = ANY_SUBSTRATE
+    phases = GRADER_STUDY_PHASES
+    envelope = EnvelopeSpec(
+        requires=frozenset({RegimeCondition.GROUP_NONDEGENERATE}),
+        measured_by=MEASURED_BY,
+        on_violation="refuse",
+    )
+    #: The reported scalar is a correlation between two projections, which a shared orthogonal map
+    #: leaves unchanged. The direction itself moves with the basis, which is what
+    #: ``GaugeStatus.COVARIANT`` records and what gate 2 makes a caller supply a frame for.
+    invariance = "repr.basis"
+    invariance_relation = INVARIANT
+    baselines = ("baseline.shuffled_disagreement", "baseline.random_direction")
+    rung = 0
+    #: A white-box reading owes an `IncrementalValidity` and this instrument cannot produce
+    #: one. The id is checkable and the prose is the argument.
+    incremental_exemption = (
+        "NO_BLACK_BOX_ON_THESE_ITEMS",
+        "the instrument consumes an (n, d) activation-difference matrix and an (n,) disagreement "
+        "vector and never touches the view, so its items carry no text, no logged series and no "
+        "judge, and all six baselines refuse for want of a field they name. The white-box side is "
+        "ready: the projection onto the fitted axis is a per-item score and the disagreement is a "
+        "per-item target. A record becomes measurable the moment the pairs arrive with their "
+        "transcripts attached.",
     )
 
     def __init__(
@@ -85,15 +132,34 @@ class Contested(BaseObservable):
         self.delta_h = delta_h
         self.disagreement = disagreement
 
+    def preflight(self, ctx: Context) -> PreflightResult:
+        """Both arrays or a refusal. A contested direction is a covariance and needs two vectors.
+
+        The injected input is absent, which makes this a `Refusal` rather than an Evidence
+        carrying a note. Nothing has to be computed to know it, so the question belongs
+        here: `estimate` returns this refusal before `measure` is reached, and the
+        capability report gets it with no work at all.
+        """
+        if self.delta_h is None or self.disagreement is None:
+            return missing_injection(
+                self,
+                needs={
+                    "delta_h": "an (n, d) array of per-pair chosen-minus-rejected activations",
+                    "disagreement": "an (n,) array of per-pair grader disagreement",
+                },
+                have="neither was injected",
+                remedy=(
+                    "Construct `Contested(delta_h=..., disagreement=...)`. `delta_h` is the (n, d) matrix of "
+                    "chosen-minus-rejected final-token activations, one row per comparison; `disagreement` "
+                    "is the matching (n,) vector of how far the graders disagreed on that comparison. They "
+                    "index the same pairs, so their first dimension has to match."
+                ),
+            )
+        return super().preflight(ctx)
+
     def measure(self, ctx: Context) -> "Evidence":
         if self.delta_h is None or self.disagreement is None:
-            return ctx.emit(
-                {
-                    "note": "contested needs per-pair delta_h and a disagreement signal; none injected"
-                },
-                uncertainty=Uncertainty(method="none"),
-                gauge=GaugeStatus.COVARIANT,
-            )
+            raise measured_without_input(self)
         result = contested_direction(self.delta_h, self.disagreement)
         payload = {
             "direction": np.asarray(result["direction"], dtype=np.float64),

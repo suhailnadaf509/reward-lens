@@ -1,6 +1,6 @@
-"""A14 VCE: Value Convergence Excess (Appendix A14).
+"""A14 VCE: Value Convergence Excess.
 
-Formal definition: Appendix A14. ``VCE = align(canonicalized reward subspaces across an RM pair) −
+Formal definition, A14. ``VCE = align(canonicalized reward subspaces across an RM pair) −
 align(matched capability subspaces, same layers and metric)``, read against the RUM-identifiability null
 (faithful_to PRH 2405.07987, signed against it). The platonic representation hypothesis says
 capabilities converge as models scale; VCE asks whether values converge beyond that. If two reward
@@ -24,9 +24,18 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from reward_lens.core.envelope import EnvelopeSpec, RegimeCondition
 from reward_lens.core.evidence import Uncertainty
-from reward_lens.core.types import Capability, GaugeStatus
-from reward_lens.measure.base import BaseObservable, Context
+from reward_lens.core.invariance import INVARIANT
+from reward_lens.core.types import Access, AccessMatrix, Capability, Component, GaugeStatus
+from reward_lens.measure.base import BaseObservable, Context, PreflightResult
+from reward_lens.measure.indices._support import (
+    GRADER_STUDY_PHASES,
+    MEASURED_BY,
+    NEURAL_SUBSTRATES,
+    measured_without_input,
+    missing_injection,
+)
 
 if TYPE_CHECKING:
     from reward_lens.core.evidence import Evidence
@@ -57,7 +66,7 @@ def value_convergence_excess(
     null_draws: int = 1000,
     seed: int = 0,
 ) -> dict[str, float]:
-    """VCE and its null-anchored reading (Appendix A14).
+    """VCE and its null-anchored reading (A14).
 
     ``VCE = reward_alignment − capability_alignment``. When ``d`` and ``k`` are given, draws the
     RUM-identifiability null for ``(d, k)`` and reports its mean and 95th percentile, plus whether the
@@ -89,17 +98,45 @@ class VCE(BaseObservable):
     injected here (with the ambient ``d`` and subspace ``k`` for the null); the production path computes
     them through ``geometry.subspace`` in a shared frame. Reports VCE against the RUM-identifiability
     null.
+
+    What it cannot do. Both alignments are supplied, so this instrument performs a subtraction and
+    a null comparison and nothing else; every claim it makes rests on the two numbers having been
+    computed on frame-canonicalized subspaces at the same layers with the same metric, which nothing
+    here can verify. The capability-alignment term is the control, and choosing which layers count
+    as capability decides the answer. A positive excess says the reward subspaces agree more than
+    the capability subspaces do, which is a statement about two models and their matching, not
+    evidence that values converge in general.
     """
 
     name = "VCE"
     version = "1.0"
-    requires = Capability.SCORES
+    capabilities = Capability.SCORES
     gauge_status = GaugeStatus.COVARIANT
     faithful_to = "A14"
     deviations = (
         "arithmetic and null on two supplied same-metric alignment scalars; the frame-canonicalized "
         "subspace alignments are computed upstream (geometry.subspace) and are COVARIANT",
     )
+
+    # -- the observable declarations ---------------------------------------
+    quantity = "grader.value_convergence_excess"
+    #: Both alignment scalars are recorded upstream by ``geometry.subspace`` in a shared frame.
+    requires: AccessMatrix = {Component.RECORD: Access.RECORD}
+    substrates = NEURAL_SUBSTRATES
+    phases = GRADER_STUDY_PHASES
+    envelope = EnvelopeSpec(
+        requires=frozenset({RegimeCondition.STATIONARY_GRADER}),
+        measured_by=MEASURED_BY,
+        on_violation="refuse",
+    )
+    #: A subspace alignment computed in a shared frame does not move when the same orthogonal map
+    #: acts on both subspaces, so their difference does not either. ``GaugeStatus.COVARIANT`` above
+    #: is the separate requirement that the frame exist at all, which gate 2 enforces before the
+    #: comparison is allowed to happen.
+    invariance = "repr.basis"
+    invariance_relation = INVARIANT
+    baselines = ("baseline.rum_identifiability_null", "baseline.capability_alignment")
+    rung = 0
 
     def __init__(
         self,
@@ -118,13 +155,34 @@ class VCE(BaseObservable):
         self.null_draws = int(null_draws)
         self.seed = int(seed)
 
+    def preflight(self, ctx: Context) -> PreflightResult:
+        """Both alignments, or a refusal. An excess needs something to be in excess of.
+
+        The injected input is absent, which makes this a `Refusal` rather than an Evidence
+        carrying a note. Nothing has to be computed to know it, so the question belongs
+        here: `estimate` returns this refusal before `measure` is reached, and the
+        capability report gets it with no work at all.
+        """
+        if self.reward_alignment is None or self.capability_alignment is None:
+            return missing_injection(
+                self,
+                needs={
+                    "reward_alignment": "the reward direction's alignment with the shared subspace",
+                    "capability_alignment": "the capability direction's alignment with the same subspace",
+                },
+                have="neither alignment was injected",
+                remedy=(
+                    "Construct `VCE(reward_alignment=..., capability_alignment=...)` with both alignments "
+                    "computed against the same subspace, and pass `d` and `k` as well so the excess is read "
+                    "against the RUM-identifiability null rather than against zero. The reading is the "
+                    "difference of the two, so one alignment on its own has nothing to be in excess of."
+                ),
+            )
+        return super().preflight(ctx)
+
     def measure(self, ctx: Context) -> "Evidence":
         if self.reward_alignment is None or self.capability_alignment is None:
-            return ctx.emit(
-                {"note": "vce needs reward and capability subspace alignments; none injected"},
-                uncertainty=Uncertainty(method="none"),
-                gauge=GaugeStatus.COVARIANT,
-            )
+            raise measured_without_input(self)
         report = value_convergence_excess(
             self.reward_alignment,
             self.capability_alignment,

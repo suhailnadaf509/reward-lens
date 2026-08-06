@@ -1,11 +1,11 @@
-"""``reward_lens.measure.indices`` — the index library (DESIGN section 2.8.3, Appendix A).
+"""``reward_lens.measure.indices`` — the index library (the A-series theory objects).
 
-One module per index, each an `Observable` with a formal definition in Appendix A, a ``faithful_to``
-anchor naming that entry, and a ``gauge_status``. The indices are the scalar diagnostics the cards and
-the scoreboard speak in; centralizing them here is what keeps the fifty programs of the corpus speaking
-one language, and giving each a single Appendix A definition with an explicit ``deviations`` list is the
-structural fix for the operationalization drift that let v1 compute a coverage statistic while citing a
-distortion index (liability 2).
+One module per index, each an `Observable` with a formal definition, a ``faithful_to`` anchor naming
+the theory object it instantiates, and a ``gauge_status``. The indices are the scalar diagnostics the
+cards and the scoreboard speak in; centralizing them here is what keeps the fifty programs of the
+corpus speaking one language, and giving each a single definition with an explicit ``deviations`` list
+is the structural fix for the operationalization drift that let v1 compute a coverage statistic while
+citing a distortion index.
 
 Every module exposes two things: a pure function that is the mathematics of the index, provable on
 synthetic data where the answer is known, and an `Observable` subclass whose ``measure`` reads the
@@ -14,7 +14,7 @@ production path, degrading gracefully (a note in the Evidence, never a fabricate
 dependency the corpus is still building — a concept-feature bank, a probe battery, an interventions
 patch — is not yet available.
 
-Appendix A coverage:
+Theory-object coverage:
 
   - A1  KUI                  ``kui``                  (fully computed)
   - A2  Distortion v2        ``distortion``           (definition + synthetic test)

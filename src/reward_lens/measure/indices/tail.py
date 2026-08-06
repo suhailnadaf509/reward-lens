@@ -1,6 +1,6 @@
-"""A4 Tail index: the right-tail exponent of the reward (Appendix A4).
+"""A4 Tail index: the right-tail exponent of the reward.
 
-Formal definition: Appendix A4. A Hill / peaks-over-threshold estimate of the right-tail exponent of
+Formal definition, A4. A Hill / peaks-over-threshold estimate of the right-tail exponent of
 ``r`` under the base policy ``π_0`` (aggregate), and of each feature's contribution to ``r``
 (per-feature). This is the reward-thermodynamics diagnostic (faithful_to Kwa 2407.14503): the shape of
 the reward's upper tail decides whether optimization has a finite safe budget.
@@ -25,10 +25,15 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
+from reward_lens.core.envelope import EnvelopeSpec, RegimeCondition
 from reward_lens.core.evidence import Uncertainty
-from reward_lens.core.types import Capability, GaugeStatus
+from reward_lens.core.invariance import INVARIANT
+from reward_lens.core.types import Access, AccessMatrix, Capability, Component, GaugeStatus
 from reward_lens.measure.base import BaseObservable, Context
 from reward_lens.measure.indices._support import (
+    ANY_SUBSTRATE,
+    GRADER_STUDY_PHASES,
+    MEASURED_BY,
     FeatureBank,
     final_activations,
     load_default_bank,
@@ -181,17 +186,50 @@ class TailIndex(BaseObservable):
     bank is available, estimates each feature's tail as the proxy for its contribution to ``r``. Gauge
     is INVARIANT: the tail regime and the dimensionless shape are scale-free properties of one signal,
     though ``τ`` and ``λ_c`` carry reward-scale units, which is noted as a deviation.
+
+    What it cannot do. A tail exponent is an extrapolation past the largest score anyone has seen,
+    fitted on the peaks above a quantile the caller picks, and the answer moves with that quantile:
+    the threshold is a modelling choice the payload records but does not defend. The bootstrap
+    interval on the shape covers sampling variation and not threshold choice, so it is narrower than
+    the real uncertainty. The regime call, polynomial against exponential, is the part optimisation
+    budgets are built on and it is the part a few hundred samples decide least well. The per-feature
+    tails are on the feature values, which stand in for each feature's contribution to the reward
+    and are not that contribution.
     """
 
     name = "TailIndex"
     version = "1.0"
-    requires = Capability.SCORES
+    capabilities = Capability.SCORES
     gauge_status = GaugeStatus.INVARIANT
     faithful_to = "A4"
     deviations = (
         "tau and lambda_c carry reward-scale units (the shape and regime are scale-free)",
         "per-feature tail is on the feature values as the proxy for each feature's contribution to r",
     )
+
+    # -- the observable declarations ---------------------------------------
+    quantity = "grader.tail_index"
+    #: Scores come from the grader on the view. The per-feature enrichment additionally captures
+    #: activations, and it is skipped rather than refused when the signal does not offer them.
+    requires: AccessMatrix = {Component.GRADER: Access.QUERY}
+    substrates = ANY_SUBSTRATE
+    phases = GRADER_STUDY_PHASES
+    envelope = EnvelopeSpec(
+        requires=frozenset(
+            {RegimeCondition.STATIONARY_GRADER, RegimeCondition.GROUP_NONDEGENERATE}
+        ),
+        measured_by=MEASURED_BY,
+        on_violation="refuse",
+    )
+    #: The generalized-Pareto shape is a location-scale invariant of the distribution, so it does
+    #: not move under ``r -> a*r + b``. The scale ``tau`` and the critical pressure ``lambda_c`` do
+    #: move, which is recorded in the deviations and is why the shape is what this declaration is
+    #: about. LIGHT_TAILED is deliberately absent from the envelope: this is the instrument that
+    #: measures it, and requiring it would be circular.
+    invariance = "reward.affine"
+    invariance_relation = INVARIANT
+    baselines = ("baseline.gaussian_reference", "baseline.exponential_reference")
+    rung = 0
 
     def __init__(
         self,

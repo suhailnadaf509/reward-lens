@@ -1,6 +1,6 @@
-"""A1 KUI: the Knowledge-Utilization Index (Appendix A1).
+"""A1 KUI: the Knowledge-Utilization Index.
 
-Formal definition: Appendix A1. For a property ``P`` in a battery of properties:
+Formal definition, A1. For a property ``P`` in a battery of properties:
 
   - ``decode(P)`` = percentile-within-battery of a calibrated probe's balanced accuracy for ``P`` from
     the activations ``h`` (how legibly the reward model represents ``P``).
@@ -16,7 +16,7 @@ reward can see but does not currently charge for. ``KUI(P) < 0`` means priced-be
 This is Orgad-style knowledge/behaviour dissociation made grader-side (faithful_to Orgad-style
 dissociation).
 
-This module fixes the v1 unit bug named in Appendix A1: v1 computed ``decodability − mediation`` on raw
+This module fixes the v1 unit bug named in A1: v1 computed ``decodability − mediation`` on raw
 incommensurable scales (a balanced accuracy minus a cosine), a subtraction with no meaning. Here both
 axes are pushed to their percentile-within-battery first, so the difference is between two ranks in
 ``[0, 1]`` and the plane is the honest object. Deviation from A1: mediation uses the cheap linear proxy
@@ -31,10 +31,15 @@ from typing import TYPE_CHECKING, Any, Sequence
 
 import numpy as np
 
+from reward_lens.core.envelope import EnvelopeSpec, RegimeCondition
 from reward_lens.core.evidence import Uncertainty
-from reward_lens.core.types import Capability, GaugeStatus
+from reward_lens.core.invariance import INVARIANT
+from reward_lens.core.types import Access, AccessMatrix, Capability, Component, GaugeStatus
 from reward_lens.measure.base import BaseObservable, Context
 from reward_lens.measure.indices._support import (
+    GRADER_STUDY_PHASES,
+    MEASURED_BY,
+    NEURAL_SUBSTRATES,
     percentile_within_battery,
     reward_vector,
 )
@@ -62,7 +67,7 @@ class Property:
 
 
 def linear_mediation_proxy(direction: np.ndarray, w_r: np.ndarray) -> float:
-    """The cheap linear mediation proxy ``|cos(w_P, w_r)|`` (Appendix A1).
+    """The cheap linear mediation proxy ``|cos(w_P, w_r)|`` (A1).
 
     A property whose direction is nearly parallel to the reward direction is one the reward prices
     heavily; a direction orthogonal to ``w_r`` moves the reward not at all under a linear head. The
@@ -84,7 +89,7 @@ def kui_plane(
 
     ``KUI = (decode_pct − mediate_pct) / √2`` is the signed perpendicular distance from the diagonal
     ``decode = mediate``, positive for represented-but-unpriced properties. Standardizing both axes to
-    ranks in ``[0, 1]`` before subtracting is the whole point (Appendix A1's unit-bug fix); the raw
+    ranks in ``[0, 1]`` before subtracting is the whole point (A1's unit-bug fix); the raw
     balanced accuracy and raw cosine never meet on the same scale. Returns the two percentile axes and
     the KUI vector, all length ``m`` (the battery size).
     """
@@ -134,11 +139,18 @@ class KUI(BaseObservable):
     layer supplies probes and directions in production. When the mediation proxy is used, the cosine is
     read against a random-direction null so a "represented-but-unpriced" flag beats the high-dimensional
     cosine noise floor. Gauge is INVARIANT: the plane is a within-battery, within-signal object.
+
+    What it cannot do. Mediation defaults to ``|cos(w_P, w_r)|``, a geometric proxy for a causal
+    quantity: a property whose direction is nearly orthogonal to the reward can still move the
+    reward through a non-linear route, and the proxy reports it as unpriced. Both axes are
+    percentiles within the battery, so every reading is relative to which properties the caller
+    chose and no KUI value is comparable across two different batteries. A battery of one is
+    undefined and says so rather than returning 0.5 as though it had ranked something.
     """
 
     name = "KUI"
     version = "1.0"
-    requires = Capability.ACTIVATIONS | Capability.LINEAR_READOUT
+    capabilities = Capability.ACTIVATIONS | Capability.LINEAR_READOUT
     gauge_status = GaugeStatus.INVARIANT
     faithful_to = "A1"
     deviations = (
@@ -146,6 +158,38 @@ class KUI(BaseObservable):
         "measured causal delta-r from steering",
         "both axes are standardized to percentile-within-battery before subtraction (the A1 unit-bug "
         "fix); a singleton battery is undefined and reported as such",
+    )
+
+    # -- the observable declarations ---------------------------------------
+    quantity = "grader.knowledge_utilization"
+    #: The reward direction is read off the head; the property battery, with its decodabilities and
+    #: directions, is a recorded measurement from the concept layer.
+    requires: AccessMatrix = {
+        Component.GRADER: Access.FORWARD,
+        Component.RECORD: Access.RECORD,
+    }
+    substrates = NEURAL_SUBSTRATES
+    phases = GRADER_STUDY_PHASES
+    envelope = EnvelopeSpec(
+        requires=frozenset({RegimeCondition.STATIONARY_GRADER}),
+        measured_by=MEASURED_BY,
+        on_violation="refuse",
+    )
+    #: The mediation proxy is a cosine between a property direction and the readout, which a shared
+    #: orthogonal change of basis leaves unchanged, and the percentile step is monotone in it.
+    invariance = "repr.basis"
+    invariance_relation = INVARIANT
+    baselines = ("baseline.random_direction", "baseline.decodability_only")
+    rung = 0
+    #: A white-box reading owes an `IncrementalValidity` and this instrument cannot produce
+    #: one. The id is checkable and the prose is the argument.
+    incremental_exemption = (
+        "NO_PER_ITEM_VERDICT",
+        "the reading is a plane over a battery of properties, one point per property, and both of its "
+        "axes are percentiles within that battery. There is no per-item verdict and no ground truth "
+        "saying which properties should be represented-but-unpriced, so neither the index nor a "
+        "baseline has an error vector. The battery is also injected, so the reading is relative to "
+        "which properties the caller chose.",
     )
 
     def __init__(

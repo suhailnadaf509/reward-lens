@@ -1,6 +1,6 @@
-"""A9 Coherence and Contamination: cross-criterion geometry (Appendix A9).
+"""A9 Coherence and Contamination: cross-criterion geometry.
 
-Formal definition: Appendix A9. For a reward with criterion directions ``{v_k}`` (ArmoRM's nineteen
+Formal definition, A9. For a reward with criterion directions ``{v_k}`` (ArmoRM's nineteen
 objectives, a rubric's criteria):
 
   - Coherence ``μ_jk = v_j · v_k`` on unit-normalized directions is the Gram matrix of the criteria.
@@ -26,10 +26,20 @@ from typing import TYPE_CHECKING, Any
 
 import numpy as np
 
+from reward_lens.core.envelope import EnvelopeSpec, RegimeCondition
 from reward_lens.core.evidence import Uncertainty
-from reward_lens.core.types import Capability, GaugeStatus
+from reward_lens.core.invariance import INVARIANT
+from reward_lens.core.types import (
+    Access,
+    AccessMatrix,
+    Capability,
+    Component,
+    GaugeStatus,
+    Substrate,
+)
 from reward_lens.geometry import participation_ratio
 from reward_lens.measure.base import BaseObservable, Context
+from reward_lens.measure.indices._support import GRADER_STUDY_PHASES, MEASURED_BY
 
 if TYPE_CHECKING:
     from reward_lens.core.evidence import Evidence
@@ -138,11 +148,20 @@ class Coherence(BaseObservable):
     chance" beats the high-dimensional noise floor. Gauge is INVARIANT: the Gram of one signal's own
     criteria is invariant under a shared orthogonal transform of the representation; a cross-signal
     criterion comparison would be COVARIANT and frame-gated, which is noted as a deviation.
+
+    What it cannot do. The contamination matrix reported here *is* the coherence matrix: to first
+    order under a linear head the two coincide, so nothing in this payload is causal evidence that
+    steering criterion j moves criterion k, only that their directions overlap. The Welch floor is a
+    statement about how many nearly-orthogonal directions fit in ``d`` ambient dimensions, and it
+    only binds once ``K > d``; on a wide head with a handful of criteria it returns 0.0 and the
+    ``meets_welch_floor`` field is None rather than a pass. ``d_eff`` is the participation ratio of
+    the criteria's own Gram unless a Hessian spectrum is supplied, which measures the dimension the
+    criteria span and not the dimension the reward has available to spend.
     """
 
     name = "Coherence"
     version = "1.0"
-    requires = Capability.MULTI_READOUT
+    capabilities = Capability.MULTI_READOUT
     gauge_status = GaugeStatus.INVARIANT
     faithful_to = "A9"
     deviations = (
@@ -151,6 +170,26 @@ class Coherence(BaseObservable):
         "within one signal's criterion basis the Gram is rotation-invariant (INVARIANT); a "
         "cross-signal criterion comparison would be COVARIANT and frame-gated",
     )
+
+    # -- the observable declarations ---------------------------------------
+    quantity = "grader.criterion_coherence"
+    requires: AccessMatrix = {Component.GRADER: Access.FORWARD}
+    #: NEURAL_SCALAR only. The criterion directions are rows of a multi-objective head; a GenRM has
+    #: no per-criterion weight vector and a PROCEDURAL rubric ensemble has criteria with no
+    #: geometry, so neither has a Gram matrix to read.
+    substrates = frozenset({Substrate.NEURAL_SCALAR})
+    phases = GRADER_STUDY_PHASES
+    envelope = EnvelopeSpec(
+        requires=frozenset({RegimeCondition.STATIONARY_GRADER}),
+        measured_by=MEASURED_BY,
+        on_violation="refuse",
+    )
+    #: The Gram of unit-normalised rows is unchanged when the same orthogonal map acts on every row,
+    #: and `repr.basis` is exactly that map.
+    invariance = "repr.basis"
+    invariance_relation = INVARIANT
+    baselines = ("baseline.random_direction_pair", "baseline.welch_bound")
+    rung = 0
 
     def __init__(
         self,

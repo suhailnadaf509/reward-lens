@@ -1,6 +1,6 @@
-"""A15 Legibility frontier and tacit residual (Appendix A15).
+"""A15 Legibility frontier and tacit residual.
 
-Formal definition: Appendix A15. Read interpretation as rate-distortion. Build a program
+Formal definition, A15. Read interpretation as rate-distortion. Build a program
 ``r̂_K = Σ w_i π_i`` from predicates ``π_i`` of description length at most ``K``, fit to the model's
 scores, and measure ``fidelity(K) =`` the ranking agreement of ``r̂_K`` with the true reward ``r``. The
 frontier ``fidelity(K)`` rises with the description-length budget ``K``; its knee ``K*`` is the point of
@@ -20,10 +20,19 @@ from typing import TYPE_CHECKING, Sequence
 
 import numpy as np
 
+from reward_lens.core.envelope import EnvelopeSpec, RegimeCondition
 from reward_lens.core.evidence import Uncertainty
-from reward_lens.core.types import Capability, GaugeStatus
-from reward_lens.measure.base import BaseObservable, Context
-from reward_lens.measure.indices._support import reward_scores
+from reward_lens.core.invariance import INVARIANT
+from reward_lens.core.types import Access, AccessMatrix, Capability, Component, GaugeStatus
+from reward_lens.measure.base import BaseObservable, Context, PreflightResult
+from reward_lens.measure.indices._support import (
+    ANY_SUBSTRATE,
+    GRADER_STUDY_PHASES,
+    MEASURED_BY,
+    measured_without_input,
+    missing_injection,
+    reward_scores,
+)
 
 if TYPE_CHECKING:
     from reward_lens.core.evidence import Evidence
@@ -44,7 +53,7 @@ def legibility_frontier(
     *,
     knee_tol: float = 0.02,
 ) -> dict[str, object]:
-    """The legibility frontier, its knee ``K*``, and the tacit residual (Appendix A15).
+    """The legibility frontier, its knee ``K*``, and the tacit residual (A15).
 
     ``predicates`` is ``(n, P)`` predicate activations, ``costs`` their description lengths, ``reward``
     the ``(n,)`` scores. For each budget ``K`` the cheapest predicates with cumulative cost ``≤ K`` are
@@ -105,11 +114,18 @@ class Legibility(BaseObservable):
     difference dictionary supplies them in production). Reports the fidelity curve over the budget, the
     knee, and the illegible tacit residual. Gauge is INVARIANT: fidelity is a rank agreement, and the
     tacit residual's variance fraction is scale-free.
+
+    What it cannot do. The frontier is only as wide as the predicate library it is handed, so a
+    low fidelity at every budget means the library missed the reward's structure and not that the
+    reward is illegible; those two readings are indistinguishable in this payload. Predicates are
+    taken cheapest-first rather than searched over, so the curve is one greedy path through the
+    space and the knee is the knee of that path. The tacit residual is what this predicate set
+    failed to capture, which is a weaker claim than what no short program can capture.
     """
 
     name = "Legibility"
     version = "1.0"
-    requires = Capability.SCORES
+    capabilities = Capability.SCORES
     gauge_status = GaugeStatus.INVARIANT
     faithful_to = "A15"
     deviations = (
@@ -118,6 +134,30 @@ class Legibility(BaseObservable):
         "the predicate library and its description lengths are the production path (concept diff "
         "dictionary)",
     )
+
+    # -- the observable declarations ---------------------------------------
+    quantity = "grader.legibility_frontier"
+    #: The grader is scored on the view; the predicate library and its description lengths come
+    #: from the concept layer's difference dictionary.
+    requires: AccessMatrix = {
+        Component.GRADER: Access.QUERY,
+        Component.RECORD: Access.RECORD,
+    }
+    substrates = ANY_SUBSTRATE
+    phases = GRADER_STUDY_PHASES
+    envelope = EnvelopeSpec(
+        requires=frozenset(
+            {RegimeCondition.STATIONARY_GRADER, RegimeCondition.GROUP_NONDEGENERATE}
+        ),
+        measured_by=MEASURED_BY,
+        on_violation="refuse",
+    )
+    #: Fidelity is Spearman rank agreement, which any increasing transformation of the reward leaves
+    #: alone, and an affine rescale with positive scale is one.
+    invariance = "reward.affine"
+    invariance_relation = INVARIANT
+    baselines = ("baseline.length", "baseline.single_cheapest_predicate")
+    rung = 0
 
     def __init__(
         self,
@@ -130,15 +170,34 @@ class Legibility(BaseObservable):
         self.costs = costs
         self.budgets = budgets
 
+    def preflight(self, ctx: Context) -> PreflightResult:
+        """The predicate library and its costs, or a refusal. A budget sweep with no costs is an arbitrary subset.
+
+        The injected input is absent, which makes this a `Refusal` rather than an Evidence
+        carrying a note. Nothing has to be computed to know it, so the question belongs
+        here: `estimate` returns this refusal before `measure` is reached, and the
+        capability report gets it with no work at all.
+        """
+        if self.predicates is None or self.costs is None:
+            return missing_injection(
+                self,
+                needs={
+                    "predicates": "an (n, P) matrix of predicate activations",
+                    "costs": "a length-P vector of description lengths, one per predicate",
+                },
+                have="neither was injected",
+                remedy=(
+                    "Construct `Legibility(predicates=..., costs=...)`. `predicates` holds one column per "
+                    "predicate in the library evaluated on each sample; `costs` holds that predicate's "
+                    "description length in the same column order. The frontier sweeps a cost budget, and the "
+                    "costs are what make the sweep an ordering rather than an arbitrary subset."
+                ),
+            )
+        return super().preflight(ctx)
+
     def measure(self, ctx: Context) -> "Evidence":
         if self.predicates is None or self.costs is None:
-            return ctx.emit(
-                {
-                    "note": "legibility needs a predicate library and description-length costs; none "
-                    "injected"
-                },
-                uncertainty=Uncertainty(method="none"),
-            )
+            raise measured_without_input(self)
         reward = reward_scores(ctx.signal, ctx.view, ctx.readout)
         report = legibility_frontier(self.predicates, reward, self.costs, self.budgets)
         payload = {
