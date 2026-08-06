@@ -1,4 +1,4 @@
-"""Hessian spectroscopy tests (DESIGN section 2.7.2).
+"""Hessian spectroscopy tests.
 
 The pure numerics are proven on synthetic operators with known spectra through the ``matvec = lambda
 v: M @ v`` interface, so correctness holds on CPU with no model: Lanczos recovers the top-k

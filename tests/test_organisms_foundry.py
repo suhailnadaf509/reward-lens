@@ -1,4 +1,4 @@
-"""Pure tests for the organism foundry (section 2.10.2, M4 acceptance, must pass now).
+"""Pure tests for the organism foundry (M4 acceptance, must pass now).
 
 These assert the ground truth the foundry claims is actually present in the data it emits: a
 dose-controlled spurious feature correlates with the label at the requested rho; a compositional rule's
@@ -6,7 +6,7 @@ data obeys the rule on both the train and a fresh OOD split; the answer key is i
 planted intransitivity contains cycles; the annotator mixture's H(V) matches its construction; the
 rubric's criterion directions have the requested correlation; and the hack organism has the predicted
 sign structure. If these hold, the data was genuinely generated from the rule, which is the premise the
-whole calibration story rests on (section 5.2).
+whole calibration story rests on.
 """
 
 from __future__ import annotations

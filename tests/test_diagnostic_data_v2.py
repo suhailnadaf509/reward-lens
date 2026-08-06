@@ -1,6 +1,11 @@
-"""Tests for reward_lens.diagnostic_data_v2 — the expanded diagnostic set."""
+"""Tests for the hand-written diagnostic seed corpus and its mutation expansion.
 
-from reward_lens.diagnostic_data_v2 import (
+The module was `reward_lens.diagnostic_data_v2` through 2.0.x and is now
+`reward_lens.data.builtin.diagnostic_seeds`, next to the only thing that consumes it. The
+assertions are unchanged; only the import moved.
+"""
+
+from reward_lens.data.builtin.diagnostic_seeds import (
     ALL_DIMENSIONS_V2,
     PreferencePair,
     get_pairs_by_dim_v2,
@@ -28,7 +33,7 @@ class TestDiagnosticDataV2:
         assert set(ALL_DIMENSIONS_V2.keys()) == expected
 
     def test_at_least_10_dimensions(self):
-        """Prompt §4.6 requires ≥10 dimensions."""
+        """The dataset contract requires ≥10 dimensions."""
         assert len(ALL_DIMENSIONS_V2) >= 10
 
     def test_get_pairs_returns_list(self):
@@ -47,7 +52,7 @@ class TestDiagnosticDataV2:
             assert len(p.description) > 0
 
     def test_at_least_30_per_dimension(self):
-        """Prompt §4.6: ≥30 pairs per dimension."""
+        """The dataset contract: ≥30 pairs per dimension."""
         pairs_by_dim = get_pairs_by_dim_v2(n_per_dim=30)
         for dim, pairs in pairs_by_dim.items():
             assert len(pairs) >= 30, f"dimension '{dim}' has only {len(pairs)} pairs (need ≥30)"
@@ -67,8 +72,8 @@ class TestDiagnosticDataV2:
         assert len(pairs) <= 15  # shouldn't wildly overshoot
 
     def test_seed_pairs_are_human_written(self):
-        """§4.6: ≥5 human-reviewed seed pairs per dimension."""
-        from reward_lens.diagnostic_data_v2 import _SEEDS
+        """The dataset contract: ≥5 human-reviewed seed pairs per dimension."""
+        from reward_lens.data.builtin.diagnostic_seeds import _SEEDS
 
         for dim, seeds in _SEEDS.items():
             assert len(seeds) >= 5, f"dimension '{dim}' has only {len(seeds)} seed pairs (need ≥5)"

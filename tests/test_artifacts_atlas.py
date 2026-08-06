@@ -1,4 +1,4 @@
-"""The Atlas-v0 leaderboard tabulates stored Evidence and flags uncalibrated cells (section 2.15, M7).
+"""The Atlas-v0 leaderboard tabulates stored Evidence and flags uncalibrated cells (M7).
 
 This is the M7 Atlas acceptance exercised on synthetic evidence: register a population, append battery
 Evidence for a couple of models to a temp store, and assert that the leaderboard is a faithful view

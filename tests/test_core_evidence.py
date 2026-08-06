@@ -1,6 +1,6 @@
 """M0 acceptance tests for `reward_lens.core`: Evidence, the store DAG, and the gates.
 
-These lock the milestone-M0 acceptance criteria as committed, green tests (section 4.4): an
+These lock the milestone-M0 acceptance criteria as committed, green tests: an
 Evidence round-trips through the store with a resolvable parent DAG; the gate logic downgrades an
 uncalibrated and unregistered Evidence to EXPLORATORY and climbs the ladder as the gate inputs
 are supplied; and the pure layer imports without torch. The ess-on-a-clone-view criterion lives
@@ -34,7 +34,7 @@ def _subject() -> SubjectRef:
 
 
 def test_pure_layer_imports_without_torch():
-    # The gates and evidence engine must be usable without torch (section 4.1): everything imports
+    # The gates and evidence engine must be usable without torch: everything imports
     # them, and they carry no model dependency. This must be checked in a fresh interpreter, not by
     # inspecting sys.modules in-process: pytest's collection phase imports every test module up
     # front, and the runtime/signals/geometry test modules import torch, so by the time this test
@@ -78,7 +78,7 @@ def test_gate_ladder_is_computed_not_set():
 
 def test_uncalibrated_registered_still_carries_no_calibration():
     # A REGISTERED number without a scorecard must still visibly carry calibration=None so a
-    # card renders it as unvalidated; the two axes stay independent (section 1.3).
+    # card renders it as unvalidated; the two axes stay independent.
     ev = make_evidence(
         observable="Chi", observable_version="1", subject=_subject(), value=0.4, registered=True
     )

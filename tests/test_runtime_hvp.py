@@ -1,4 +1,4 @@
-"""M1 acceptance: the runtime's ``hvp`` computes the reward Hessian correctly (section 2.2.1, M1).
+"""M1 acceptance: the runtime's ``hvp`` computes the reward Hessian correctly (M1).
 
 The reward is a scalar, so its Hessian at any site is ``d x d`` and reachable by Hessian-vector
 products without ever materializing the network Jacobian. This test builds the tiny ``ClassifierRM``,

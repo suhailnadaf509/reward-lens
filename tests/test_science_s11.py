@@ -2,7 +2,7 @@
 
 This is one of milestone M6's cheap sciences. The contested-direction probe is calibrated on a real
 tiny ClassifierRM's reward direction with a planted orthogonal contested direction, so the answer is
-known by construction (DESIGN 2.10, gate 1): the probe must decode disagreement above chance and report
+known by construction (gate 1): the probe must decode disagreement above chance and report
 the direction as orthogonal to w_r. The verdict-before-critique probe needs a real reasoning judge, so
 it is recorded as inconclusive-because-gated rather than failed. The study folds its confirmatory
 outcomes into the theorem scoreboard at T7.
@@ -34,9 +34,9 @@ def test_s11_runs_and_registers(tmp_path):
     contested = store.find(observable="S11.ContestedDirection")
     assert contested and contested[0].trust is TrustLevel.REGISTERED
 
-    # The verdict-before-critique arm is gated: it emits no adjudicated metric, so it is
-    # inconclusive-because-gated, and its Evidence records the gate explicitly.
-    assert result.outcomes["H3-verdict-before-critique"] == "inconclusive"
+    # The verdict-before-critique arm is gated: it emits no adjudicated metric, so the runner
+    # voids it, and its Evidence records the gate explicitly.
+    assert result.outcomes["H3-verdict-before-critique"] == "void"
     assert "verdict_prefix_match_rate" not in result.metrics
     verdict = store.find(observable="S11.VerdictBeforeCritique")
     assert verdict and verdict[0].trust is TrustLevel.REGISTERED

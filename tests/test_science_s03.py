@@ -1,8 +1,8 @@
 """S3 runs end to end as a frozen study, emitting REGISTERED Evidence and updating T9.
 
 This is one of milestone M6's cheap sciences, exercised on a synthetic-but-honest base-policy draw
-where the susceptibility is analytically known by construction (DESIGN 2.10, gate 1). It proves the
-worked trace (DESIGN 2.17): the strongest program in the corpus is a frozen spec plus a thin analysis
+where the susceptibility is analytically known by construction (gate 1). It proves the
+worked trace: the strongest program in the corpus is a frozen spec plus a thin analysis
 function over the kernel (here the loops susceptibility and best-of-n arms), producing REGISTERED
 Evidence and folding its outcomes into the theorem scoreboard at T9.
 """

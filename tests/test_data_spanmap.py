@@ -1,4 +1,4 @@
-"""SpanMap fuzz and correctness tests (section 4.3.1, the mandatory alignment property test).
+"""SpanMap fuzz and correctness tests (the mandatory alignment property test).
 
 Misalignment is the quiet killer of every pairwise causal method, so the alignment carries a
 property test rather than a couple of examples. The fuzz generates random token-level edits to a

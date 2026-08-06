@@ -1,6 +1,6 @@
 """Tests for reward_lens.stats.ess — the R7 lineage/ESS machinery.
 
-These are the executable form of the R7 property (section 4.3.1): a view built
+These are the executable form of the R7 property: a view built
 from clones of one seed must report an effective n of ~1, the default bootstrap
 must refuse to inflate it, and the clone-inflated path must stamp its method
 string so the inflation travels with the Evidence.

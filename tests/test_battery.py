@@ -1,4 +1,4 @@
-"""Property tests for the measurement battery (section 2.8, 4.3.2).
+"""Property tests for the measurement battery.
 
 These are not parity tests (that is ``test_e_parity.py``); they are the properties every ported
 Observable must have: it runs on a tiny ``from_tiny`` ClassifierRM, it returns gated Evidence at the
@@ -57,6 +57,26 @@ def signal():
 @pytest.fixture(scope="module")
 def signal_b():
     return from_tiny(seed=1)
+
+
+class _RandomDictionary:
+    """A random decoder, supplied through ``ctx.regime['sae']``.
+
+    This is what ``FeatureRewardAlignment`` used to build for itself when no dictionary was
+    supplied, and the numbers it produces are identical in kind: alignments of random directions
+    with the reward, which the observable reports with ``trained_sae=False``. It moved into the test
+    when ``reward_lens.sae`` moved behind the ``[dict]`` extra, because an instrument that
+    conjures a sparse dictionary out of a module it happens to be able to import is claiming a
+    dependency it never declared. The documented contract is one method, so this is the whole of it.
+    """
+
+    def __init__(self, d_model: int, n_features: int, seed: int = 0):
+        generator = torch.Generator().manual_seed(seed)
+        self.W_dec = torch.randn(n_features, d_model, generator=generator)
+        self.W_dec /= self.W_dec.norm(dim=1, keepdim=True)
+
+    def feature_reward_alignments(self, reward_direction: torch.Tensor) -> torch.Tensor:
+        return self.W_dec @ reward_direction.to(self.W_dec.dtype)
 
 
 @pytest.fixture(scope="module")
@@ -128,7 +148,17 @@ def test_every_observable_returns_gated_evidence(
             CircuitJaccard(),
             mb.Context(signal=signal, view=one_axis_view, others=(signal_b,), is_comparison=True),
         ),
-        (FeatureRewardAlignment(), mb.Context(signal=signal, view=one_axis_view)),
+        (
+            FeatureRewardAlignment(),
+            mb.Context(
+                signal=signal,
+                view=one_axis_view,
+                regime={
+                    "sae": _RandomDictionary(int(signal.meta.d_model), 64),
+                    "sae_trained": False,
+                },
+            ),
+        ),
         (MultiObjectiveGeometry(), mb.Context(signal=multi_label_signal, view=one_axis_view)),
     ]
     for obs, ctx in cases:

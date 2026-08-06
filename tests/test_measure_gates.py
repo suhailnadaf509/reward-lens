@@ -1,4 +1,4 @@
-"""The Observable runner is the enforcement point for the three gates (section 2.8.1).
+"""The Observable runner is the enforcement point for the three gates.
 
 These tests are the executable definition of "the gates are enforced in the kernel, not by
 convention" (R5). A measurement that requires a capability the signal does not declare is refused
@@ -15,6 +15,7 @@ import pytest
 
 from reward_lens.core.errors import CapabilityError, GaugeError
 from reward_lens.core.gates import CalibrationRef
+from reward_lens.core.reading import Refusal, RefusalReason
 from reward_lens.core.types import Capability, GaugeStatus, TrustLevel
 from reward_lens.measure import base as mb
 
@@ -38,13 +39,56 @@ def _reset_provider():
 def test_capability_gate_refuses_before_work():
     class NeedsGrad(mb.BaseObservable):
         name = "NeedsGrad"
-        requires = Capability.GRADIENTS
+        capabilities = Capability.GRADIENTS
 
         def measure(self, ctx):
             return ctx.emit(1.0)
 
     with pytest.raises(CapabilityError):
         mb.run(NeedsGrad(), mb.Context(signal=_FakeSignal()))
+
+
+def test_estimate_turns_the_capability_gate_into_a_refusal_with_a_remedy():
+    """The same gate through the `estimate` entry point, which returns rather than raises.
+
+    `run` is the 2.0.1 `Observable` path, typed `-> Evidence`, and raising there is right for a
+    caller who made a programming error. `estimate` is typed `-> Reading`, and a refusal is a value
+    with a remedy and never an exception. A missing capability is the commonest thing a capability
+    report exists to warn about in advance, so it is anticipated by definition.
+    """
+
+    class NeedsGrad(mb.BaseObservable):
+        name = "NeedsGrad"
+        capabilities = Capability.GRADIENTS
+
+        def measure(self, ctx):
+            return ctx.emit(1.0)
+
+    reading = NeedsGrad().estimate(mb.Context(signal=_FakeSignal()))
+
+    assert isinstance(reading, Refusal)
+    assert reading.reason is RefusalReason.ACCESS_INSUFFICIENT
+    assert reading.instrument == "NeedsGrad"
+    assert "GRADIENTS" in reading.statistics["missing"]
+    # The remedy is an instruction, not a restatement of the failure.
+    assert "Supply a signal offering GRADIENTS" in reading.remedy
+    assert "lower rung" in reading.remedy
+
+
+def test_an_instrument_with_no_signal_at_all_refuses_and_says_what_to_declare():
+    class NeedsGrad(mb.BaseObservable):
+        name = "NeedsGrad"
+        capabilities = Capability.GRADIENTS
+
+        def measure(self, ctx):
+            return ctx.emit(1.0)
+
+    reading = NeedsGrad().estimate(mb.Context())
+
+    assert isinstance(reading, Refusal)
+    assert reading.reason is RefusalReason.ACCESS_INSUFFICIENT
+    assert "declare Capability.NONE instead" in reading.remedy
+    assert "a program has no activations" in reading.remedy
 
 
 def test_gauge_gate_refuses_covariant_comparison_without_frame():

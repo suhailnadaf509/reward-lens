@@ -1,4 +1,4 @@
-"""The claims checker is the structural fix for the PAPER_DISCREPANCIES failure class (section 2.15.5).
+"""The claims checker is the structural fix for the PAPER_DISCREPANCIES failure class.
 
 A document may not claim a number the store does not contain. These tests build a store with a known
 Evidence, then check documents that (a) cite the number correctly, (b) cite a wrong number, (c) cite

@@ -1,6 +1,6 @@
 {
-  "source": "/home/suhail-nadaf/final-reward/reward-lens/outputs/v2_20260506_222648_unknown",
-  "note": "E-parity targets, section 4.3.2",
+  "source": "v2_20260506_222648_unknown",
+  "note": "E-parity targets: the v1 headline numbers v3 must reproduce from cached activations",
   "E04": {
     "per_model_mean_rho": {
       "ArmoRM-Llama3-8B-v0.1": 0.047465,

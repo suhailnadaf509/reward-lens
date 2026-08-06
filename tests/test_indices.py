@@ -1,4 +1,4 @@
-"""The index library computes its Appendix A definitions correctly on synthetic data (section 2.8.3).
+"""The index library computes its catalogue definitions correctly on synthetic data.
 
 Each index is proved two ways. Its pure function is exercised on synthetic data where the answer is
 known in closed form: chi recovers a planted covariance, tail recovers a planted exponential scale and a
@@ -632,7 +632,7 @@ def test_legibility_observable_emits():
 
 
 # ---------------------------------------------------------------------------
-# Metadata: every Observable declares its Appendix A anchor and gauge
+# Metadata: every Observable declares its catalogue anchor and gauge
 # ---------------------------------------------------------------------------
 
 

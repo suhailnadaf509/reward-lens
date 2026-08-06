@@ -1,4 +1,4 @@
-"""Pure tests for the method scorecard (section 2.10.3, M4 acceptance, must pass now).
+"""Pure tests for the method scorecard (M4 acceptance, must pass now).
 
 The scorecard is the ROC of an instrument recovering a planted structure. Its two load-bearing
 properties are testable now with a synthetic detector whose separability scales with the dose rho: the

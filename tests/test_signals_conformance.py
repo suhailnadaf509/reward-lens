@@ -1,4 +1,4 @@
-"""M1 acceptance: the conformance suite passes on the tiny ``ClassifierRM`` (section 2.3.6, M1).
+"""M1 acceptance: the conformance suite passes on the tiny ``ClassifierRM`` (M1).
 
 ``run_conformance`` is the gate every signal adapter must clear before it is trusted: determinism,
 batch-vs-single parity, left-pad invariance, readout-matches-head, prefix consistency, the

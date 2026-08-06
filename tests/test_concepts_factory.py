@@ -1,4 +1,4 @@
-"""Proofs for the calibrated concept factory (section 2.5, probes / beliefs / diff_dict / banks).
+"""Proofs for the calibrated concept factory (probes / beliefs / diff_dict / banks).
 
 Everything here is proven on planted or synthetic structure, so the answer is known by construction
 and the passing test is the deliverable. The four constructs are held to the claims their design
@@ -208,7 +208,7 @@ def test_make_direction_id_is_content_derived():
 
 
 def _corruption_keyed_labels(n_solutions: int = 130, seed: int = 0):
-    """Verifiable answer-is-correct labels from the corruption generator's known edit (section 2.4.4).
+    """Verifiable answer-is-correct labels from the corruption generator's known edit.
 
     For each templated solution the clean version is correct (label 1); corrupting step 1 with the
     mechanical swap makes it incorrect (label 0). The label is the corruption key, produced by the

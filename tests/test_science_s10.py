@@ -38,7 +38,7 @@ def test_s10_gates_the_production_fit_honestly(tmp_path):
     store = EvidenceStore(tmp_path)
     frozen, result = run_study(build_spec(), store=store)
 
-    assert result.outcomes["H3-real-legibility"] == "inconclusive"
+    assert result.outcomes["H3-real-legibility"] == "void"
     assert "real_tacit_fraction" not in result.metrics
 
     gate = store.find(observable="S10.RealLegibilityGate")

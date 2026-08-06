@@ -1,4 +1,4 @@
-"""The RM Card renders uncalibrated indices in a distinct unvalidated style (section 2.15, gate 1).
+"""The RM Card renders uncalibrated indices in a distinct unvalidated style (gate 1).
 
 This is the M7 card acceptance exercised in isolation: build a card from a mix of calibrated and
 uncalibrated Evidence and assert that the uncalibrated entries are flagged, that the HTML marks

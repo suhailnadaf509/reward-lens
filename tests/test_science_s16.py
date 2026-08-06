@@ -39,9 +39,9 @@ def test_s16_gates_certified_radius_and_production_read(tmp_path):
     store = EvidenceStore(tmp_path)
     frozen, result = run_study(build_spec(), store=store)
 
-    # Neither the certified radius nor the production read is fabricated; both are inconclusive.
-    assert result.outcomes["H3-certified-radius"] == "inconclusive"
-    assert result.outcomes["H4-production-eval-awareness"] == "inconclusive"
+    # Neither the certified radius nor the production read is fabricated; both are void.
+    assert result.outcomes["H3-certified-radius"] == "void"
+    assert result.outcomes["H4-production-eval-awareness"] == "void"
     assert "certified_radius" not in result.metrics
     assert "real_probe_balanced_acc" not in result.metrics
 
@@ -55,4 +55,4 @@ def test_s16_gates_certified_radius_and_production_read(tmp_path):
 
     report = render_report(frozen, result, store)
     assert "CONFIRMED" in report
-    assert "inconclusive" in report
+    assert "VOID" in report

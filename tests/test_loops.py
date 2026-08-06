@@ -1,6 +1,6 @@
-"""M10: the ``loops`` subsystem, proven on CPU (DESIGN 2.13).
+"""M10: the ``loops`` subsystem, proven on CPU.
 
-Optimization, serving, and recording. Every acceptance property named in the brief is pinned here
+Optimization, serving, and recording. Every acceptance property is pinned here
 and runs on the tiny synthetic model or on pure-numpy synthetic organisms, so the whole file is
 CPU-provable; the GPU-scale pieces (real RL rollouts, the vLLM-backed BoN draw, the live training
 callbacks) are coded and marked in the modules, not exercised here.
@@ -51,7 +51,7 @@ from reward_lens.loops.tilt import ESSGuardError
 
 
 def test_bon_kl_identity_exact():
-    """The acceptance test: ``KL(bo_n || base) = log(n) - (n-1)/n`` reproduced exactly (DESIGN 2.13).
+    """The acceptance test: ``KL(bo_n || base) = log(n) - (n-1)/n`` reproduced exactly.
 
     Bit-for-bit, not within a tolerance: the identity is a closed form of ``n`` alone (Beirami et
     al. 2401.01879), and reproducing it exactly is what makes the BoN sweep a calibration-free KL
@@ -156,7 +156,7 @@ def test_tilt_susceptibility_matches_base_covariance():
 
 
 def test_tilt_refuses_beyond_half_lambda_c():
-    """The tilt refuses ``lambda > lambda_c / 2`` with a clear error naming the ceiling (DESIGN 2.13).
+    """The tilt refuses ``lambda > lambda_c / 2`` with a clear error naming the ceiling.
 
     Beyond half the critical pressure the exponential tilt stops emulating practical optimization,
     and past ``lambda_c`` there is no tilted optimum for a heavy tail (Appendix A4/A5). The emulator
@@ -192,7 +192,7 @@ def test_tilt_initial_slope_tracks_susceptibility():
 
 
 def test_tilt_ess_collapse_guard():
-    """The second guard fires when the SNIS weights collapse even within ``lambda_c / 2`` (DESIGN 2.13).
+    """The second guard fires when the SNIS weights collapse even within ``lambda_c / 2``.
 
     A single dominating sample gives an effective sample size of one, so a confident tilted estimate
     from it would be a lie. The guard refuses when the ESS fraction falls below the floor.
@@ -228,7 +228,7 @@ def test_recorder_names_direction_and_reports_lead_time(seed):
     On a synthetic rollout that drifts along a planted hack feature (proxy loves it, gold does not),
     the recorder must name that feature as exploited and detect its drift onset before the gold
     reward diverges. A positive lead time is the reward-feature signal preceding the behavioral one
-    (DESIGN 2.13, science S13).
+    (science S13).
     """
     roll = synthetic_hack_rollout(seed=seed)
     rec = RolloutRecorder(roll.feature_bank, roll.w_r, roll.baseline)
@@ -314,7 +314,7 @@ def test_anneal_bistable_has_nonzero_hysteresis_area():
     Sweeping optimization pressure up through onset and back down, the tilted double-well follows its
     local optimum, so the aligned and hacked branches do not coincide and the loop encloses a nonzero
     area. That area is the irreversibility signature: a hacked policy cannot be annealed back
-    (DESIGN 2.13, science S14).
+    (science S14).
     """
     up, down = up_down_schedule(-2.5, 2.5, 60)
     responder = double_well_responder(reward_weight=1.0)
@@ -391,18 +391,18 @@ def test_integration_reward_fn_shape(tiny_signal):
 
 
 def test_integration_geometry_logger_every_k(tiny_signal):
-    """The geometry logger logs the RM's geometry on fixed probes exactly every ``k`` steps (DESIGN 2.13).
+    """The geometry logger logs the RM's geometry on fixed probes exactly every ``k`` steps.
 
     Held-fixed probes scored while the policy moves is how the RM's geometry is tracked inside a run.
     The logger must fire on steps 0, k, 2k, ... and each log must carry the probe scores, the
     reward-direction norm, and the concept doses against the feature bank.
     """
     from reward_lens.loops.integrations import GeometryLogger, GeometryProbe
-    from reward_lens.loops.recorder import FeatureBank
+    from reward_lens.loops.recorder import DirectionBank
 
     d = tiny_signal.meta.d_model
     rng = np.random.default_rng(0)
-    bank = FeatureBank(["fa", "fb"], rng.standard_normal((2, d)))
+    bank = DirectionBank(["fa", "fb"], rng.standard_normal((2, d)))
     probe = GeometryProbe(prompts=["p1", "p2"], responses=["r1", "r2"], feature_bank=bank, k=5)
     logger = GeometryLogger(probe)
 
@@ -419,16 +419,52 @@ def test_integration_geometry_logger_every_k(tiny_signal):
 def test_integration_framework_hooks_require_extra(tiny_signal):
     """The framework-specific hooks refuse with ``IntegrationUnavailableError`` when the extra is absent.
 
-    TRL, OpenRLHF, and veRL are optional extras not installed here. The reward-fn shape runs without
-    them, but binding a callback/worker into a live trainer needs the framework, and that entrypoint
-    must say so clearly rather than fail obscurely (R14, DESIGN 2.13).
+    The reward-fn shape runs without any framework, but binding a callback/worker into a live
+    trainer needs the framework, and that entrypoint must say so clearly rather than fail
+    obscurely (R14).
+
+    Availability is resolved per framework rather than assumed. The first version of this test
+    asserted all three hooks raise, which was true only because none of the three extras happened
+    to be installed, so it pinned the environment rather than the contract. Installing ``trl``
+    behind its declared extra broke it while the code was correct, which is the tell. What the
+    contract actually says is a biconditional: absent framework, typed error naming the extra;
+    present framework, no such error. Both directions are asserted here, and the message is
+    checked rather than only the type, because an ``IntegrationUnavailableError`` that does not
+    name the extra leaves the reader in the loop the error exists to break.
     """
+    import importlib.util
+
     from reward_lens.loops.integrations import GeometryProbe, IntegrationUnavailableError
     from reward_lens.loops.integrations.openrlhf import openrlhf_geometry_hook
     from reward_lens.loops.integrations.trl import trl_geometry_callback
     from reward_lens.loops.integrations.verl import verl_geometry_worker
 
     probe = GeometryProbe(prompts=["p"], responses=["r"], k=10)
-    for hook in (trl_geometry_callback, openrlhf_geometry_hook, verl_geometry_worker):
-        with pytest.raises(IntegrationUnavailableError):
-            hook(tiny_signal, probe)
+    cases = (
+        (trl_geometry_callback, "trl", "trl"),
+        (openrlhf_geometry_hook, "openrlhf", "openrlhf"),
+        (verl_geometry_worker, "verl", "verl"),
+    )
+    checked = 0
+    for hook, module, extra in cases:
+        if importlib.util.find_spec(module) is None:
+            with pytest.raises(IntegrationUnavailableError) as caught:
+                hook(tiny_signal, probe)
+            assert extra in str(caught.value), (
+                f"{hook.__name__} refused without naming the {extra!r} extra, so the remedy is "
+                f"not in the message: {caught.value}"
+            )
+            checked += 1
+        else:
+            # Present: it may fail for its own reasons, and it must not claim the extra is missing.
+            try:
+                hook(tiny_signal, probe)
+            except IntegrationUnavailableError as exc:  # pragma: no cover - a real regression
+                pytest.fail(
+                    f"{module!r} is importable and {hook.__name__} still reported it unavailable: "
+                    f"{exc}"
+                )
+            except Exception:
+                pass
+            checked += 1
+    assert checked == len(cases)

@@ -1,0 +1,244 @@
+{
+  "_provenance": {
+    "what": "Reward-head facts read off five real reward-model checkpoints on the HuggingFace hub.",
+    "how": "huggingface_hub.HfApi().get_safetensors_metadata(repo_id), which range-reads each shard's safetensors header, plus that repo's config.json. No weights were downloaded. Tensor entries under model.layers.* are dropped; what is kept is every non-block tensor, which is where a reward head, a gate and an embedding live.",
+    "why": "signals/adapters.py has to resolve a reward head across five naming conventions and three forward-output conventions. Which convention each family actually uses is a fact about published checkpoints, and this is that fact rather than a recollection of it. Regenerate with tools/collect_reward_head_facts.py.",
+    "collected": "2026-08-05",
+    "huggingface_hub": "1.26.0"
+  },
+  "armorm": {
+    "architectures": [
+      "LlamaForRewardModelWithGating"
+    ],
+    "attn_logit_softcapping": null,
+    "final_logit_softcapping": null,
+    "hidden_size": 4096,
+    "model_type": "llama",
+    "non_layer_tensors": {
+      "gating.layers.0.bias": {
+        "dtype": "F32",
+        "shape": [
+          1024
+        ]
+      },
+      "gating.layers.0.weight": {
+        "dtype": "F32",
+        "shape": [
+          1024,
+          4096
+        ]
+      },
+      "gating.layers.1.bias": {
+        "dtype": "F32",
+        "shape": [
+          1024
+        ]
+      },
+      "gating.layers.1.weight": {
+        "dtype": "F32",
+        "shape": [
+          1024,
+          1024
+        ]
+      },
+      "gating.layers.2.bias": {
+        "dtype": "F32",
+        "shape": [
+          1024
+        ]
+      },
+      "gating.layers.2.weight": {
+        "dtype": "F32",
+        "shape": [
+          1024,
+          1024
+        ]
+      },
+      "gating.layers.3.bias": {
+        "dtype": "F32",
+        "shape": [
+          19
+        ]
+      },
+      "gating.layers.3.weight": {
+        "dtype": "F32",
+        "shape": [
+          19,
+          1024
+        ]
+      },
+      "gating.logit_scale": {
+        "dtype": "F32",
+        "shape": [
+          1
+        ]
+      },
+      "model.embed_tokens.weight": {
+        "dtype": "BF16",
+        "shape": [
+          128257,
+          4096
+        ]
+      },
+      "model.norm.weight": {
+        "dtype": "BF16",
+        "shape": [
+          4096
+        ]
+      },
+      "regression_layer.weight": {
+        "dtype": "F32",
+        "shape": [
+          19,
+          4096
+        ]
+      },
+      "reward_transform_matrix": {
+        "dtype": "F32",
+        "shape": [
+          19,
+          19
+        ]
+      }
+    },
+    "num_attention_heads": 32,
+    "num_hidden_layers": 32,
+    "repo_id": "RLHFlow/ArmoRM-Llama3-8B-v0.1"
+  },
+  "gemma2": {
+    "architectures": [
+      "Gemma2ForSequenceClassification"
+    ],
+    "attn_logit_softcapping": 50.0,
+    "final_logit_softcapping": 30.0,
+    "hidden_size": 2304,
+    "model_type": "gemma2",
+    "non_layer_tensors": {
+      "model.embed_tokens.weight": {
+        "dtype": "F16",
+        "shape": [
+          256000,
+          2304
+        ]
+      },
+      "model.norm.weight": {
+        "dtype": "F16",
+        "shape": [
+          2304
+        ]
+      },
+      "score.weight": {
+        "dtype": "F16",
+        "shape": [
+          1,
+          2304
+        ]
+      }
+    },
+    "num_attention_heads": 8,
+    "num_hidden_layers": 26,
+    "repo_id": "Ray2333/GRM-Gemma2-2B-rewardmodel-ft"
+  },
+  "internlm2": {
+    "architectures": [
+      "InternLM2ForRewardModel"
+    ],
+    "attn_logit_softcapping": null,
+    "final_logit_softcapping": null,
+    "hidden_size": 2048,
+    "model_type": "internlm2",
+    "non_layer_tensors": {
+      "model.norm.weight": {
+        "dtype": "F16",
+        "shape": [
+          2048
+        ]
+      },
+      "model.tok_embeddings.weight": {
+        "dtype": "F16",
+        "shape": [
+          92544,
+          2048
+        ]
+      },
+      "v_head.weight": {
+        "dtype": "F16",
+        "shape": [
+          1,
+          2048
+        ]
+      }
+    },
+    "num_attention_heads": 16,
+    "num_hidden_layers": 24,
+    "repo_id": "internlm/internlm2-1_8b-reward"
+  },
+  "llama": {
+    "architectures": [
+      "LlamaForSequenceClassification"
+    ],
+    "attn_logit_softcapping": null,
+    "final_logit_softcapping": null,
+    "hidden_size": 4096,
+    "model_type": "llama",
+    "non_layer_tensors": {
+      "model.embed_tokens.weight": {
+        "dtype": "BF16",
+        "shape": [
+          128257,
+          4096
+        ]
+      },
+      "model.norm.weight": {
+        "dtype": "BF16",
+        "shape": [
+          4096
+        ]
+      },
+      "score.weight": {
+        "dtype": "BF16",
+        "shape": [
+          1,
+          4096
+        ]
+      }
+    },
+    "num_attention_heads": 32,
+    "num_hidden_layers": 32,
+    "repo_id": "Skywork/Skywork-Reward-Llama-3.1-8B"
+  },
+  "qwen3": {
+    "architectures": [
+      "Qwen3ForSequenceClassification"
+    ],
+    "attn_logit_softcapping": null,
+    "final_logit_softcapping": null,
+    "hidden_size": 1024,
+    "model_type": "qwen3",
+    "non_layer_tensors": {
+      "model.embed_tokens.weight": {
+        "dtype": "BF16",
+        "shape": [
+          151936,
+          1024
+        ]
+      },
+      "model.norm.weight": {
+        "dtype": "BF16",
+        "shape": [
+          1024
+        ]
+      },
+      "score.weight": {
+        "dtype": "BF16",
+        "shape": [
+          1,
+          1024
+        ]
+      }
+    },
+    "num_attention_heads": 16,
+    "num_hidden_layers": 28,
+    "repo_id": "Skywork/Skywork-Reward-V2-Qwen3-0.6B"
+  }
+}

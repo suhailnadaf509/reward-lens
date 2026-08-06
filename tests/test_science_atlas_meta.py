@@ -24,7 +24,7 @@ def test_universality_calibrates_vce_sign(tmp_path):
     assert result.outcomes["H1-vce-positive"] == "confirmed", result.metrics
     assert result.outcomes["H2-vce-sign-separates"] == "confirmed", result.metrics
     assert result.outcomes["H3-beats-rum-null"] == "confirmed", result.metrics
-    assert result.outcomes["H4-real-rm-pair"] == "inconclusive"
+    assert result.outcomes["H4-real-rm-pair"] == "void"
     assert not result.killed
     assert result.metrics["vce_convergent"] > 0.05
     assert result.metrics["vce_convergent"] > result.metrics["vce_null"]
@@ -53,7 +53,7 @@ def test_performative_calibrates_half_life_ordering(tmp_path):
     # The causal metric outlasts the observational one, whose correlation with truth halves in time.
     assert result.outcomes["H1-halflife-ordering"] == "confirmed", result.metrics
     assert result.outcomes["H2-observational-decays"] == "confirmed", result.metrics
-    assert result.outcomes["H3-real-audit-loop"] == "inconclusive"
+    assert result.outcomes["H3-real-audit-loop"] == "void"
     assert not result.killed
     assert result.metrics["half_life_gap"] > 5.0
     assert result.metrics["half_life_causal"] > result.metrics["half_life_obs"]
@@ -78,4 +78,4 @@ def test_performative_updates_t11_and_gates(tmp_path):
 
     report = render_report(frozen, result, store)
     assert "CONFIRMED" in report
-    assert "inconclusive" in report
+    assert "VOID" in report

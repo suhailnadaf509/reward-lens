@@ -1,4 +1,4 @@
-"""M6 engine tests: freeze, run, adjudicate, report, scoreboard (section 2.14).
+"""M6 engine tests: freeze, run, adjudicate, report, scoreboard.
 
 These exercise the studies engine end to end on a minimal analysis, with no model: freezing a spec
 produces a stable content-derived StudyID and records the git sha; running it emits REGISTERED

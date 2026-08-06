@@ -1,4 +1,4 @@
-"""Onset detection recovers a planted changepoint (DESIGN section 2.11).
+"""Onset detection recovers a planted changepoint.
 
 The recorder's lead-time claim rests on detecting the start of a drift, not the point at which it
 became large. These tests plant a changepoint at a known index in an otherwise-stationary series

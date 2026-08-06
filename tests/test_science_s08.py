@@ -1,7 +1,7 @@
 """S8 runs end to end as a frozen study, emitting REGISTERED Evidence and updating T2 and T10.
 
 This is one of milestone M6's cheap sciences, exercised entirely on planted ground truth where the
-answer is known by construction (DESIGN 2.10, gate 1), so each instrument is calibrated before it would
+answer is known by construction (gate 1), so each instrument is calibrated before it would
 ever be turned on a production model. Four things are proven here. First, the Knowledge-Utilization
 Index recovers a positive represented-but-unpriced gap on a planted battery and ~none for a
 decoded-and-priced control (the mechanistic precondition of hacking). Second, per-dimension distortion

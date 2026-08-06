@@ -1,4 +1,4 @@
-"""The seven M-adapters behind the ``RewardSignal`` protocol (section 2.3.3).
+"""The seven M-adapters behind the ``RewardSignal`` protocol.
 
 M1 shipped ``ClassifierRM``; this suite is the acceptance for the rest of the corpus's substrate: a
 generative judge, a process (step-level) RM, an implicit (DPO log-ratio) RM, a rubric grader, a
@@ -11,7 +11,7 @@ extractor is pinned EXPLORATORY because it ships gated.
 
 The tiny models have random weights, so no score is semantically meaningful; what is asserted is the
 mechanism (the readout really is the head) and the structural invariants, which is exactly what carries
-over unchanged to an 8B model that only differs in magnitude (section 2.3.6).
+over unchanged to an 8B model that only differs in magnitude.
 """
 
 from __future__ import annotations
@@ -34,7 +34,7 @@ from reward_lens.signals.process import ProcessRM, StepScores
 from reward_lens.signals.rubric import RubricRM
 from reward_lens.signals.trajectory import TrajectoryRM
 
-# A stimulus set varied in length so batching forces heavy left-padding (section 2.3.6).
+# A stimulus set varied in length so batching forces heavy left-padding.
 _JUDGE_ITEMS = [
     ("What is 2+2?", "It is 4."),
     ("Name a color.", "Blue."),
@@ -231,7 +231,7 @@ def test_process_conformance(process):
 
 
 def test_implicit_decomposition_sums_to_score(implicit):
-    """The native per-token reward decomposition sums exactly to the sequence score (section 2.3.3)."""
+    """The native per-token reward decomposition sums exactly to the sequence score."""
     items = [("What is 2+2?", "It is four."), ("Name a color.", "A calm blue.")]
     scores = implicit.score(items).value.values
     per_token = implicit.per_token_rewards(items).value.curves
@@ -428,7 +428,7 @@ def test_ensemble_conformance(ensemble):
 def test_all_adapters_satisfy_the_protocol(
     judge, process, implicit, rubric, trajectory, dense, ensemble, distributional
 ):
-    """Every adapter is structurally a ``RewardSignal`` (the extensibility contract, section 5.3)."""
+    """Every adapter is structurally a ``RewardSignal`` (the extensibility contract)."""
     from reward_lens.signals.base import RewardSignal
 
     for sig in (judge, process, implicit, rubric, trajectory, dense, ensemble, distributional):

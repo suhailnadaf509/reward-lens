@@ -1,4 +1,4 @@
-"""Skew preference operator tests (DESIGN section 2.7.3, theorem T8).
+"""Skew preference operator tests (theorem T8).
 
 Plant a genuinely cyclic (intransitive) preference structure by generating preferences from a known
 rank-1 skew operator, then confirm ``PreferenceRankTest`` recovers it: the rank-k skew model predicts

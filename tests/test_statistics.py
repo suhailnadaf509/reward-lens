@@ -1,4 +1,4 @@
-"""Tests for reward_lens.statistics — the population-statistics module.
+"""Tests for the canonical population statistics in reward_lens.stats — the population-statistics module.
 
 Exercises every exported function with known-answer inputs and edge cases.
 """
@@ -8,15 +8,15 @@ import math
 import numpy as np
 import pytest
 
-from reward_lens.statistics import (
+from reward_lens.stats.effects import (
     BootstrapResult,
-    bh_fdr,
     bootstrap_ci,
     bootstrap_cohens_d,
     cohens_d,
     paired_permutation_test,
     spearman_with_ci,
 )
+from reward_lens.stats.multiplicity import bh_fdr
 
 # ── cohens_d ────────────────────────────────────────────────────────────
 

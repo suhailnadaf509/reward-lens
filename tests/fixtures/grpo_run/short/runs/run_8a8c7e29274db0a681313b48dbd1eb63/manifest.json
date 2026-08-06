@@ -1,0 +1,40 @@
+{
+ "schema_version": 1,
+ "run_id": "run:8a8c7e29274db0a681313b48dbd1eb63",
+ "format": "jsonl",
+ "chunk_steps": 100,
+ "tables": [
+  "steps",
+  "groups",
+  "trajectories",
+  "turns"
+ ],
+ "partitions": [
+  {
+   "lo": 0,
+   "hi": 99,
+   "name": "step_range=000000-000099"
+  }
+ ],
+ "step_indices": [
+  0,
+  1,
+  2,
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9,
+  10,
+  11
+ ],
+ "counts": {
+  "steps": 12,
+  "groups": 24,
+  "trajectories": 96,
+  "turns": 192
+ },
+ "tensor_bytes": 0
+}

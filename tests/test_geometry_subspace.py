@@ -1,4 +1,4 @@
-"""Subspace comparison tests (DESIGN section 2.7.3).
+"""Subspace comparison tests.
 
 CKA is 1 for identical representations and ~0 for independent high-dimensional ones; Procrustes
 recovers a known rotation to numerical zero disparity; subspace and feature alignment beat their

@@ -1,4 +1,4 @@
-"""The reward-lens CLI runs its pure subcommands over the store and gates the model-touching ones (section 2.16, M13).
+"""The reward-lens CLI runs its pure subcommands over the store and gates the model-touching ones (M13).
 
 This exercises the operator surface with typer's CliRunner. The subcommands that are views over the
 evidence store (``card``, ``scoreboard``, ``atlas export``, and ``claims`` on a sound document) run

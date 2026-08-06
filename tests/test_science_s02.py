@@ -1,7 +1,7 @@
 """S2 runs end to end as a frozen study, emitting REGISTERED Evidence and updating T6 and T8.
 
 This is one of milestone M6's three cheap sciences, exercised on controlled inputs where the answer
-is known by construction. It proves the worked trace (DESIGN section 2.17): a science is a frozen
+is known by construction. It proves the worked trace: a science is a frozen
 spec plus a thin analysis function over the kernel (here geometry), producing REGISTERED Evidence
 whose headline metrics name the geometry Evidence they were derived from, and folding its outcomes
 into the theorem scoreboard.

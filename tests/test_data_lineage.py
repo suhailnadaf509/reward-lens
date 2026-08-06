@@ -1,4 +1,4 @@
-"""Lineage and effective-sample-size tests (section 4.3.1, the R7 property test).
+"""Lineage and effective-sample-size tests (the R7 property test).
 
 The single most important thing this subsystem does is make v1's fake-n failure class impossible to
 hide. These tests pin the two mechanisms: a view of clones reports an effective n of about one and a

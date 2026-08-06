@@ -1,4 +1,4 @@
-"""M1 acceptance: the v1 ``.pt`` activation cache reads through the adapter (section 2.2.3, M1).
+"""M1 acceptance: the v1 ``.pt`` activation cache reads through the adapter (M1).
 
 The v1 campaign left 2.5 GB of cached activations for four models under
 ``outputs/.../_shared_cache/<model>/floor-population-<hash>.pt``. Reading them back for free is what
@@ -10,20 +10,22 @@ message if the campaign outputs are not present on this machine.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
 
 from reward_lens.runtime.store import read_v1_cache
 
-# The v1 shared cache lives beside the original (untouched) repo; one shard per (model, pairset).
-_V1_CACHE_ROOT = Path(
-    "/home/suhail-nadaf/final-reward/reward-lens/outputs/v2_20260506_222648_unknown/_shared_cache"
-)
+# The v1 shared cache is not in this repository; one shard per (model, pairset). There is no
+# default: point ``REWARD_LENS_V1_CACHE`` at the ``_shared_cache`` directory a v1 run left
+# behind, or this test skips.
+_V1_CACHE_ENV = os.environ.get("REWARD_LENS_V1_CACHE")
+_V1_CACHE_ROOT = Path(_V1_CACHE_ENV) if _V1_CACHE_ENV else None
 
 
 def _first_shard() -> Path | None:
-    if not _V1_CACHE_ROOT.exists():
+    if _V1_CACHE_ROOT is None or not _V1_CACHE_ROOT.exists():
         return None
     shards = sorted(_V1_CACHE_ROOT.glob("*/floor-population-*.pt"))
     return shards[0] if shards else None
@@ -32,7 +34,7 @@ def _first_shard() -> Path | None:
 def test_read_one_v1_cache_shard():
     shard = _first_shard()
     if shard is None:
-        pytest.skip(f"v1 shared cache not present under {_V1_CACHE_ROOT}; E-parity fixture absent")
+        pytest.skip("no v1 shared activation cache; set REWARD_LENS_V1_CACHE")
 
     cache = read_v1_cache(shard, device="cpu")
 

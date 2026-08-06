@@ -1,4 +1,4 @@
-"""The E07 acceptance test (section 4.2): no cross-dimension cascade on honest matched data.
+"""The E07 acceptance test: no cross-dimension cascade on honest matched data.
 
 E07 correlated arbitrarily paired per-dimension delta vectors and reported the noise floor as "no
 cascade." The problem was never the conclusion; it was that the pairing was arbitrary, so the number

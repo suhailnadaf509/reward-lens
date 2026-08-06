@@ -2,7 +2,7 @@
 
 The Verification Score, the span-patch separation, and the dense-map localization are exercised on a
 planted verifier where the causal-anchoring fraction and the error span are known by construction, so
-the instrument is validated before it is turned on a production model (DESIGN 2.10, gate 1). The
+the instrument is validated before it is turned on a production model (gate 1). The
 Verification Score must recover the planted anchored fraction alpha across the sweep, span-patching the
 error span must shift the score by the anchored fraction and not the style fraction, and the real
 DenseRewardExtractor's per-token map must light up the labeled error span. The per-model VS leaderboard,

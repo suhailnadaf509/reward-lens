@@ -1,4 +1,4 @@
-"""Dataset registry tests (section 4.3.1): the limit/subset bug dies at the typed loader boundary.
+"""Dataset registry tests: the limit/subset bug dies at the typed loader boundary.
 
 The v1 loader shrank "200 held-out pairs" to about thirty by applying a limit before a subset, and
 nothing caught it. `load_dataset` asserts the declared count and the content checksum after every

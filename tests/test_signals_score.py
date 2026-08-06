@@ -1,4 +1,4 @@
-"""M1: the tiny ``ClassifierRM`` scores pairs into Evidence with the right gauge and trust (section 2.3).
+"""M1: the tiny ``ClassifierRM`` scores pairs into Evidence with the right gauge and trust.
 
 This test exercises the score path end to end: the return is ``Evidence[Scores]`` (not a bare float,
 R1), typed INVARIANT (a raw score is gauge-free) and EXPLORATORY (nothing is calibrated yet, gate 1).

@@ -1,4 +1,4 @@
-"""The safety case is ADJUDICATED-only: it refuses uncalibrated or unregistered components (section 2.15, M13).
+"""The safety case is ADJUDICATED-only: it refuses uncalibrated or unregistered components (M13).
 
 This is the M13 safety-case acceptance in isolation. A safety case is the one artifact that refuses
 rather than degrades: where a card renders an uncalibrated index in an unvalidated style, the safety

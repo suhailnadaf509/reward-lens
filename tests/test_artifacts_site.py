@@ -1,4 +1,4 @@
-"""The static site export writes cards, the scoreboard, and the Atlas leaderboard (section 2.15, M13).
+"""The static site export writes cards, the scoreboard, and the Atlas leaderboard (M13).
 
 This exercises ``build_site`` on a synthetic store: it must write an index, a scoreboard page, an
 Atlas page carrying the population and its leaderboard, and one card page per model the store holds

@@ -1,4 +1,4 @@
-"""Acceptance tests for ``reward_lens.dynamics`` (DESIGN 2.12, M9).
+"""Acceptance tests for ``reward_lens.dynamics`` (M9).
 
 Four properties carry the milestone and each is proven here on the CPU-provable synthetic vehicle
 (`synthetic_planted_sequence`), a handful of tiny reward models that differ only in a planted, growing
@@ -50,7 +50,7 @@ from reward_lens.dynamics import checkpoints as ck  # noqa: E402
 
 @pytest.fixture(scope="module")
 def synthetic():
-    """Build the planted-feature checkpoint sequence once for the module (DESIGN 2.12)."""
+    """Build the planted-feature checkpoint sequence once for the module."""
     return synthetic_planted_sequence(n_checkpoints=8, seed=0)
 
 
@@ -60,7 +60,7 @@ def synthetic():
 
 
 def test_chain_verifies_honest_sequence(synthetic):
-    """An honest sequence passes the shallow chain check and the deep fingerprint check (DESIGN 2.2.5)."""
+    """An honest sequence passes the shallow chain check and the deep fingerprint check."""
     seq = synthetic.sequence
     assert seq.verify_chain().ok
     assert seq.verify_fingerprints().ok
@@ -69,7 +69,7 @@ def test_chain_verifies_honest_sequence(synthetic):
 
 
 def test_chain_rejects_shallow_tamper(synthetic):
-    """Editing a recorded fingerprint breaks the hash chain at that step (DESIGN 2.2.5)."""
+    """Editing a recorded fingerprint breaks the hash chain at that step."""
     seq = synthetic.sequence
     tampered = seq.tampered(3, model_fp="mfp:deadbeefdeadbeefdeadbeefdeadbeef")
 
@@ -81,7 +81,7 @@ def test_chain_rejects_shallow_tamper(synthetic):
 
 
 def test_chain_rejects_deep_weight_swap(synthetic):
-    """Swapping weights under an unchanged record passes the chain but fails the fingerprint (DESIGN 2.2.5)."""
+    """Swapping weights under an unchanged record passes the chain but fails the fingerprint."""
     seq = synthetic.sequence
     # A loader from an unrelated sequence returns a model whose fingerprint differs from the record.
     other = synthetic_planted_sequence(n_checkpoints=1, seed=99)
@@ -98,7 +98,7 @@ def test_chain_rejects_deep_weight_swap(synthetic):
 
 
 def test_reseal_restores_a_valid_chain(synthetic):
-    """An honest re-release reseals the chain around a change, and it verifies again (DESIGN 2.2.5)."""
+    """An honest re-release reseals the chain around a change, and it verifies again."""
     seq = synthetic.sequence
     other = synthetic_planted_sequence(n_checkpoints=1, seed=123)
     resealed = seq.tampered(
@@ -116,7 +116,7 @@ def test_reseal_restores_a_valid_chain(synthetic):
 
 
 def test_sweep_is_resumable(synthetic, tmp_path):
-    """A second sweep over the same chain skips every step and appends nothing new (DESIGN 2.12)."""
+    """A second sweep over the same chain skips every step and appends nothing new."""
     store = EvidenceStore(tmp_path / "store")
     observable = LayerwiseProjection()
 
@@ -143,7 +143,7 @@ def test_sweep_is_resumable(synthetic, tmp_path):
 
 
 def test_sweep_verifies_chain_before_running(synthetic, tmp_path):
-    """A sweep refuses to run over a chain that does not verify (DESIGN 2.2.5, 2.12)."""
+    """A sweep refuses to run over a chain that does not verify."""
     store = EvidenceStore(tmp_path / "store")
     tampered = synthetic.sequence.tampered(2, model_fp="mfp:00000000000000000000000000000000")
     with pytest.raises(ProvenanceError):
@@ -151,7 +151,7 @@ def test_sweep_verifies_chain_before_running(synthetic, tmp_path):
 
 
 def test_builtin_observable_emits_gated_evidence(synthetic, tmp_path):
-    """The built-in crystallization observable yields well-formed, invariant Evidence (DESIGN 2.12)."""
+    """The built-in crystallization observable yields well-formed, invariant Evidence."""
     store = EvidenceStore(tmp_path / "store")
     traj = sweep_over_checkpoints(
         synthetic.sequence, LayerwiseProjection(), view=synthetic.view, store=store
@@ -171,7 +171,7 @@ def test_builtin_observable_emits_gated_evidence(synthetic, tmp_path):
 
 
 def test_bias_entry_curve_is_monotone_rising(synthetic, tmp_path):
-    """The planted feature's effect size rises monotonically across training (DESIGN 2.12, 4.4 M9)."""
+    """The planted feature's effect size rises monotonically across training (M9)."""
     store = EvidenceStore(tmp_path / "store")
     curves = bias_entry_curve(synthetic.sequence, [synthetic.probe], synthetic.view, store=store)
     d = curves.effect_size[synthetic.probe.name]
@@ -190,7 +190,7 @@ def test_bias_entry_curve_is_monotone_rising(synthetic, tmp_path):
 
 
 def test_bias_entry_curve_with_labels(synthetic, tmp_path):
-    """A probe defined by a binary label grouping produces the same rising curve (DESIGN 2.12)."""
+    """A probe defined by a binary label grouping produces the same rising curve."""
     store = EvidenceStore(tmp_path / "store")
     labels = (synthetic.feature >= float(np.median(synthetic.feature))).astype(int)
     probe = Probe(name="planted-label", labels=labels)
@@ -206,7 +206,7 @@ def test_bias_entry_curve_with_labels(synthetic, tmp_path):
 
 
 def test_stabilization_detector_reports_finite_step(synthetic, tmp_path):
-    """The reward direction stops rotating at a finite step while its magnitude keeps growing (DESIGN 2.12)."""
+    """The reward direction stops rotating at a finite step while its magnitude keeps growing."""
     store = EvidenceStore(tmp_path / "store")
     report = stabilization_report(synthetic.sequence, synthetic.view, store=store)
 
@@ -225,7 +225,7 @@ def test_stabilization_detector_reports_finite_step(synthetic, tmp_path):
 
 
 def test_stabilization_step_near_schedule_expectation(synthetic, tmp_path):
-    """The detected stabilization step matches the planted schedule's rotation knee (DESIGN 2.12)."""
+    """The detected stabilization step matches the planted schedule's rotation knee."""
     store = EvidenceStore(tmp_path / "store")
     report = stabilization_report(synthetic.sequence, synthetic.view, store=store)
     # The detector and the schedule's own direction-rotation expectation agree within a step or two;
@@ -239,7 +239,7 @@ def test_stabilization_step_near_schedule_expectation(synthetic, tmp_path):
 
 
 def test_collapse_autopsy_reports_growth_and_alignment():
-    """The autopsy names growing components and w_r's drift toward a memorization direction (DESIGN 2.12)."""
+    """The autopsy names growing components and w_r's drift toward a memorization direction."""
     component_magnitudes = {
         0: {"mlp_L0": 1.0, "attn_L1": 1.0},
         1: {"mlp_L0": 1.0, "attn_L1": 1.0},
@@ -305,19 +305,19 @@ def test_faithfulness_rho_trajectory_is_developmental():
 
 
 def test_train_rm_pythia_is_gpu_gated():
-    """The RM-Pythia training run refuses on non-flagship hardware and never fabricates (DESIGN 4.5)."""
+    """The RM-Pythia training run refuses on non-flagship hardware and never fabricates."""
     with pytest.raises(RuntimeError, match="GPU-gated"):
         ck.train_rm_pythia()
 
 
 def test_from_hf_revisions_is_download_gated():
-    """Building a chain from HF revisions refuses to fan out downloads unless allowed (DESIGN 2.3.4)."""
+    """Building a chain from HF revisions refuses to fan out downloads unless allowed."""
     with pytest.raises(NotImplementedError, match="download"):
         ck.from_hf_revisions("org/rm-pythia", [(0, "step-0"), (1, "step-100")])
 
 
 def test_devinterp_bridge_is_a_marked_stub():
-    """The optional LLC bridge reports unavailable and refuses cleanly when the package is absent (DESIGN 2.12)."""
+    """The optional LLC bridge reports unavailable and refuses cleanly when the package is absent."""
     # The external package is not a dependency and is not installed here.
     assert devinterp.is_available() is False
     with pytest.raises(ImportError, match="devinterp"):

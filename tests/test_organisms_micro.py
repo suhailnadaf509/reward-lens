@@ -1,6 +1,6 @@
-"""The M4 acceptance test: the CI micro-organism (section 2.10.3, R6, torch-gated).
+"""The M4 acceptance test: the CI micro-organism (R6, torch-gated).
 
-This is the go/no-go for the whole design (section 5.2). It trains a planted rule into the tiny CPU
+This is the go/no-go for the whole design. It trains a planted rule into the tiny CPU
 trunk, verifies the rule governs behaviour out of distribution, and runs the built-in linear detector
 to recover the rule on the held-out OOD split. If the detector cannot recover the planted rule on a
 system whose ground truth is known by construction, then no scorecard on a production signal can be
@@ -44,7 +44,7 @@ def test_micro_organism_calibration_recovers_planted_rule():
     # (d) the built-in detector recovers the planted rule on the OOD split above threshold.
     assert result.detector.recovered, (
         f"CI GATE: the detector failed to recover the micro-organism rule "
-        f"(OOD AUC {result.detector.ood_auc:.3f} < {result.detector.threshold}). Per section 5.2 this "
+        f"(OOD AUC {result.detector.ood_auc:.3f} < {result.detector.threshold}). This "
         f"is the go/no-go signal; a red detector here means the calibration floor is unbuildable."
     )
     assert result.detector.ood_auc >= 0.75

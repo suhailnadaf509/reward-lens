@@ -1,0 +1,130 @@
+{
+ "schema_version": 1,
+ "id": "run:f77bf75940ab982bbc35407af99cc094",
+ "kind": "train",
+ "components": {
+  "POLICY": {
+   "name": "trl-internal-testing/tiny-Qwen3ForCausalLM",
+   "kind": "policy",
+   "substrate": null,
+   "model_fp": null,
+   "dataset": null,
+   "version": "5.14.1",
+   "extra": {}
+  },
+  "GRADER": {
+   "name": "length_reward",
+   "kind": "reward_functions",
+   "substrate": null,
+   "model_fp": null,
+   "dataset": null,
+   "version": null,
+   "extra": {
+    "n_wrapped": 1,
+    "n_skipped": 0,
+    "skipped": []
+   }
+  },
+  "ESTIMATOR": {
+   "name": "grpo",
+   "kind": "estimator",
+   "substrate": null,
+   "model_fp": null,
+   "dataset": null,
+   "version": null,
+   "extra": {}
+  },
+  "OPTIMIZER": {
+   "name": "OptimizerNames.ADAMW_TORCH_FUSED",
+   "kind": "optimizer",
+   "substrate": null,
+   "model_fp": null,
+   "dataset": null,
+   "version": null,
+   "extra": {}
+  }
+ },
+ "access": {
+  "POLICY": 1,
+  "GRADER": 1,
+  "ESTIMATOR": 1,
+  "OPTIMIZER": 1,
+  "RECORD": 1
+ },
+ "regime": {
+  "declared": {
+   "NEAR_POLICY": true,
+   "NO_COMPACTION": true,
+   "MASK_STABLE": true
+  },
+  "notes": {
+   "NEAR_POLICY": "num_iterations=1, steps_per_generation=1; a generation is consumed by 1 optimizer step(s)",
+   "NO_COMPACTION": "TRL's GRPO path generates one completion per prompt and never rewrites a prefix, so no importance ratio in this run crosses a compaction boundary",
+   "MASK_STABLE": "loss_type=dapo, mask_truncated_completions=False, both fixed on GRPOConfig for the whole run"
+  },
+  "declared_by": "reward_lens.tap.adapters.trl, read from GRPOConfig"
+ },
+ "arms": [],
+ "coupling": null,
+ "lineage": {
+  "git_sha": "unknown",
+  "config_hash": null,
+  "framework": "trl",
+  "framework_version": "1.9.2",
+  "library_version": "",
+  "created_at": "2026-08-04T23:05:31",
+  "parent_run": null,
+  "extra": {
+   "transformers_version": "5.14.1",
+   "attached": true,
+   "device": "cpu",
+   "config": {
+    "beta": 0.0,
+    "temperature": 1.0,
+    "top_p": 1.0,
+    "top_k": 0,
+    "epsilon": 0.2,
+    "epsilon_high": null,
+    "delta": null,
+    "seed": 1234,
+    "loss_type": "dapo",
+    "scale_rewards": "group",
+    "multi_objective_aggregation": "sum_then_normalize",
+    "importance_sampling_level": "token",
+    "mask_truncated_completions": false,
+    "num_iterations": 1,
+    "steps_per_generation": 1,
+    "generation_batch_size": 8,
+    "max_completion_length": 12,
+    "num_generations": 4,
+    "reward_weights": null,
+    "log_completions": true,
+    "use_vllm": false,
+    "optim": "adamw_torch_fused",
+    "learning_rate": 1e-06,
+    "gradient_accumulation_steps": 1,
+    "per_device_train_batch_size": 8,
+    "max_steps": 200,
+    "output_dir": ".fixture-scratch/long",
+    "model": "trl-internal-testing/tiny-Qwen3ForCausalLM",
+    "dtype": "torch.float32",
+    "attn_implementation": "sdpa",
+    "trl_version": "1.9.2",
+    "transformers_version": "5.14.1",
+    "generation_engine": "transformers"
+   }
+  }
+ },
+ "sampling_policy": {
+  "scheme": "full",
+  "rate": 1.0,
+  "strata_rates": {},
+  "stratum_key": null,
+  "selected_by": "",
+  "seed": null,
+  "population": 200,
+  "recorded": 200,
+  "unit": "step",
+  "notes": "ring: 0/209715 held, 200 accepted, 200 drained, high water 1, 0 dropped"
+ }
+}

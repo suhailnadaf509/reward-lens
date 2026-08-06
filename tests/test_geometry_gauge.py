@@ -1,4 +1,4 @@
-"""THE gauge property test (DESIGN section 4.3.1): the executable definition of "gauge".
+"""THE gauge property test: the executable definition of "gauge".
 
 This is the single most important test in the geometry subsystem. It synthesizes an activation
 matrix with a genuine active subspace and a genuine data-null subspace, plants a reward direction in
@@ -168,7 +168,7 @@ def test_require_frame_for_comparison_raises_without_frame():
 
 
 def test_frame_refuses_fp16():
-    """Frames refuse half-precision inputs (DESIGN section 2.2.4)."""
+    """Frames refuse half-precision inputs."""
     h = np.random.default_rng(0).standard_normal((100, 8)).astype(np.float16)
     with pytest.raises(NumericsError):
         fit_frame(h)

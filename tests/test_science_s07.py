@@ -38,9 +38,9 @@ def test_s07_gates_the_real_sweep_honestly(tmp_path):
     store = EvidenceStore(tmp_path)
     frozen, result = run_study(build_spec(), store=store)
 
-    # The real Pythia sweep is not fabricated: its metric is absent, so the runner marks it
-    # inconclusive, and a REGISTERED gate Evidence states exactly what the arm needs.
-    assert result.outcomes["H3-real-pythia-sweep"] == "inconclusive"
+    # The real Pythia sweep is not fabricated: its metric is absent, so the runner voids it
+    # rather than adjudicating it, and a REGISTERED gate Evidence states what the arm needs.
+    assert result.outcomes["H3-real-pythia-sweep"] == "void"
     assert "real_bias_before_quality" not in result.metrics
 
     gate = store.find(observable="S07.RealPythiaSweepGate")
@@ -54,4 +54,4 @@ def test_s07_gates_the_real_sweep_honestly(tmp_path):
 
     report = render_report(frozen, result, store)
     assert "CONFIRMED" in report
-    assert "inconclusive" in report
+    assert "VOID" in report

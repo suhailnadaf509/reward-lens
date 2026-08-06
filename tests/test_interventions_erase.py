@@ -1,4 +1,4 @@
-"""LEACE erasure and post-hoc certificates (DESIGN section 2.6, ``erase.py`` / ``certify.py``).
+"""LEACE erasure and post-hoc certificates (``erase.py`` / ``certify.py``).
 
 The proofs split cleanly along the grain of what is algebra and what is statistics. The defining
 properties of the closed form (perfect linear erasure, idempotence, minimal edit) are algebraic
@@ -129,7 +129,7 @@ def test_leace_preserves_orthogonal_direction_minimal_edit():
 
 
 def test_leace_guarantee_heldout_probe_drops_to_chance(capsys):
-    """A fresh held-out probe for the concept is >> 0.5 before erasure and ~0.5 after (DESIGN 2.6).
+    """A fresh held-out probe for the concept is >> 0.5 before erasure and ~0.5 after.
 
     This is the whole point of LEACE. The eraser is fit on the train split only; the probe is then
     trained and evaluated on a disjoint held-out split, both before and after applying the

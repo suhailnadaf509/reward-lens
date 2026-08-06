@@ -1,18 +1,18 @@
 """Extract the E-parity golden numbers from the v1 campaign result CSVs.
 
-The v1 campaign's result CSVs (under ``reward-lens/outputs/v2_20260506_222648_unknown/``) are
-the trust anchor for v3 (section 4.3.2): v3 must reproduce v1's verified-clean headline numbers
-from the cached activations before it is trusted to produce new ones, and must produce the
-honest correction of v1's known-bad numbers. This script reads those CSVs and writes
-``golden.json``, the structured target the E-parity test suite asserts against.
+The v1 campaign's result CSVs (under ``reward-lens/outputs/v2_20260506_222648_unknown/``) are the
+trust anchor for v3: v3 must reproduce v1's verified-clean headline numbers from the cached
+activations before it is trusted to produce new ones, and must produce the honest correction of
+v1's known-bad numbers. This script reads those CSVs and writes ``golden.json``, the structured
+target the E-parity test suite asserts against.
 
-It reads only the CSVs, so it needs nothing but pandas. Recomputing these numbers from the
-cached activations (the actual E-parity test) needs the runtime and the battery, and lands in
-M3. This module's job is to state precisely what the targets are.
+It reads only the CSVs, so it needs nothing but pandas. Recomputing these numbers from the cached
+activations, which is the actual E-parity test, needs the runtime and the battery. This module's
+job is to state precisely what the targets are.
 
-Run: ``python fixtures/e_parity/extract_golden.py`` from the clean-repo root. The source path is
-resolved relative to this repo's parent, matching the layout on the build machine; override with
-the ``REWARD_LENS_V1_OUTPUTS`` environment variable.
+Run: ``python fixtures/e_parity/extract_golden.py`` from the repository root. The campaign outputs
+are not in this repository. By default they are looked for beside it, in the layout the run used;
+point ``REWARD_LENS_V1_OUTPUTS`` at wherever you keep them instead.
 """
 
 from __future__ import annotations
@@ -44,7 +44,13 @@ def _dir(name: str) -> Path:
 
 
 def extract() -> dict:
-    golden: dict = {"source": str(OUTPUTS), "note": "E-parity targets, section 4.3.2"}
+    # The run label, not the path it happened to sit at. Whoever regenerates this has the campaign
+    # somewhere else, and a golden file that records their home directory is a golden file that
+    # produces a diff for everyone who is not them.
+    golden: dict = {
+        "source": OUTPUTS.name,
+        "note": "E-parity targets: the v1 headline numbers v3 must reproduce from cached activations",
+    }
 
     # E04 faithfulness: attribution-vs-patching rank correlation per (model, dimension). The
     # headline is the per-model mean across dimensions; the design names -0.171 / -0.203 /

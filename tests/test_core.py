@@ -1,5 +1,7 @@
 """Tests for the reward-lens core model wrapper."""
 
+import importlib.util
+
 import pytest
 import torch
 import torch.nn as nn
@@ -133,6 +135,15 @@ class TestAdapterAutoDetection:
         assert isinstance(adapter, LlamaAdapter)
 
 
+@pytest.mark.skipif(
+    importlib.util.find_spec("sae_lens") is None,
+    reason=(
+        "reward_lens.sae moved behind the [dict] extra, because a sparse\n"
+        "dictionary is a candidate generator and never a claim substrate. Install it with\n"
+        "pip install 'reward-lens[dict]' to run these. The gate itself is asserted in\n"
+        "tests/acceptance/test_w0_5_migration.py, which runs on an install without the extra."
+    ),
+)
 class TestTopKSAE:
     """Tests for the TopK SAE."""
 
@@ -191,88 +202,3 @@ class TestTopKSAE:
         assert loaded.k == 4
         # Check weights are the same
         assert torch.allclose(sae.W_enc.data, loaded.W_enc.data)
-
-
-class TestDiagnosticData:
-    """Tests for diagnostic datasets."""
-
-    def test_get_all_pairs(self):
-        from reward_lens.diagnostic_data import get_diagnostic_pairs
-
-        pairs = get_diagnostic_pairs()
-        assert len(pairs) > 0
-        for pair in pairs:
-            assert pair.prompt
-            assert pair.preferred
-            assert pair.dispreferred
-            assert pair.dimension
-
-    def test_get_specific_dimension(self):
-        from reward_lens.diagnostic_data import get_diagnostic_pairs
-
-        safety_pairs = get_diagnostic_pairs(["safety"])
-        assert all(p.dimension == "safety" for p in safety_pairs)
-        assert len(safety_pairs) > 0
-
-    def test_get_all_prompts_and_responses(self):
-        from reward_lens.diagnostic_data import get_all_prompts_and_responses
-
-        data = get_all_prompts_and_responses()
-        assert len(data) > 0
-        for d in data:
-            assert "prompt" in d
-            assert "response" in d
-            assert "label" in d
-            assert "dimension" in d
-
-    def test_unknown_dimension_raises(self):
-        from reward_lens.diagnostic_data import get_diagnostic_pairs
-
-        with pytest.raises(ValueError, match="Unknown dimension"):
-            get_diagnostic_pairs(["nonexistent_dimension"])
-
-
-class TestHackingDetector:
-    """Tests for hacking test data structures."""
-
-    def test_all_tests_have_required_keys(self):
-        from reward_lens.hacking import ALL_TESTS
-
-        for dim_name, tests in ALL_TESTS.items():
-            for test in tests:
-                assert "prompt" in test, f"Missing 'prompt' in {dim_name}"
-                assert "neutral" in test, f"Missing 'neutral' in {dim_name}"
-                assert "biased" in test, f"Missing 'biased' in {dim_name}"
-
-    def test_bias_result_verdict(self):
-        import numpy as np
-
-        from reward_lens.hacking import BiasTestResult
-
-        result = BiasTestResult(
-            dimension="test",
-            reward_deltas=np.array([0.5, 0.6, 0.4]),
-            mean_delta=0.5,
-            std_delta=0.1,
-            effect_size=5.0,
-            pairs_tested=3,
-            verdict="SIGNIFICANT test bias detected (large effect size)",
-        )
-        assert "SIGNIFICANT" in result.verdict
-
-    def test_hacking_report(self):
-        import numpy as np
-
-        from reward_lens.hacking import BiasTestResult, HackingReport
-
-        report = HackingReport(model_name="test-model")
-        report.results["length"] = BiasTestResult(
-            dimension="length",
-            reward_deltas=np.array([0.1]),
-            mean_delta=0.1,
-            std_delta=0.0,
-            effect_size=float("inf"),
-            pairs_tested=1,
-            verdict="test",
-        )
-        assert report.get_vulnerable_dimensions(threshold=0.5) == ["length"]
