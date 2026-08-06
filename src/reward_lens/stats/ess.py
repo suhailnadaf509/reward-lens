@@ -17,7 +17,7 @@ travels with the Evidence and is visible on every card that consumes it.
 
 The functions here are pure and operate on plain sequences: ``seed_labels`` is
 one lineage label per row, ``content_hashes`` is one content hash per row.
-Turning a DataView into those sequences is the data plane's job (section 2.4.2).
+Turning a DataView into those sequences is the data plane's job.
 """
 
 from __future__ import annotations

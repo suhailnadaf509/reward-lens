@@ -1,4 +1,4 @@
-"""Online changepoint and onset detection (DESIGN section 2.11).
+"""Online changepoint and onset detection.
 
 The recorder needs to answer "when did this feature start drifting?" before the reward and KL
 curves visibly move, which is the whole point of the flight recorder: catch the onset early. Two
@@ -54,8 +54,17 @@ def cusum(
     b = x[: baseline if baseline else n]
     mu = float(np.nanmean(b))
     sd = float(np.nanstd(b))
-    if not np.isfinite(sd) or sd == 0:
-        sd = float(np.nanstd(x)) or 1.0
+    # Degenerate has to mean "degenerate to floating point", not "exactly zero". A run of identical
+    # float64 values has a computed standard deviation around 1.7e-18 rather than 0.0, so an
+    # equality guard misses it, the standardisation divides by numerical noise, and the accumulator
+    # crosses on rounding error. Measured: a series constant at 0.01 for 120 steps and then 0.6
+    # reports an onset at index 10 with `baseline=60`, which is a confident changepoint inside the
+    # flat part. Scaled to the data, because 1e-18 is degenerate at unit scale and ordinary at 1e-15.
+    scale = float(np.nanmax(np.abs(b))) if b.size else 0.0
+    if not np.isfinite(sd) or sd <= 1e-12 * max(scale, 1.0):
+        sd = float(np.nanstd(x))
+        if not np.isfinite(sd) or sd <= 1e-12 * max(scale, 1.0):
+            sd = 1.0
     z = (x - mu) / sd
     hi = lo = 0.0
     peak = 0.0

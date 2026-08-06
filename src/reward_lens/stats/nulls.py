@@ -2,9 +2,8 @@
 
 Every Observable that says one thing "aligns with", "predicts", or "exceeds"
 another owes a null: the value it would report if the relationship were absent.
-Section 2.11 makes the null a first-class object the runner attaches to the
-Evidence, so a reader can see the effect against its own noise floor instead of
-against zero.
+The null is a first-class object the runner attaches to the Evidence, so a
+reader can see the effect against its own noise floor instead of against zero.
 
 This module supplies the nulls the corpus actually uses:
 
@@ -72,7 +71,7 @@ def random_direction_cosines(
     norms = np.linalg.norm(vecs, axis=1, keepdims=True)
     norms[norms == 0] = 1.0  # a zero draw has probability ~0; keep it finite
     vecs = vecs / norms
-    return vecs @ reference
+    return np.asarray(vecs @ reference, dtype=np.float64)
 
 
 def random_direction_null(
@@ -139,13 +138,13 @@ def shuffle_null(
         (fraction of ``|replicate|`` at least as extreme as ``|observed|``,
         with the ``(count + 1) / (n + 1)`` correction).
     """
-    values = np.asarray(values)
-    labels = np.asarray(labels)
-    observed = float(statistic(values, labels))
+    value_array = np.asarray(values)
+    label_array = np.asarray(labels)
+    observed = float(statistic(value_array, label_array))
     rng = np.random.default_rng(seed)
     replicates = np.empty(n, dtype=np.float64)
     for i in range(n):
-        replicates[i] = float(statistic(values, rng.permutation(labels)))
+        replicates[i] = float(statistic(value_array, rng.permutation(label_array)))
     finite = replicates[np.isfinite(replicates)]
     if finite.size == 0 or not np.isfinite(observed):
         return {"observed": observed, "null_mean": float("nan"), "p_value": float("nan")}

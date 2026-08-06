@@ -1,4 +1,4 @@
-"""``reward_lens.stats`` — the epistemics engine (section 2.11).
+"""``reward_lens.stats`` — the epistemics engine.
 
 This is the layer that turns measurements into defensible claims: it holds the
 numerical machinery the three gates rely on, and it enforces invariant I2 (a
@@ -49,6 +49,30 @@ from reward_lens.stats.ess import (
     detect_clones,
     effective_sample_size,
 )
+from reward_lens.stats.meta import (
+    EggerTest,
+    FixedEffect,
+    Heterogeneity,
+    MetaAnalysis,
+    PredictionRule,
+    ProportionMeta,
+    VoteCount,
+    cochran_q,
+    eggers_test,
+    fixed_effect,
+    heterogeneity,
+    power_for_pooled_effect,
+    power_to_detect_heterogeneity,
+    prediction_interval,
+    proportion_effects,
+    proportion_meta,
+    random_effects,
+    tau2_dersimonian_laird,
+    tau2_paule_mandel,
+    tau2_q_profile_ci,
+    tau2_reml,
+    vote_count,
+)
 from reward_lens.stats.mi import (
     MICalibration,
     calibrate_gaussian,
@@ -74,6 +98,29 @@ from reward_lens.stats.roc import (
 )
 
 __all__ = [
+    # meta-analysis (X8)
+    "MetaAnalysis",
+    "ProportionMeta",
+    "Heterogeneity",
+    "FixedEffect",
+    "PredictionRule",
+    "EggerTest",
+    "VoteCount",
+    "random_effects",
+    "proportion_meta",
+    "proportion_effects",
+    "fixed_effect",
+    "heterogeneity",
+    "prediction_interval",
+    "cochran_q",
+    "tau2_dersimonian_laird",
+    "tau2_paule_mandel",
+    "tau2_reml",
+    "tau2_q_profile_ci",
+    "eggers_test",
+    "vote_count",
+    "power_for_pooled_effect",
+    "power_to_detect_heterogeneity",
     # effects
     "BootstrapResult",
     "cohens_d",

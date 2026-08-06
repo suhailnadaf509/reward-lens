@@ -1,11 +1,11 @@
 """ROC/PR curves, calibration, and operating points: the scorecard's engine.
 
-The organism foundry (section 2.10) certifies an instrument by asking how well
-it recovers a planted structure it already knows the answer to. That question is
-an ROC/PR question, and this module is where those numbers are computed:
+The organism foundry certifies an instrument by asking how well it recovers a
+planted structure it already knows the answer to. That question is an ROC/PR
+question, and this module is where those numbers are computed:
 answer-key ROC and precision-recall curves, reliability (calibration) diagrams,
 and the operating-point lookup behind statements like "flags biases stronger
-than rho=0.75 at 90% TPR / 5% FPR" (section 2.10.3).
+than rho=0.75 at 90% TPR / 5% FPR".
 
 The AUC is computed from the rank / Mann-Whitney identity rather than by
 integrating the curve, because the rank form is exact under ties and needs no

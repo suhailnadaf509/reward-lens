@@ -6,7 +6,7 @@ as trustworthy as its calibration: a k-nearest-neighbour estimator carries a bia
 neighbour count, the sample size, and the local geometry, so a raw bits number means nothing until the
 estimator has been made to recover a mutual information that is known in closed form. This module holds
 the estimators and the Gaussian calibration that grades them, so an alignment-channel bit count is
-never reported by an uncalibrated instrument (DESIGN S8 kill criterion: MI estimates too loose even on
+never reported by an uncalibrated instrument (S8 kill criterion: MI estimates too loose even on
 organisms is a publishable calibration study, not a hidden failure).
 
 Three estimators and one calibration:
