@@ -1,0 +1,16 @@
+# The sdist carried `tests/` and could not run it. setuptools picked up the 118 modules at the top
+# of `tests/` and nothing else: no `conftest.py`, so the evidence store was never redirected to a
+# temporary directory and the torch-gated modules were never deselected; no `tests/fixtures/`, so
+# every instrument that reads the GRPO record had nothing to read; no `tests/acceptance/`, which is
+# where a package's stated condition is actually checked.
+#
+# Shipping the rest is not the fix either. Twenty test modules import the top-level `studies/`
+# package through the `pythonpath = ["."]` setting in pyproject.toml, and `core/quantity.py` looks
+# for the repository's `spec/` directory before it falls back to the copy inside the wheel. Making
+# the sdist's suite runnable therefore means shipping `studies/`, `spec/`, `fixtures/` and `tools/`
+# as well, which is the whole repository wearing a different name.
+#
+# So the sdist is the package, and the repository is where the suite runs. A half-suite that errors
+# on collection is worse than no suite, because it reads as a broken library rather than as a
+# deliberate boundary.
+prune tests

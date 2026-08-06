@@ -26,7 +26,7 @@ What did you expect to happen? (e.g., "Expected the patched reward to match the 
  - Python version [e.g. 3.11]
  - PyTorch version [e.g. 2.1.0]
  - Transformers variant [e.g. 4.35.0]
- - Reward Lens version [e.g. 0.2.0]
+ - reward-lens version [e.g. 3.0.0]
  - Model being analyzed (if applicable) [e.g. Skywork/Skywork-Reward-Llama-3.1-8B]
 
 **Additional Context or Output**

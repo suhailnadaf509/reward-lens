@@ -37,6 +37,149 @@ jobs:
       - name: Format check (ruff format)
         run: ruff format --check src/ tests/
 
+  types:
+    name: Types (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      # mypy has been configured in pyproject.toml and installed by [dev] since 2.0
+      # and never run anywhere. It is here for one reason above all: Blind[T] is
+      # enforced by the type checker, so oracle leakage is only a type error if a
+      # type checker actually runs.
+      - name: Install package with dev extras
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[white-box,dev]"
+      - name: Type check the kernel
+        run: mypy src/reward_lens/core src/reward_lens/studies
+
+  blind-types:
+    name: Types (Blind[T] leakage)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install package with dev extras
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      # The static half of the Blind[T] contract: "a function annotated to take features cannot be
+      # passed a Blind, checked by the type checker in CI". This job is the "in
+      # CI" half. It is separate from the kernel's types job because it asserts
+      # something no ordinary type check asserts: that a particular file is
+      # REJECTED. A green mypy on tests/w2_3_typing/leaks.py means the barrier is
+      # gone, so the step below inverts the exit code deliberately.
+      #
+      # MYPYPATH is load-bearing rather than tidiness. The package ships no
+      # py.typed marker, so mypy treats the installed reward_lens as untyped and
+      # ignore_missing_imports (pyproject, [tool.mypy]) then resolves every name
+      # in it to Any. Under that resolution the leakage fixture type checks with
+      # one unrelated error and none of the eight real ones, and this whole job
+      # would pass while checking nothing. Delete MYPYPATH here, and the test in
+      # tests/test_record_labels_typing.py that watches for it, on the day
+      # src/reward_lens/py.typed lands.
+      - name: Type check the label module
+        run: MYPYPATH=src mypy --follow-imports=silent src/reward_lens/record/labels.py
+      - name: A correct detector, scorer and audit still type check
+        run: MYPYPATH=src mypy --follow-imports=silent tests/w2_3_typing/clean.py
+      - name: The leakage fixture must be REJECTED
+        run: |
+          if MYPYPATH=src mypy --follow-imports=silent tests/w2_3_typing/leaks.py; then
+            echo "::error file=tests/w2_3_typing/leaks.py::mypy accepted a Blind passed to a function annotated to take features. The static half of the Blind[T] contract is not being enforced."
+            exit 1
+          fi
+      # The runtime half of the same contract, so this job is a complete gate on its own rather
+      # than half of one that has to be read together with the matrix job below.
+      - name: ...and rejected on the right lines, for the right reasons
+        run: |
+          pytest -q \
+            tests/test_record_labels_typing.py \
+            tests/test_record_labels.py \
+            tests/test_record_labels_properties.py \
+            tests/acceptance/test_w2_3_blind.py
+
+  base-install:
+    name: Base install (no compiled dependency)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      # The core must install with no compiled dependency, because most of the
+      # instrument catalogue needs a record and a callable grader and nothing
+      # else. This job is what makes that a property rather than an intention:
+      # it installs the built wheel, asserts nothing compiled came with it, and
+      # runs the subset of the suite that does not need torch.
+      - name: Build and install the base wheel only
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel --outdir dist/
+          # pytest and hypothesis are the harness, not the package. Both are pure
+          # Python, so neither weakens the assertion below, and installing them
+          # here keeps the property tests running against the base wheel instead
+          # of quietly skipping the subset most likely to catch a portability bug.
+          pip install dist/*.whl pytest hypothesis
+      - name: Assert nothing compiled was installed
+        run: |
+          if pip list --format=freeze | grep -Ei '^(torch|transformers|tokenizers|safetensors|triton|nvidia-)'; then
+            echo "::error::a compiled dependency reached the base install"
+            exit 1
+          fi
+      - name: Assert importing the package does not import torch
+        run: python -c "import reward_lens, sys; assert 'torch' not in sys.modules"
+      - name: Run the torch-free subset
+        run: pytest tests/ -q
+
+  claims:
+    name: Claims (no unbound numbers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+      # A number in a published page is either traceable to an evidence id or
+      # labelled illustrative in the same sentence. The five excluded pages are
+      # the ones that teach the claim syntax: their example tags are
+      # illustrations, and a checker that cannot tell the difference would make
+      # its own documentation unpublishable.
+      #
+      # The baseline holds the numbers written before this check existed. It may
+      # shrink and must not grow, so the gate is live from today without being
+      # permanently red, which is the state in which a gate stops being read.
+      - name: Check the published docs
+        run: |
+          reward-lens-claims docs/content \
+            --baseline docs/claims-baseline.txt \
+            --exclude cards-and-claims.md \
+            --exclude artifacts-operate.md \
+            --exclude cli.md \
+            --exclude measurements-you-can-trust.md \
+            --exclude evidence-store.md
+      - name: Check the findings, with no baseline
+        # The findings page is scanned above as part of docs/content, but with the baseline
+        # applied. It carries no baselined numbers of its own, so it is worth re-running against
+        # it alone with no exemptions at all.
+        run: reward-lens-claims docs/content/findings.md
+
   test:
     name: Tests (Python ${{ matrix.python-version }})
     needs: lint
@@ -55,6 +198,6 @@ jobs:
       - name: Install package with dev extras
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[dev]"
+          pip install -e ".[white-box,organisms,verifier,viz,dev]"
       - name: Run test suite
         run: pytest tests/ -v

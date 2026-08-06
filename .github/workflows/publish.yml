@@ -33,8 +33,29 @@ jobs:
           python -m pip install --upgrade pip
           pip install build twine
 
+      # A tag push publishes. Nothing here checked that the tag and the version in pyproject.toml
+      # were the same, so `git tag v3.0.0` on a tree reading 3.0.0rc1 would have published a release
+      # candidate to PyPI under a final-release tag, silently and irreversibly, since a version can
+      # be yanked but never replaced. This is the cheapest possible guard against the one mistake in
+      # this workflow that cannot be undone.
+      - name: The tag must match the version
+        if: github.event_name == 'push'
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VERSION=$(python -c "import tomllib,pathlib; print(tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version'])")
+          echo "tag: ${TAG}   pyproject: ${VERSION}"
+          if [ "${TAG}" != "${VERSION}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match version ${VERSION} in pyproject.toml"
+            exit 1
+          fi
+
       - name: Build Source and Wheel Distributions
         run: python -m build
+
+      # twine was installed and never run. It checks the metadata PyPI will reject on upload, which
+      # is the last cheap check before an irreversible one.
+      - name: Check the distributions
+        run: twine check dist/*
 
       - name: Archive artifacts
         uses: actions/upload-artifact@v4
@@ -42,8 +63,42 @@ jobs:
           name: dist
           path: dist/
 
-  publish:
+  # Trusted publishing only. The `id-token: write` permission below is the whole
+  # authentication mechanism: PyPI verifies the workflow's OIDC identity against the
+  # publisher configured for the project. 2.0.1 went out this way.
+  #
+  # There is deliberately no `password:` on either step. Carrying an API token as well
+  # is one mechanism too many: whichever one is live, the other is an unused credential
+  # sitting in the repository's secrets with upload rights to the package.
+
+  publish-testpypi:
+    name: Publish to TestPyPI
     needs: build
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.release_type == 'test'
+    runs-on: ubuntu-latest
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/reward-lens
+    permissions:
+      id-token: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+          verbose: true
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build
+    if: github.event_name == 'push' || github.event.inputs.release_type == 'production'
     runs-on: ubuntu-latest
     environment:
       name: pypi
@@ -58,9 +113,7 @@ jobs:
           path: dist/
 
       - name: Publish to PyPI
-        if: github.event.inputs.release_type != 'test'
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
           skip-existing: true
           verbose: true

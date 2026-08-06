@@ -3,203 +3,218 @@
 [![PyPI version](https://badge.fury.io/py/reward-lens.svg)](https://pypi.org/project/reward-lens/)
 [![Python](https://img.shields.io/pypi/pyversions/reward-lens.svg)](https://pypi.org/project/reward-lens/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1x5zG07HdsWlNsJmkl2ddJ1yalmwwujfY?usp=sharing)
 
-White-box tools and built-in epistemic discipline for reward models, the objects that define what RLHF optimizes.
+**Measurement instruments for reward models and RL runs. Every reading is either evidence or a refusal that tells you what to fix.**
 
-Every model trained with RLHF was shaped by a reward model. That reward model sat in the loop and decided, on pair after pair, which of two answers was better. It is the closest thing the pipeline has to a written-down definition of what we asked for, and almost nobody looks inside one. That is strange, because the reward model is where alignment actually gets decided. A policy does not optimize your intentions. It optimizes the number this model hands back, and whatever the reward model fails to measure becomes the exact thing the policy is free to exploit. If you want to know why a model learned to pad its answers, agree with whatever you said, or wrap everything in confident structure, the honest place to look is not the policy. It is the function that rewarded it.
+You wrote a reward function. Your policy optimized something else. The gap between the two is what people variously call reward hacking, side effects, style bias, specification gaming and Goodhart, and it is not visible in the reward function, because it is a property of what the policy actually did.
 
-reward-lens is the instrument for looking.
-
-## The one output direction
-
-A reward model is a language model with its vocabulary head removed and a single linear layer bolted on. The score is a dot product:
-
-```
-r(x) = w_r · h + b
-```
-
-The final hidden state `h` is read out along one fixed vector `w_r`, the reward direction. It is not something you probe for or approximate. It sits in the weights, known exactly, the same for every input. A generative model spreads its answer across fifty thousand logits; a reward model concentrates it into one number along one line. Once you see the reward as a projection, most of the tools here become variations on a single move. Project each layer's activation onto `w_r` and you watch the preference form. Split the final state into its parts and project each, and you get a per-component ledger. Intervene on a component and remeasure, and you get a causal test. Same direction, different questions.
-
-## Why the measurements need discipline, not just tools
-
-The first version of this library was a bag of those primitives. Running them at scale taught the lesson that reshaped everything since: naive reward-model measurement produces confident, wrong numbers, and it does it in ways that look fine on the page.
-
-A concrete one. Rank a model's components by how much attribution assigns them, rank them again by how much causal patching says they carry, and on Skywork the two rankings correlate at Spearman ρ = -0.256. Negative. The last MLP layers dominate attribution; the early layers dominate patching. The place the reward visibly accumulates is not the place that causes it. Quote the cheap observational tool as if it were the causal one and you have published a plausible, backwards result.
-
-There were more of these. Confidence intervals computed over five hand-written stimuli that had been cloned into "thirty pairs," so the interval described the cloning and not the model. Cross-model reward directions compared in raw coordinates, where a change of basis reads as a change of function. Instruments with no answer key, reporting numbers nobody had ever checked against a case with known ground truth. None of these are exotic. They are the predictable output of tools that carry no notion of evidence, provenance, or calibration. So the rebuild does not add more tools. It puts the discipline underneath them.
-
-## One kernel, sixteen sciences, three gates
-
-reward-lens 2.0 is a small kernel of subsystems, a layer of studies that consume it, and three gates that hold the whole thing honest.
-
-Every measurement returns an `Evidence` object, never a bare float. Evidence carries the value, its uncertainty (including an effective sample size that counts unique content, not cloned rows), its gauge status, its calibration reference, its provenance back to the inputs it came from, and a trust level. The trust level is never set by the caller. It is computed by the gates.
-
-- **Calibration gate.** An instrument with no scorecard, meaning no measured performance against a case whose ground truth is known, cannot claim more than exploratory trust. You earn calibration by grading the instrument on model organisms with structure planted by construction, and then the same measurement on a real model cites that scorecard.
-- **Gauge gate.** A quantity that only means something in a fixed basis (a direction, an angle, a subspace overlap) cannot be compared across models without a shared frame. Ask for that comparison without fixing the gauge and the library raises, rather than handing back a number that confuses a coordinate change for a real one.
-- **Registration gate.** A confirmatory claim requires a frozen preregistration. A study is a spec plus a thin analysis function; freezing it stamps the git sha and locks the predictions before the run, so the result is adjudicated against a prediction made in advance, not a story fit afterward.
-
-The trust ladder runs exploratory, calibrated, registered, adjudicated, and an Evidence sits on the highest rung the facts actually support. This is the part worth being direct about. The honesty is in the type system, not in a disclaimer. You do not have to remember to be careful. The instrument will not let you quote a number as more than it is.
-
-## Install
+reward-lens measures that gap. It reads a training record and a grader, works out which measurements your access allows, and returns numbers with uncertainty attached, or a refusal naming exactly what it would need to answer.
 
 ```bash
 pip install reward-lens
 ```
 
-Python 3.10 or newer. The base install brings torch and transformers, because most of the library eventually touches a model. If all you want is the epistemics layer it is still one line, and `import reward_lens.core` and `import reward_lens.stats` will not import torch.
+## Sixty seconds
+
+Start with `capabilities`. It costs nothing, loads no model, and calls no grader:
 
 ```bash
-pip install "reward-lens[sae]"    # SAE training support
-pip install "reward-lens[dev]"    # tests, ruff, mypy
+reward-lens capabilities --record path/to/run --substrate NEURAL_GEN
 ```
 
-From source:
+It prints what you can measure right now with its expected uncertainty and cost, and what it cannot measure with the specific remedy for each. Most people find this is the useful part: it answers "what could I learn about this run, and what would it cost me to learn more" before anything is spent.
 
-```bash
-git clone https://github.com/reward-lens/reward-lens.git
-cd reward-lens
-pip install -e ".[dev]"
-```
+Then a grader card, which needs no GPU and no model:
 
-## A first look
-
-If you would rather run the code than read it, there is a [guided tour notebook on Colab](https://colab.research.google.com/drive/1x5zG07HdsWlNsJmkl2ddJ1yalmwwujfY?usp=sharing) that takes the whole library from the reward direction through evidence, interventions, gauge, and preregistered studies. It installs itself, opens on the free tier, and the CPU path needs no GPU at all.
-
-Otherwise, start with the part that needs no GPU, because it is the part that explains the rest. Trust is not a label you write down. It is computed from what you actually did to earn it.
-
+<!-- generated: card-plan-code -->
 ```python
-from reward_lens.core import make_evidence, CalibrationRef, SubjectRef, ModelFP
+from pathlib import Path
 
-subject = SubjectRef(signals=(ModelFP("mfp:demo"),), dataset="ds:demo", readout="reward")
+from reward_lens.measure.card import CardInputs, card_plan
+from reward_lens.verifier import ListCorpus, Rollout, VerifierUnderTest
 
-# A bare measurement is exploratory. Nothing has earned it more than that.
-ev = make_evidence(observable="BiasBattery", observable_version="1",
-                   subject=subject, value=-0.05)
-print(ev.trust)          # TrustLevel.EXPLORATORY
-
-# Calibrate it against a scorecard graded on planted ground truth and it climbs a rung.
-cal = CalibrationRef(scorecard_entry="ev:...", organism_family="spurious-correlation")
-ev = make_evidence(observable="BiasBattery", observable_version="1",
-                   subject=subject, value=-0.05, calibration=cal)
-print(ev.trust)          # TrustLevel.CALIBRATED
-```
-
-When you do reach for a model, a measurement is the same three steps every time: load a signal, pick an observable, run it through the gated runner. Here it is on a small model that runs on CPU, so nothing downloads.
-
-```python
-from reward_lens.signals import from_tiny
-from reward_lens.measure import base as mb
-from reward_lens.measure.battery import DirectLinearAttribution
-from reward_lens.data.builtin.diagnostic_v3 import load_diagnostic_v3
-from reward_lens.data.schema import DataView
-
-signal = from_tiny(seed=0)
-view = DataView(list(load_diagnostic_v3()["helpfulness"].items)[:8])
-
-ev = mb.run(DirectLinearAttribution(), mb.Context(signal=signal, view=view))
-print(ev.value["dominant_component"])   # which head or MLP wrote the reward difference
-print(ev.trust)                         # EXPLORATORY, until this observable earns a scorecard
-```
-
-The same call runs on an 8B classifier reward model, a generative judge, or a process reward model, because they all satisfy one signal protocol. Only the readout changes.
-
-To make a confirmatory claim, you freeze the prediction before the run. Freezing stamps the git sha and locks the predictions, and the runner adjudicates the result against them.
-
-```python
-from reward_lens.studies import StudySpec, Hypothesis, Prediction, SubjectQuery, freeze, run_study
-
-spec = StudySpec(
-    id="smoke-thermo", title="Mean reward rises under mild optimization", science="S03-thermo",
-    hypotheses=(Hypothesis(id="H1", statement="mean reward exceeds 0.3",
-        prediction=Prediction(metric="mean_reward", comparator=">", threshold=0.3),
-        scoreboard_row="T9"),),
-    analysis="yourpkg.analysis.thermo_smoke",
-    subjects=SubjectQuery(signals=("mfp:study-test",)),
+# Your grader. This one is four lines; SWE-bench's is four hundred.
+Path("grade.py").write_text(
+    "def grade(answer, gold):\n"
+    "    return 1.0 if answer.strip() == gold.strip() else 0.0\n"
 )
 
-frozen = freeze(spec)                                    # study:smoke-thermo@v1#<hash>, git sha stamped
-frozen, result = run_study(spec, subjects={"primary": signal}, store=store)
-print(result.outcomes["H1"])                             # "confirmed" or "refuted", against the frozen prediction
+plan = card_plan(
+    CardInputs(
+        verifier=VerifierUnderTest(Path("grade.py"), entrypoint="grade"),
+        corpus=ListCorpus(
+            tuple(Rollout(id=f"r{i}", inputs={"answer": "4", "gold": "4"}) for i in range(20))
+        ),
+    )
+)
+print(plan.render())
+```
+<!-- /generated: card-plan-code -->
+
+<!-- generated: card-plan-output -->
+```text
+CARD PLAN  grade.py:grade
+  2 of 13 fields would read; 11 would refuse.
+  cost  at least 0 grader calls, no GPU and no model. 2 of the 2 available fields do not model their own cost, so this is a floor and not a total
+  not checked  access
+  not checked  phase
+  not checked  envelope (regime not measured)
+  not checked  limit of detection
+
+  coverage                   available at rung 1, cost not modelled by this instrument
+                             not checked: access
+                             not checked: phase
+                             not checked: envelope (regime not measured)
+                             not checked: limit of detection
+  variance components        would refuse: RECORD_INCOMPLETE
+                             the record this card was built from carries no replicated scoring design
+                             Remedy: score each item at least twice under controlled facet variation and pass the crossed design: `CardInputs(design=ReplicationDesign.from_long(values, objects, raters))`. A variance decomposition needs replication to separate the grader's disagreement with itself from the spread across items, and one score per item confounds the two with nothing able to tell.
+  curl mass                  would refuse: SUBSTRATE_MISMATCH
+                             this instrument applies to NEURAL_GEN, PROCEDURAL; the grader is PROGRAM
+                             Remedy: use an instrument declared for PROGRAM. A PROGRAM grader is a different kind of object, not a harder case of the same one.
+
+  ... 10 more fields, same shape
+```
+<!-- /generated: card-plan-output -->
+
+A card describes a grader as a measurement device rather than a leaderboard row: how much of its branching your corpus exercises, how many edits to it your corpus would fail to notice, how much of the gap between two rollouts is the grader disagreeing with itself.
+
+## A reading is evidence or a refusal
+
+This is the one idea everything else follows from.
+
+```python
+Reading = Evidence | Refusal
 ```
 
-The Evidence this produces is registered, and it lands in an append-only store. Everything downstream (an RM card, the population leaderboard, a safety case) is a view over that store, so a card and a paper are guaranteed to quote the same number. The command line is the operator surface over the same store, and it draws a clean line. Anything that is a view over stored evidence runs here and now with no model. Anything that needs a reward model names the exact kernel call it would make and refuses rather than printing a number it did not compute.
+A `Refusal` carries a reason, the numbers behind it, and a remedy written as an instruction. It cannot be constructed without one. It is a success rather than a downgrade: an instrument that cannot answer says so, instead of returning a worse number, a `None`, or a zero that looks identical to a measured zero and means the opposite.
+
+There are seventeen reasons an instrument can decline, and they sort by where the fix lives. `ACCESS_INSUFFICIENT` is fixable where you are standing. `RECORD_INCOMPLETE` is fixable upstream, in whatever wrote the record. `QUANTITY_UNDEFINED` is fixable nowhere, so it is required to name the question that does apply instead.
+
+<details>
+<summary>All seventeen, from <code>reward_lens.core.reading</code></summary>
+
+<!-- generated: refusal-reasons -->
+```text
+ABOVE_LOD_BELOW_LOQ
+    Detected but not quantifiable. A bound is returned; a point estimate would be false
+    precision.
+ACCESS_INSUFFICIENT
+    No estimator for this quantity works at the access you have. Silent degradation to a
+    worse one is how a number becomes uninterpretable, so nothing was computed.
+BELOW_LOD
+    The effect is smaller than the measurement substrate's disagreement with itself, so
+    it is not attributable to the thing being measured.
+BUDGET_EXCEEDED
+    The costed plan exceeds the declared budget.
+ENVELOPE_VIOLATED
+    The estimator's assumptions do not hold on this run. An instrument that is available
+    and invalid is worse than one that is unavailable.
+ESS_BELOW_FLOOR
+    The importance weights have degenerated, so this is past the visibility horizon and
+    any number would be a guess wearing an interval.
+GAUGE_MISMATCH
+    A covariant quantity was compared across frames with no shared basis, so the
+    difference would be a coordinate artifact.
+LABEL_QUALITY_UNKNOWN
+    The labels have no measured error rate, so scoring against them measures the labels.
+NO_MATCHED_CONTROL
+    A null with no identically-powered positive control cannot be distinguished from an
+    underpowered experiment.
+PHASE_MISMATCH
+    This is an in-run question and the run is over, or a pre-run question and it has
+    started.
+PLAN_NOT_CLOSED
+    A registered prediction names a metric that no arc in this plan produces. Found
+    before anything ran.
+QUANTITY_UNDEFINED
+    This quantity is not defined for this object, so there is nothing here to measure at
+    any access and from any record. The remedy names the question that does apply
+    instead.
+RECORD_INCOMPLETE
+    Your access is sufficient and the record does not carry the field this estimator
+    reads. Nothing more can be recovered from this record; the fix is upstream, where it
+    was written.
+REFERENCE_UNCERTIFIED
+    The reference material carries no uncertainty of its own. You cannot calibrate
+    against an uncalibrated ruler.
+SUBSTRATE_MISMATCH
+    This instrument does not apply to this kind of grader. A program has no activations;
+    that is a category error rather than a hard case.
+UNIT_MISMATCH
+    Two quantities in incompatible units were compared. The conversion factor is a
+    property of the data, not of the unit, so this is not converted silently.
+VOID
+    The run is not readable, which is different from a negative result.
+```
+<!-- /generated: refusal-reasons -->
+
+</details>
+
+The library refuses below the limit of detection, outside an estimator's regime, against an uncertified reference, against labels with no measured error rate, with no matched control, across a unit boundary, and on a study plan that does not close.
+
+## Install
+
+Python 3.10 or newer. The base install pulls nothing compiled, and `import reward_lens` does not import torch, because most of the catalogue needs a run record and a callable grader and nothing else.
 
 ```bash
-reward-lens card mfp:...        # an RM card: every stored Evidence about one model
-reward-lens scoreboard          # standing theorems and candidate laws
-reward-lens claims paper.md     # nonzero exit if the manuscript cites a number the store cannot back
-reward-lens atlas export        # the population leaderboard, as JSON and HTML
-
-reward-lens score <signal>      # GPU-gated: dispatches to signals.load_signal(...).score(...)
+pip install reward-lens                # the measurement half. numpy, scipy, a CLI
+pip install "reward-lens[verifier]"    # grader cards and the verifier series. Pure Python
+pip install "reward-lens[white-box]"   # torch and transformers, for the model-touching half
+pip install "reward-lens[trl]"         # the TRL training tap
+pip install "reward-lens[dev]"         # tests, ruff, mypy
 ```
 
-That `claims` command is worth pausing on. It reads a manuscript, finds every number tagged with an evidence id, and fails if the store does not hold that exact value. A paper cannot claim a figure the evidence does not support, and you find out in CI rather than in review.
+Reaching a subsystem behind an extra you have not installed raises a typed error naming an extra `pip` can install, rather than an `ImportError` about a module you have never heard of.
 
-## What is in the kernel
+## What is in it
 
-The kernel is the set of subsystems every study stands on. You rarely touch all of them; you reach for the ones a question needs. Imports stay lazy and layered, so the epistemics layer pulls only numpy and scipy, and nothing loads torch until you touch a model.
+<!-- generated: catalogue -->
+```text
+95 instruments across 14 series, 51 of them in the wedge
+190 quantities, 112 of them in the wedge
+13 regime conditions, 7 invariance groups, 17 refusal reasons
 
-**Signals** give one interface over the different things people call a reward. The `RewardSignal` protocol carries first-class readouts and positions, so eight substrates look the same to every tool downstream: classifier reward models, generative judges, process reward models, implicit (DPO log-ratio) rewards, rubric graders, trajectory models, dense per-token rewards, and ensembles. A new kind of grader becomes a new adapter that passes the conformance suite, and the whole battery works on it unchanged.
+the wedge is what a record and a callable grader reach: no weights, no gradients,
+no GPU. `reward-lens capabilities` is how you find out which of them your run is in.
+```
+<!-- /generated: catalogue -->
 
-**Data** is the plane instruments read from, and never construct themselves. Pairs, quadruples, tournaments, and trajectories are typed and lineage-tracked. A `DataView` reports its effective sample size and a content checksum, which is where the cloned-stimulus problem dies: the statistics count unique content, not duplicated rows.
+Those counts are written by `scripts/gen_readme.py` straight from the registry, so the page cannot claim a different number of instruments than the catalogue holds.
 
-**Measure** is the library of things you can measure. A battery of eleven observables ports the interpretability primitives (the reward lens across depth, per-component attribution, activation and path patching, the bias battery, concept dose-response, SAE feature alignment, multi-objective geometry, cross-model circuit overlap). On top sit eighteen scalar indices, each one a named theory object with a formal definition it must stay faithful to: the knowledge-utilization gap that predicts which dimension gets hacked, reward susceptibility from fluctuation-dissipation, the tail exponent that sets the critical optimization pressure, a verification score that separates checking work from reading style, and more. Every observable returns gated Evidence. There is no path that returns an unguarded number.
+Every instrument declares the quantity it estimates, the access it requires, the regime it is valid in, the invariance group it respects, the baselines it ships against, and its rung on the estimator ladder. An instrument that cannot pass `lint_instrument` does not exist: an unregistered quantity fails at import.
 
-**Interventions** are the causal side: patch, steer, ablate, edit the reward head in weight space, and erase a concept with a closed-form affine map (LEACE) that you can then certify by training a fresh probe and reporting how much it recovers. An erasure that cannot be certified stays exploratory.
+The kernel is `core/`: quantities with units on three axes, so comparing a per-token quantity against a per-sequence one returns `False` rather than a number; regime envelopes whose lint runs in `__post_init__`, so an envelope that cannot be enforced cannot be built; a GUM uncertainty budget that names its own largest term, which is rarely sampling noise; certified reference materials that carry their own uncertainty; and plan closure, which raises before any work runs when a study's registered metric is something no arc of the plan produces.
 
-**Geometry** is what makes cross-model comparison mean something. It fixes the gauge, whitens to a canonical frame, and reports the STARC-invariant angle whose cosine is the on-distribution correlation of two reward readouts. It also carries Hessian spectroscopy and a skew-symmetric test for the intransitive preferences a scalar head cannot express.
+`record/` is the process record, five levels from `Run` down to `Token`. Scores are a `ScoreTree` rather than a float, so "what happens to the advantages if I drop the length term" is answerable on recorded leaves at zero compute. Held-out labels are `Blind[T]` with no `.unwrap()`, so leakage is a type error rather than a code review.
 
-**Dynamics** watches a reward model form across training. Checkpoints link into a hash-verified chain, the battery sweeps over them, and the curves show when bias enters and when the reward direction stops rotating and merely rescales.
-
-**Organisms** are the ground truth. An organism is a reward model with a rule planted by construction, so you know the answer. Grading an instrument against the planted structure is how it earns a calibration scorecard, and the scorecard has to be monotone in the planted signal strength before it counts. This is the floor the calibration gate stands on.
-
-**Loops** wire the instrument into the training run. A framework-agnostic reward function, geometry logging on fixed probes every few steps, best-of-N and tilt analysis for reading optimization pressure, and a rollout recorder that watches reward-feature drift and can name an exploited direction with a lead time before the true reward diverges. Bindings for TRL, veRL, and OpenRLHF share the same reward and logging shapes.
-
-**Studies** are preregistered experiments: a frozen spec, a thin analysis function, kill criteria, and a runner that adjudicates the result against predictions made before the run. Standing results accumulate on a theorem scoreboard.
-
-**Artifacts** are views over the evidence store, never fresh computation. Build an RM card for a model, a population leaderboard, or a safety case, which is the strictest artifact of all: it assembles a claim about what is safe to optimize and refuses unless every component it rests on is both calibrated and registered.
-
-Underneath all of it, **core**, **stats**, and **runtime** hold the floor: the Evidence atom, provenance, the append-only store, and the gates in core; a real numpy statistics engine (effect sizes, bootstrap and cluster-bootstrap CIs, multiplicity control, ROC and calibration, changepoint detection, mutual information) in stats; and the HuggingFace execution layer (hooks, per-family numerics policies with an fp32 reward head, model fingerprinting, an activation cache) in runtime.
-
-## The sixteen sciences
-
-The kernel exists so the research on top can be thin. Each science is a family of preregistered studies that add only a hypothesis and a short analysis function, never new infrastructure, and every result is adjudicated against a prediction frozen before the run. A theorem scoreboard tracks which claims have held up, and refutations show up as plainly as confirmations. Here is what they ask.
-
-| Science | The question it puts to a reward model |
-|---|---|
-| Gauge | Can two reward directions be compared at all, when a head is fixed only up to shift and scale? |
-| Thermodynamics | Which features will optimization exploit, read off base-policy statistics before any RL? |
-| Capacity | How much bias does a scalar head force just by routing many criteria through few dimensions? |
-| Topology | What share of reward error is topologically obligatory, beyond any scalar reward's reach? |
-| Embryology | Does the reward direction form gradually or in jumps, and which features enter first? |
-| Factorization | How much does the reward know but fail to use, and is its error epistemic or about values? |
-| Verification | Does the reward check the work, or just read the style around it? |
-| Decompiling | How much of the decision function can be put into words, and what stays tacit? |
-| Values | Does the model encode "this pair is contested," and is a judge's verdict set before its critique? |
-| Hackability | Can a number read off the weights name the dimension that gets hacked, before training starts? |
-| Coupling | Watching policy and grader as one loop, does representational divergence come before hacking? |
-| Phase | Is the hacking transition reversible, or does hysteresis mean a hacked policy cannot anneal back? |
-| Forensics | How does the grader weigh evidence: does it rank a caught fabrication below saying nothing? |
-| Robustness | Does the model know it is being tested, and does that recognition inflate the score? |
-| Universality | Do two reward models converge on values beyond what shared world-modeling forces? |
-| Performative | How fast does a metric decay once developers start optimizing against it? |
-
-The last two run across a whole population of reward models rather than a single one.
-
-## Coming from version 1
-
-The 1.0 API still works. Every v1 name lives on under `reward_lens.legacy` and stays importable from the top level, so `from reward_lens import RewardModel, RewardLens, ComponentAttribution` keeps running while you migrate. As each primitive settles into its new home behind the protocols, its legacy entry is repointed at a thin adapter with no change on your side. The pure layers never import any of it, so the torch-free promise holds regardless.
-
-## Status
-
-This is alpha, and honest about which parts are load-bearing today. The epistemics layer (core, stats, the data plane, the index math) is pure, tested, and usable now without a GPU. The measurement, intervention, and study machinery is wired end to end and proven on small synthetic models and organisms in the test suite. The paths that need an 8B model or a flagship GPU, real dataset downloads, or an external judge are gated: they name the call and refuse rather than fabricate a result. Where a dependency is still landing, the code says so in place instead of returning a plausible number. Interfaces in the science layer may still move.
+`tap/` wraps a grader inside somebody else's training loop and records every call. `policy/` is the peer of `signals/`, so the same instruments run against a policy and against a grader. `forecast/` refuses to build a `Forecast` if any transitive input postdates its issue time.
 
 ## Documentation
 
-Full documentation, including the theory behind each index and a candid account of what the observational tools can and cannot tell you, is at <https://reward-lens.github.io/reward-lens/>.
+<https://reward-lens.github.io>
 
-The same material with the code actually running is the [Colab tour](https://colab.research.google.com/drive/1x5zG07HdsWlNsJmkl2ddJ1yalmwwujfY?usp=sharing). It is the fastest way to see what a gated measurement feels like in the hand.
+The catalogue, the quantity registry and the refusal reference are rendered from the live registry at build time, so a documentation page cannot claim a different number of instruments than the catalogue holds.
+
+Coming from 2.0.1? `Observable` becomes `Instrument`, measurements return a `Reading`, and the flat v1 API is gone. The migration guide is [`docs/migration-2.0-to-3.0.md`](docs/migration-2.0-to-3.0.md), and it names what to rename, what moved behind which extra, and which two shipped numbers changed.
+
+## What this does not claim
+
+Stated once, so nobody has to find it in review.
+
+- **Not the Goodhart turning point.** That is occupied, with a solver: HedgeTune, `arXiv:2506.19248`, NeurIPS 2025 Spotlight. What is measured here is the turn in `E_λ[g]` for a named gold signal `g`, and if `g` is itself a proxy, a measured turn is the turn for `g`.
+- **Not white-box superiority.** The bar is decorrelation plus signal, reported against a scaffolded black-box baseline every time. The correlation between a white-box instrument's errors and the black-box baseline's errors is a required output field.
+- **Not that nobody predicts reward hacking.** At least four published methods do.
+- **Not that monitors degrading under pressure is new.** It is a live subfield with results in both directions. What is missing is turning that degradation curve into the figure of merit that ranks competing monitors.
+- **Not linear-representation realism.** The portfolio is built so that most of it survives that hypothesis failing.
+
+## Status
+
+The kernel, the record, the access layer, the tap, the verifier series, the metrology and the four books are built, tested and linted.
+
+Two gaps are worth knowing before you start. The capability report can price a measurement and route you to the instrument that performs it, but it cannot yet dispatch the measurement itself: sixty-four estimator entries are registered and none carries a callable. And ten of the twelve framework adapters are not built. `tap/adapters/` ships `trl.py` and `verifiers.py`; `verl`, `openrlhf`, `skyrl`, `slime`, `areal`, `nemo`, `primerl`, `roll` and `tinker` are named in the architecture and were never scheduled.
+
+`probe/`, `measure/coverage/` and `stats/identification.py` are not in this release, and the compute-gated studies ship as code, a runbook and a price rather than as results. [`docs/content/not-in-3-0.md`](docs/content/not-in-3-0.md) is the full list. `CHANGELOG.md` carries the release entry, including the defects this build found in its own previous release.
 
 ## Citation
 

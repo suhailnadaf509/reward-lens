@@ -76,3 +76,4 @@ venv.bak/
 .mypy_cache/
 .pyre/
 .pytype/
+.fixture-scratch/
