@@ -15,7 +15,7 @@ class RewardLensError(Exception):
 
 
 class CapabilityError(RewardLensError):
-    """An Observable requires a Capability the signal does not declare (R3).
+    """An Observable requires a Capability the signal does not declare.
 
     Raised before any GPU work, with the required and available capability sets in the
     message, so an incompatible measurement fails fast rather than deep inside a hook.
@@ -37,12 +37,12 @@ class CalibrationWarning(RewardLensError):
     Most calibration gaps are handled by downgrading trust rather than raising (gates
     never silently block work; they downgrade visibly). This is raised only where a
     caller explicitly demands calibrated output and none exists, for example the MI
-    estimators that refuse to over-claim on production signals (S8, RK3).
+    estimators that refuse to over-claim on production signals.
     """
 
 
 class ConformanceError(RewardLensError):
-    """A signal adapter failed the conformance suite (section 2.3.6).
+    """A signal adapter failed the conformance suite.
 
     New adapters are not registered until conformance passes; this is the structural fix
     for the InternLM2/QRM class of silent exclusion, where a failed load simply dropped a
@@ -51,7 +51,7 @@ class ConformanceError(RewardLensError):
 
 
 class ProvenanceError(RewardLensError):
-    """A required provenance or lineage field is missing (I5, RK9).
+    """A required provenance or lineage field is missing (I5).
 
     The store rejects a signal, dataset, or derived Evidence whose parents or fingerprints
     cannot be resolved. Lineage is cheap to collect at creation and impossible to
@@ -75,8 +75,8 @@ class DataError(RewardLensError):
 class NumericsError(RewardLensError):
     """A per-family numerics policy was violated or produced a non-finite result.
 
-    NaN propagation on the cosine path (the E09 all-NaN failure) and soft-cap
-    interactions (the E08 damping artifact) are caught here rather than flowing into a
+    NaN propagation on the cosine path (the all-NaN failure) and soft-cap
+    interactions (the damping artifact) are caught here rather than flowing into a
     published number.
     """
 

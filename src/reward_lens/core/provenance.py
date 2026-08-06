@@ -1,13 +1,13 @@
-"""Provenance capture (section 2.1.2).
+"""Provenance capture.
 
 Every Evidence records where it came from: the git commit of the code that produced it, a hash
-of the configuration, the seeds, the compute it cost (R13), any oracle calls that fed it (R10),
+of the configuration, the seeds, the compute it cost, any oracle calls that fed it,
 and the ids of the parent Evidence it was derived from (I5). The parent list is what makes the
 store a DAG; a forecast regression that consumes stored KUI and chi Evidence names them as
 parents, and that is what lets a card or a paper trace every number back to leaf measurements.
 
 Provenance is cheap to collect at creation and impossible to reconstruct afterwards, so it is a
-mandatory field, not optional metadata (RK9). The store rejects Evidence whose declared parents
+mandatory field, not optional metadata. The store rejects Evidence whose declared parents
 it cannot resolve.
 """
 
@@ -54,7 +54,7 @@ def git_sha(repo_dir: str | None = None) -> str:
 
 @dataclass(frozen=True)
 class Cost:
-    """The compute a measurement consumed (R13).
+    """The compute a measurement consumed.
 
     Metered on every Evidence so studies and cards can report their total cost, and so the
     Atlas at population scale is budgetable. ``gpu_seconds`` is wall-clock GPU time; ``tokens``
@@ -86,7 +86,7 @@ class Provenance:
 
     ``config_hash`` is a content hash of whatever configuration object produced the run;
     ``seeds`` records every RNG seed used; ``oracle_calls`` lists ``OracleCall`` ids for any
-    LLM-derived input (R10); ``parents`` lists the Evidence ids this quantity was derived from
+    LLM-derived input; ``parents`` lists the Evidence ids this quantity was derived from
     (I5). ``study`` is the frozen StudyID when the run was registered (gate 3), else None.
     """
 

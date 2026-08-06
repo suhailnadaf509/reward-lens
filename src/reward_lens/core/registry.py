@@ -1,4 +1,4 @@
-"""Plugin registries (section 2.1.3, R9).
+"""Plugin registries.
 
 One mechanism for extension across the whole kernel: string-keyed registries with decorator
 registration and, optionally, ``importlib.metadata`` entry-point discovery. Signal adapters,

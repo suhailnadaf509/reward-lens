@@ -1,4 +1,4 @@
-"""The three gates, as runtime policy (section 1.3, R5).
+"""The three gates, as runtime policy.
 
 The gates convert the corpus's epistemology from prose into mechanism. They are implemented
 once, here, and applied everywhere Evidence is produced or compared. Gates never silently block
@@ -17,10 +17,21 @@ mistake cannot be committed to the store.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
 from reward_lens.core.errors import GaugeError
 from reward_lens.core.types import FrameID, GaugeStatus, TrustLevel
+
+
+class SupportsTrustCap(Protocol):
+    """Anything that caps the trust of a reading derived from it.
+
+    `ReferenceMaterial` and `CalibrationChain` implement this. Structural rather than nominal so
+    `gates` does not import `reference`, which would pull the budget machinery into the module
+    every Evidence construction goes through.
+    """
+
+    def trust_cap(self) -> TrustLevel: ...
 
 
 @dataclass(frozen=True)
@@ -53,8 +64,9 @@ def compute_trust(
     calibration: CalibrationRef | None,
     registered: bool,
     adjudicated: bool = False,
+    reference: "SupportsTrustCap | None" = None,
 ) -> TrustLevel:
-    """Compute the trust level of an Evidence from the gate inputs (section 1.3).
+    """Compute the trust level of an Evidence from the gate inputs.
 
     The trust level is never set by a caller. It is derived from three facts the gates
     establish: whether a calibration reference is present (gate 1), whether the run happened
@@ -70,14 +82,31 @@ def compute_trust(
     ADJUDICATED requires the full set: registered, calibrated, and adjudicated. A caller that
     passes ``adjudicated=True`` without the other two gets the highest rung the facts actually
     support, never ADJUDICATED on the strength of the flag alone.
+
+    **The reference cap.** A reading calibrated against a reference material whose
+    own uncertainty was never characterised cannot climb past `CALIBRATED`, whatever else is true
+    of it. `u_homogeneity is None` is not a missing field: it means nobody checked whether two
+    plants with different seeds give the same answer, and the Model Organism Lottery says they do
+    not. Freezing a prediction against a ruler of unknown length does not make the reading better;
+    it makes the prediction precise about something unmeasured. This is the one rule that would
+    have changed how the `CAL-TRANSFER` result reads.
+
+    ``reference`` is anything exposing ``trust_cap() -> TrustLevel``, which
+    `core.reference.ReferenceMaterial` and `core.reference.CalibrationChain` both do. Duck-typed
+    rather than imported so the gate module keeps its shallow import graph. Absent means no cap,
+    so every existing caller is unaffected.
     """
     if adjudicated and registered and calibration is not None:
-        return TrustLevel.ADJUDICATED
-    if registered:
-        return TrustLevel.REGISTERED
-    if calibration is not None:
-        return TrustLevel.CALIBRATED
-    return TrustLevel.EXPLORATORY
+        level = TrustLevel.ADJUDICATED
+    elif registered:
+        level = TrustLevel.REGISTERED
+    elif calibration is not None:
+        level = TrustLevel.CALIBRATED
+    else:
+        level = TrustLevel.EXPLORATORY
+    if reference is not None:
+        level = min(level, reference.trust_cap())
+    return level
 
 
 def require_frame_for_comparison(gauge_status: GaugeStatus, frame: FrameID | None) -> None:
@@ -101,6 +130,7 @@ def require_frame_for_comparison(gauge_status: GaugeStatus, frame: FrameID | Non
 
 __all__ = [
     "CalibrationRef",
+    "SupportsTrustCap",
     "compute_trust",
     "require_frame_for_comparison",
 ]

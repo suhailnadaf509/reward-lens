@@ -1,11 +1,11 @@
-"""Kernel configuration (section 2.0, 2.1.2).
+"""Kernel configuration.
 
 One pydantic settings object resolves the paths and policies the kernel needs: where the
 evidence store lives, where the activation cache lives, the disk budget for that cache, and the
 device policy. Defaults put the store under ``~/.reward_lens`` and honour environment overrides
 prefixed ``REWARD_LENS_`` so a study can be pointed at a repo-local store without code changes.
 
-The store must remain trivially inspectable and diffable (section 2.1.2), which is why the
+The store must remain trivially inspectable and diffable, which is why the
 defaults are plain directories of files, never a database server.
 """
 
