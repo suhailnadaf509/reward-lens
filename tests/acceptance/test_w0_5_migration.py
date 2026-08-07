@@ -760,6 +760,19 @@ def test_which_families_have_no_reachable_real_subject_and_what_would_be_needed(
         ),
         "qwen3": _hub_snapshot("Skywork/Skywork-Reward-V2-Qwen3-0.6B", "model.safetensors"),
     }
+    if not any(p is not None for p in reachable_with_weights.values()):
+        # Same skip the three tests above take, and for the same reason: nothing here downloads
+        # anything, so on a machine with an empty hub cache this asserts that the cache is empty
+        # rather than anything about the inventory. The two-of-six gap is a claim about which
+        # families can be reached from a populated cache, and a runner that has never fetched a
+        # checkpoint cannot answer it either way. One of the two present and the other missing is
+        # a different thing, a real change in what is reachable, and still fails below.
+        pytest.skip(
+            "no reward-model weights in the local HF cache, so which families are reachable "
+            "cannot be determined here. Fetch hf_hub_download('Skywork/Skywork-Reward-Llama-3.1"
+            "-8B', 'model-00004-of-00004.safetensors') and hf_hub_download('Skywork/Skywork-"
+            "Reward-V2-Qwen3-0.6B', 'model.safetensors') to run this inventory."
+        )
     assert all(p is not None for p in reachable_with_weights.values()), reachable_with_weights
 
     for family in ("armorm", "internlm2"):
