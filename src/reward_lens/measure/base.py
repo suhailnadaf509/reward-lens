@@ -379,6 +379,28 @@ def declared_access(inst: Any) -> AccessMatrix:
     return req if isinstance(req, Mapping) else {}
 
 
+def capability_name(caps: Capability) -> str:
+    """Name a capability set the same way on every interpreter.
+
+    `caps.name` is not enough on its own, for two reasons that pull in opposite directions. Before
+    3.11 a composite `Flag` has no `name` at all, so it needs a fallback; from 3.11 on it has one,
+    so a refusal recorded under two interpreters would carry two different strings for the same
+    capabilities. A record that reads differently depending on the Python that wrote it is the kind
+    of difference that surfaces much later as a diff nobody can account for.
+
+    The fallback this replaces was `str(int(caps))`, which could never have worked: `Capability` is
+    a `Flag` and not an `IntFlag`, so it has no `__int__`. On 3.11 and up `name` is always truthy
+    and `or` never evaluated its right-hand side, which is how a call that raises on every input
+    reached 3.0 with only the 3.10 leg of the matrix failing, and only on a composite.
+
+    Joining the declared members reproduces exactly what 3.12 puts in `name`, so the fix converges
+    the two versions rather than giving 3.10 a second spelling of its own.
+    """
+    if not caps:
+        return Capability.NONE.name or "NONE"
+    return "|".join(m.name or "" for m in Capability.__members__.values() if m.value and m in caps)
+
+
 def run(observable: Observable, ctx: Context) -> Evidence:
     """Run an Observable under the gates.
 
@@ -675,9 +697,9 @@ class BaseObservable:
                 detail=str(exc),
                 remedy=self._capability_remedy(missing, has_signal=ctx.signal is not None),
                 statistics={
-                    "needed": needed.name or str(int(needed)),
-                    "have": have.name or str(int(have)),
-                    "missing": missing.name or str(int(missing)),
+                    "needed": capability_name(needed),
+                    "have": capability_name(have),
+                    "missing": capability_name(missing),
                 },
             )
 
@@ -852,6 +874,7 @@ __all__ = [
     "Context",
     "is_white_box",
     "lint_reading",
+    "capability_name",
     "declared_access",
     "declared_capabilities",
     "Instrument",
