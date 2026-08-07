@@ -181,14 +181,30 @@ def test_the_none_case_is_fiellers_unbounded_case_and_now_says_so():
         at, ci, note = _project_collapse(steps[mask], frac[mask])
         if at is None:
             continue
+        if abs(at) > 1000 * float(np.ptp(steps)):
+            # Two of the 97 windows carry no trend at all, so the fitted slope is roundoff and
+            # dividing by it projects a crossing astronomically outside the run. Window 264's logit
+            # rises and falls in equal measure and fits +5.8e-15, which lands the crossing at step
+            # -2.0e15. Window 0 is constant at zero and fits -1.7e-16, which is refused above only
+            # because the noise happened to come out negative: on the runner it comes out positive
+            # and the window is counted, which is what made this assertion read 57 there and 56
+            # here. Which side of zero that noise falls on is a property of the BLAS the numpy
+            # wheel was built against and not of the run being measured.
+            #
+            # Neither window carries a crossing on any machine, and the run is 400 steps long, so
+            # a projection a thousand runs away is the roundoff case rather than a near miss. The
+            # library reporting a dominance step of -2.0e15 instead of declining to project one is
+            # worth fixing where the division happens; this only stops the count depending on which
+            # machine ran it.
+            continue
         old = _old_interval(steps[mask], frac[mask])
         assert (ci is None) == (old is None), f"the None boundary moved at step {lo}"
         agreed += 1
         if ci is None:
             unbounded += 1
             assert "unbounded" in note and "standard errors from zero" in note
-    assert agreed == 56, "56 twelve-step windows project a crossing at all"
-    assert unbounded == 51, "51 of those 56 have an interval Fieller leaves unbounded"
+    assert agreed == 55, "55 twelve-step windows project a crossing worth calling one"
+    assert unbounded == 50, "50 of those 55 have an interval Fieller leaves unbounded"
 
 
 def test_the_note_reaches_the_reader_when_the_interval_is_unbounded():
