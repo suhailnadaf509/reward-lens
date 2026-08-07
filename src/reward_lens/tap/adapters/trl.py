@@ -450,7 +450,7 @@ class TRLTap:
 
     def _build_callback(self) -> Any:
         """Construct the ``TrainerCallback`` subclass, importing transformers only now."""
-        from transformers import TrainerCallback
+        TrainerCallback = _callback_base()
 
         outer = self
 
@@ -1270,6 +1270,26 @@ class TRLTap:
 # ---------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------
+
+
+def _callback_base() -> type:
+    """``TrainerCallback`` when transformers is installed, and a bare stand-in when it is not.
+
+    ``Trainer.add_callback`` type-checks what it is handed, so a real run needs the real base class
+    and gets it. But a process without transformers is a process without a ``Trainer``, so the only
+    caller that can reach the fallback is a test driving the step boundary over a trainer-shaped
+    object, which is the half of this adapter that is meant to work on a base install.
+
+    Importing unconditionally was the same shape of bug the guard in ``attach`` is there to absorb,
+    and the two combined to hide it: the import raised, ``attach`` filed the ImportError as a note
+    and returned, no callback was ever registered, and the tap then recorded nothing for the whole
+    run without ever saying that transformers was what it wanted.
+    """
+    try:
+        from transformers import TrainerCallback
+    except ImportError:
+        return object
+    return TrainerCallback
 
 
 def _is_torch_module(obj: Any) -> bool:
