@@ -34,8 +34,14 @@ Theory-object coverage:
   -     Robustness SNR       ``snr``                  (definition + synthetic test)
   -     Contested direction  ``contested``            (definition + synthetic test)
 
-Importing this package pulls no torch: the pure functions are numpy, and the substrate readers import
-torch lazily only when an Observable actually runs on a model.
+The pure functions here are numpy and the substrate readers import torch lazily, only when an
+Observable actually runs on a model. Importing the package nonetheless requires the ``[white-box]``
+extra today, over a single line: ``coherence`` imports ``participation_ratio`` from
+``reward_lens.geometry``, and the guard sits on the geometry package rather than on the function,
+which is itself pure numpy. So the base-install job skips this catalogue instead of covering it.
+Moving that function somewhere torch-free is what would earn the coverage back; it is coupled to
+``SpectrumResult`` in ``geometry/hessian.py``, so it is a change to make deliberately rather than
+in passing.
 """
 
 from __future__ import annotations
