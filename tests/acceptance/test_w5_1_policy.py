@@ -539,6 +539,36 @@ def test_a_serving_policy_is_not_a_policy_subject(policy):
     assert "policy.hf.from_pretrained" in str(excinfo.value)
 
 
+def test_the_boundary_is_an_attribute_error_so_hasattr_can_answer(policy):
+    """What makes the protocol check above False on every interpreter rather than most of them.
+
+    A runtime protocol check is `hasattr` over the protocol's members on 3.10 and 3.11, and
+    `typing._get_protocol_attrs` returns a **set**, so the members are walked in hash order and
+    that order changes per process. While `EngineBoundary` was a `RuntimeError` and nothing else it
+    escaped `hasattr` rather than answering False, so the test above passed or failed depending on
+    whether `capture` came up before some other absent name. The same commit went green on 3.11 and
+    red on 3.10 in one CI run over exactly this. Python 3.12 moved protocol checks to
+    `inspect.getattr_static` and never saw it, which is what made it look version-specific rather
+    than random.
+
+    `policy/selection.py` and `geometry/hessian.py` ask `hasattr` for these names too, and were
+    getting an exception where they expected a boolean.
+    """
+    serving = ServingPolicy(meta=policy.meta, call=lambda prompts, spec: None)
+    assert issubclass(EngineBoundary, AttributeError)
+    assert issubclass(EngineBoundary, RuntimeError)
+
+    for name in ("capture", "grad_h", "token_gradients", "hvp", "with_interventions"):
+        assert not hasattr(serving, name), name
+        assert getattr(serving, name, "absent") == "absent", name
+
+    # The whole point of the class is the sentence it raises, so being an AttributeError must not
+    # have cost it. A caller who reaches for the name directly still gets told where to go.
+    with pytest.raises(EngineBoundary) as excinfo:
+        serving.capture
+    assert "policy.hf.from_pretrained" in str(excinfo.value)
+
+
 def test_an_activation_instrument_refuses_a_serving_policy(policy):
     """The refusal comes from the capability gate, as a value with a remedy, not an exception."""
     serving = ServingPolicy(meta=policy.meta, call=lambda prompts, spec: None)

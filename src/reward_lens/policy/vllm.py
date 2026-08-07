@@ -82,13 +82,29 @@ ENGINE_LIMITS: dict[str, str] = {
 }
 
 
-class EngineBoundary(RuntimeError):
+class EngineBoundary(RuntimeError, AttributeError):
     """An operation that a serving engine cannot perform, with why and where it can be performed.
 
     Raised rather than returned for the same reason `ArchitectureError` is: a caller asking a
     serving policy for a gradient has made a category error at wiring time, not encountered an
     anticipated condition at measurement time. An *instrument* that needs one is refused rather than
     raised at, and that refusal comes from the capability gate reading `caps`.
+
+    Subclasses `AttributeError` as well as `RuntimeError`, the same trade `ExtraRequiredError`
+    makes with `ImportError`: it is raised out of `__getattr__`, and the language treats an
+    attribute that is absent as one whose lookup raises `AttributeError` specifically. Under a
+    plain `RuntimeError` every `hasattr` on a serving policy propagated instead of answering
+    False, which broke three things at once. `isinstance(serving, PolicySubject)` is documented on
+    `ServingPolicy` to be False and was decided by `typing._get_protocol_attrs`, a **set**, so on
+    Python 3.10 and 3.11 the protocol's members are walked in hash order and the answer depended
+    on whether `capture` came up before some other absent name. That is per-process randomised, so
+    the same commit passed and failed on the same interpreter. `policy/selection.py` and
+    `geometry/hessian.py` both ask `hasattr(subject, ...)` for exactly these names and got an
+    exception where they expected a boolean. Python 3.12 is immune to the first of those, having
+    moved protocol checks to `inspect.getattr_static`, which is why only the 3.10 leg went red.
+
+    Nothing about the message changes: a caller who reaches for `serving.grad_h` still gets the
+    sentence naming the boundary and the backend that can take the reading.
     """
 
 
@@ -149,10 +165,12 @@ class ServingPolicy:
     def __getattr__(self, name: str) -> Any:
         """Fail with the boundary, by name, for anything Plane B.
 
-        A plain `AttributeError` would be correct and useless: the caller would learn that a method
+        A bare `AttributeError` would be correct and useless: the caller would learn that a method
         is missing and not that it is missing on purpose and where the same measurement can be
-        taken. This intercepts only the four names that matter and lets everything else raise
-        normally.
+        taken. `EngineBoundary` *is* an `AttributeError`, so the message is carried without
+        breaking the one thing the language asks of `__getattr__`, which is that a name it will not
+        supply raises `AttributeError` and is therefore invisible to `hasattr`. This intercepts
+        only the five names that matter and lets everything else raise normally.
         """
         if name in ("capture", "grad_h", "token_gradients", "hvp", "with_interventions"):
             raise EngineBoundary(
